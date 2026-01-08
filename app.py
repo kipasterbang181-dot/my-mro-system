@@ -6,13 +6,11 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "avionic_mro_secret_2026")
 
 # --- DATABASE SUPABASE ---
-# Menggunakan link URI anda dengan password KUCINGPUTIH10
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Struktur Database MRO
 class RepairLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     tarikh = db.Column(db.String(50))
@@ -26,17 +24,6 @@ class RepairLog(db.Model):
 def index():
     return render_template('index.html')
 
-@app.route('/save', methods=['POST'])
-def save():
-    try:
-        data = request.json
-        new_entry = RepairLog(**data)
-        db.session.add(new_entry)
-        db.session.commit()
-        return jsonify({"status": "success", "id": new_entry.id})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -47,17 +34,23 @@ def login():
             return redirect(url_for('admin'))
     return render_template('login.html')
 
+@app.route('/save', methods=['POST'])
+def save():
+    try:
+        data = request.json
+        new_entry = RepairLog(**data)
+        db.session.add(new_entry)
+        db.session.commit()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route('/admin')
 def admin():
     if not session.get('admin'):
         return redirect(url_for('login'))
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     return render_template('admin.html', logs=logs)
-
-@app.route('/view/<int:log_id>')
-def view_report(log_id):
-    log = RepairLog.query.get_or_404(log_id)
-    return render_template('view_pdf.html', l=log)
 
 @app.route('/logout')
 def logout():
