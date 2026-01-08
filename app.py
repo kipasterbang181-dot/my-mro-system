@@ -6,7 +6,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "mro_key_2026")
 
 # --- DATABASE CONNECTION (DIRECT MODE) ---
-# Menggunakan link Direct connection dari imej anda untuk kestabilan
+# Menggunakan link Direct connection untuk mengelakkan ralat 'Tenant not found'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:KUCINGPUTIH10@db.yyvrjgdzhliodbgijlgb.supabase.co:5432/postgres'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -70,6 +70,6 @@ def logout():
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()
+        db.create_all() # Baris ini akan membina jadual di Supabase
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
