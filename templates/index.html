@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Avionic Input</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="bg-slate-100 p-4">
+    <div class="max-w-xl mx-auto bg-white p-8 rounded-2xl shadow-2xl border-t-8 border-blue-900">
+        <h1 class="text-2xl font-black text-blue-900 mb-6 uppercase tracking-tighter text-center italic">Avionic Data Entry</h1>
+        
+        <div class="space-y-4">
+            <input type="date" id="tarikh" class="w-full p-3 border rounded bg-slate-50 font-bold">
+            <input type="text" id="peralatan" placeholder="Nama Peralatan" class="w-full p-3 border rounded font-bold">
+            <input type="text" id="sn" placeholder="Serial Number (S/N)" class="w-full p-3 border rounded font-mono font-bold">
+            <select id="status" class="w-full p-3 border rounded font-bold">
+                <option>Serviceable</option>
+                <option>Unserviceable</option>
+            </select>
+            <textarea id="tindakan" placeholder="Deskripsi Pembaikan" class="w-full p-3 border rounded h-24"></textarea>
+            <input type="text" id="jurutera" placeholder="Nama Jurutera" class="w-full p-3 border rounded font-bold uppercase">
+            
+            <button onclick="hantar()" id="btn-hantar" class="w-full bg-blue-900 text-white py-4 rounded-xl font-black hover:bg-blue-800 transition shadow-lg">HANTAR DATA KE ADMIN</button>
+        </div>
+
+        <div id="qr-section" class="hidden mt-8 p-6 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl text-center">
+            <p class="text-xs font-black text-blue-900 mb-4 uppercase">QR Code Berjaya Dijana (Link PDF):</p>
+            <div id="qrcode" class="flex justify-center mb-4"></div>
+            <p class="text-[10px] text-slate-500 italic">Sila cetak dan tampal QR ini pada alatan.</p>
+            <button onclick="location.reload()" class="mt-4 text-xs text-blue-600 font-bold underline">Isi Borang Baru</button>
+        </div>
+    </div>
+
+    <script>
+        async function hantar() {
+            const d = {
+                tarikh: document.getElementById('tarikh').value,
+                peralatan: document.getElementById('peralatan').value,
+                sn: document.getElementById('sn').value,
+                status: document.getElementById('status').value,
+                tindakan: document.getElementById('tindakan').value,
+                jurutera: document.getElementById('jurutera').value
+            };
+            
+            if(!d.sn || !d.peralatan) return alert("Sila lengkapkan maklumat!");
+
+            const res = await fetch('/save', {
+                method:'POST', 
+                headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify(d)
+            });
+            
+            const result = await res.json();
+            
+            if(result.status === 'success') {
+                document.getElementById('btn-hantar').classList.add('hidden');
+                document.getElementById('qr-section').classList.remove('hidden');
+                
+                // Bina LINK PDF berdasarkan ID database
+                const serverIP = "{{ ip }}"; 
+                const linkPDF = `http://${serverIP}:5000/view/${result.id}`;
+                
+                new QRCode(document.getElementById("qrcode"), {
+                    text: linkPDF,
+                    width: 160,
+                    height: 160,
+                    colorDark: "#1e3a8a"
+                });
+            }
+        }
+    </script>
+</body>
+</html>
