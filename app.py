@@ -6,9 +6,9 @@ import socket
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "avionic_mro_secret_2024")
 
-# AMARAN: Gantikan link di bawah dengan Connection String dari Supabase anda
-# Format: postgresql://postgres:[PASSWORD]@db.[ID-PROJEK].supabase.co:5432/postgres
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:PASSWORD_ANDA@db.XXXXXXXX.supabase.co:5432/postgres'
+# --- KONFIGURASI DATABASE SUPABASE ---
+# Gantikan PASSWORD_ANDA dengan password database Supabase anda
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:PASSWORD_ANDA@db.yyvrjgdzhliodbgijlgb.supabase.co:5432/postgres'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -23,7 +23,7 @@ class RepairLog(db.Model):
     tindakan = db.Column(db.String(500))
     jurutera = db.Column(db.String(100))
 
-# Fungsi untuk dapatkan IP (Hanya untuk kegunaan local/testing)
+# Fungsi untuk dapatkan IP (Hanya untuk rujukan local)
 def get_ip():
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -73,9 +73,9 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    # Kod ini membolehkan Render menetapkan port secara dinamik
+    # Membolehkan Render menetapkan port secara automatik
     port = int(os.environ.get("PORT", 5000))
-    # db.create_all() akan dijalankan secara automatik jika table belum wujud
+    # db.create_all() akan membina table di Supabase secara automatik
     with app.app_context():
         db.create_all()
     app.run(host='0.0.0.0', port=port)
