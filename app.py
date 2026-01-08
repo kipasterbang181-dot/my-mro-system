@@ -4,16 +4,16 @@ from flask_sqlalchemy import SQLAlchemy
 import socket
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "avionic_mro_secret_2024")
+app.secret_key = os.environ.get("SECRET_KEY", "avionic_mro_secret_2026")
 
-# --- KONFIGURASI DATABASE SUPABASE ---
-# Gantikan PASSWORD_ANDA dengan password database Supabase anda
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:PASSWORD_ANDA@db.yyvrjgdzhliodbgijlgb.supabase.co:5432/postgres'
+# --- DATABASE SUPABASE LENGKAP ---
+# Saya gunakan port 6543 (Pooler) supaya lebih stabil untuk Render
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Struktur Database
+# Struktur Database MRO
 class RepairLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     tarikh = db.Column(db.String(50))
@@ -23,19 +23,9 @@ class RepairLog(db.Model):
     tindakan = db.Column(db.String(500))
     jurutera = db.Column(db.String(100))
 
-# Fungsi untuk dapatkan IP (Hanya untuk rujukan local)
-def get_ip():
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(('8.8.8.8', 1))
-        ip = s.getsockname()[0]
-    except: ip = '127.0.0.1'
-    finally: s.close()
-    return ip
-
 @app.route('/')
 def index():
-    return render_template('index.html', ip=get_ip())
+    return render_template('index.html')
 
 @app.route('/save', methods=['POST'])
 def save():
@@ -73,9 +63,7 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    # Membolehkan Render menetapkan port secara automatik
     port = int(os.environ.get("PORT", 5000))
-    # db.create_all() akan membina table di Supabase secara automatik
     with app.app_context():
-        db.create_all()
+        db.create_all() # Ini akan buat table secara automatik di Supabase
     app.run(host='0.0.0.0', port=port)
