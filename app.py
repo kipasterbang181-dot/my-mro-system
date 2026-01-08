@@ -6,11 +6,14 @@ app = Flask(__name__)
 # Rahsia untuk sesi login admin
 app.secret_key = os.environ.get("SECRET_KEY", "avionic_mro_system_2026")
 
-# --- KONFIGURASI DATABASE SUPABASE ---
-# Menggunakan sambungan Direct ke PostgreSQL Supabase
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:KUCINGPUTIH10@db.yyvrjgdzhliodbgijlgb.supabase.co:5432/postgres'
+# --- KONFIGURASI DATABASE SUPABASE (POOLER MODE) ---
+# Menggunakan username berformat postgres.[ID_PROJEK] dan port 6543
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {"pool_pre_ping": True}
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 300,
+}
 
 db = SQLAlchemy(app)
 
@@ -25,7 +28,7 @@ class RepairLog(db.Model):
     tindakan = db.Column(db.String(500))
     jurutera = db.Column(db.String(100))
 
-# --- ROUTES (LALUAN SISTEM) ---
+# --- ROUTES ---
 
 @app.route('/')
 def index():
@@ -55,7 +58,6 @@ def login():
     if request.method == 'POST':
         u = request.form.get('u')
         p = request.form.get('p')
-        # Login: admin | Password: password123
         if u == 'admin' and p == 'password123':
             session['admin'] = True
             return redirect(url_for('admin'))
@@ -65,8 +67,6 @@ def login():
 def admin():
     if not session.get('admin'):
         return redirect(url_for('login'))
-    
-    # Ambil data dan susun dari yang terbaru di atas
     try:
         logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
         return render_template('admin.html', logs=logs)
@@ -75,21 +75,30 @@ def admin():
 
 @app.route('/view/<int:log_id>')
 def view_report(log_id):
-    # Halaman untuk orang scan QR nampak detail
     log = RepairLog.query.get_or_404(log_id)
-    # Anda perlukan fail view_pdf.html nanti, buat masa ni kita guna template mudah
-    return f"<h1>Detail Rekod MRO</h1><p>Alatan: {log.peralatan}</p><p>S/N: {log.sn}</p><p>Status: {log.status}</p>"
+    # Gunakan template ringkas sementara sebelum anda buat view_pdf.html
+    return f"""
+    <html>
+    <body style="font-family:sans-serif; padding:40px;">
+        <h2>REKOD PENYELENGGARAAN AVIONIK</h2>
+        <hr>
+        <p><b>Peralatan:</b> {log.peralatan}</p>
+        <p><b>S/N:</b> {log.sn}</p>
+        <p><b>Status:</b> {log.status}</p>
+        <p><b>Tindakan:</b> {log.tindakan}</p>
+        <p><b>Jurutera:</b> {log.jurutera}</p>
+        <p><b>Tarikh:</b> {log.tarikh}</p>
+    </body>
+    </html>
+    """
 
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
 
-# --- PENGESAHAN TABLE ---
 if __name__ == '__main__':
     with app.app_context():
-        # Baris ini sangat penting: Ia akan cipta table 'repair_log' di Supabase secara automatik
         db.create_all()
-    
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
