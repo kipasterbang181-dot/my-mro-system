@@ -1,13 +1,12 @@
 import os
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
-import socket
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "avionic_mro_secret_2026")
 
-# --- DATABASE SUPABASE LENGKAP ---
-# Saya gunakan port 6543 (Pooler) supaya lebih stabil untuk Render
+# --- DATABASE SUPABASE ---
+# Menggunakan link URI anda dengan password KUCINGPUTIH10
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -29,11 +28,14 @@ def index():
 
 @app.route('/save', methods=['POST'])
 def save():
-    data = request.json
-    new_entry = RepairLog(**data)
-    db.session.add(new_entry)
-    db.session.commit()
-    return jsonify({"status": "success", "id": new_entry.id})
+    try:
+        data = request.json
+        new_entry = RepairLog(**data)
+        db.session.add(new_entry)
+        db.session.commit()
+        return jsonify({"status": "success", "id": new_entry.id})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -65,5 +67,5 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     with app.app_context():
-        db.create_all() # Ini akan buat table secara automatik di Supabase
+        db.create_all()
     app.run(host='0.0.0.0', port=port)
