@@ -5,8 +5,9 @@ from flask_sqlalchemy import SQLAlchemy
 app = Flask(__name__)
 app.secret_key = "avionic_mro_2026"
 
-# GUNA LINK TRANSACTION POOLER (PORT 6543)
-# Perhatikan username: postgres.[ID_PROJEK]
+# --- SAMBUNGAN TRANSACTION POOLER (WAJIB UNTUK RENDER) ---
+# Username: postgres.yyvrjgdzhliodbgijlgb
+# Port: 6543
 DB_URI = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
 
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URI
@@ -68,7 +69,6 @@ def login():
 
 if __name__ == '__main__':
     with app.app_context():
-        # Langkah ini penting untuk membina jadual jika ia belum wujud
         db.create_all()
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
