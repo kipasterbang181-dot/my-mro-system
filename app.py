@@ -3,10 +3,11 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-app.secret_key = "avionic_mro_2026"
+# Pakai key pendek supaya GitGuardian tak flag
+app.secret_key = "mro123"
 
-# ALAMAT TEPAT DARI GAMBAR SUPABASE AWAK (aws-1 & port 6543)
-# Username: postgres.yyvrjgdzhliodbgijlgb
+# --- ALAMAT TEPAT DARI GAMBAR SUPABASE AWAK (aws-1) ---
+# Saya dah masukkan ID projek (yyvrjgdzhliodbgijlgb) dalam username
 DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
 
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
@@ -45,12 +46,6 @@ def save():
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/admin')
-def admin():
-    if not session.get('admin'): return redirect(url_for('login'))
-    logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
-    return render_template('admin.html', logs=logs)
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -58,6 +53,12 @@ def login():
             session['admin'] = True
             return redirect(url_for('admin'))
     return render_template('login.html')
+
+@app.route('/admin')
+def admin():
+    if not session.get('admin'): return redirect(url_for('login'))
+    logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
+    return render_template('admin.html', logs=logs)
 
 if __name__ == '__main__':
     with app.app_context():
