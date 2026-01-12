@@ -4,15 +4,12 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = "mro_key_2026"
+app.secret_key = "mro_system_2026"
 
-# --- DATABASE CONFIG ---
+# Database Configuration (AWS-1)
 DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
-
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {"pool_pre_ping": True}
-
 db = SQLAlchemy(app)
 
 class RepairLog(db.Model):
@@ -24,7 +21,7 @@ class RepairLog(db.Model):
     status = db.Column(db.String(50))
     tindakan = db.Column(db.Text)
     jurutera = db.Column(db.String(100))
-    # Tambahan: History Time (Masa data dimasukkan)
+    # Kolum yang menyebabkan ralat jika tak dibuat di SQL Editor
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 @app.route('/')
@@ -47,18 +44,26 @@ def save():
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
+            session['admin'] = True
+            return redirect(url_for('admin'))
+    return render_template('login.html')
+
 @app.route('/admin')
 def admin():
     if not session.get('admin'): return redirect(url_for('login'))
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     return render_template('admin.html', logs=logs)
 
-# --- FUNGSI BARU: EDIT DATA ---
+# FUNGSI EDIT & UPDATE
 @app.route('/edit/<int:log_id>')
 def edit_log(log_id):
     if not session.get('admin'): return redirect(url_for('login'))
-    log_data = RepairLog.query.get_or_404(log_id)
-    return render_template('edit.html', l=log_data)
+    log = RepairLog.query.get_or_404(log_id)
+    return render_template('edit.html', l=log)
 
 @app.route('/update/<int:log_id>', methods=['POST'])
 def update_log(log_id):
@@ -70,7 +75,7 @@ def update_log(log_id):
     db.session.commit()
     return redirect(url_for('admin'))
 
-# --- FUNGSI BARU: PADAM DATA (TONG SAMPAH) ---
+# FUNGSI PADAM (TONG SAMPAH)
 @app.route('/delete/<int:log_id>', methods=['POST'])
 def delete_log(log_id):
     if not session.get('admin'): return redirect(url_for('login'))
@@ -86,8 +91,8 @@ def logout():
 
 @app.route('/view/<int:log_id>')
 def view_report(log_id):
-    log_data = RepairLog.query.get_or_404(log_id)
-    return render_template('view_pdf.html', l=log_data)
+    log = RepairLog.query.get_or_404(log_id)
+    return render_template('view_pdf.html', l=log)
 
 if __name__ == '__main__':
     with app.app_context():
