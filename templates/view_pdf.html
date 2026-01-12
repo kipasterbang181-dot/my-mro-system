@@ -1,54 +1,80 @@
 <!DOCTYPE html>
-<html>
+<html lang="ms">
 <head>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Release Certificate - {{ l.sn }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        @media print { .no-print { display: none; } }
+    </style>
 </head>
-<body class="bg-slate-50">
-    <div id="pdf-content" class="bg-white mx-auto shadow-2xl" style="width: 794px; min-height: 1123px;">
-        <div class="h-6 bg-blue-900 w-full mb-12"></div>
-        <div class="px-16">
-            <div class="flex justify-between items-center mb-16">
-                <div>
-                    <h1 class="text-4xl font-black text-blue-900 tracking-tighter uppercase leading-none">Service Release<br>Certificate</h1>
-                    <p class="text-xs font-bold text-slate-400 mt-2 uppercase tracking-widest">Official Maintenance Report</p>
-                </div>
-                <div class="text-right">
-                    <div class="text-3xl font-black text-blue-900 border-4 border-blue-900 px-3 py-1">AV-MRO</div>
-                </div>
-            </div>
+<body class="bg-slate-50 p-4 md:p-10">
 
-            <div class="bg-slate-50 rounded-3xl p-10 border border-slate-200 grid grid-cols-2 gap-8 mb-12">
-                <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Equipment</p><p class="text-xl font-black text-slate-800 uppercase">{{ l.peralatan }}</p></div>
-                <div class="text-right"><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Serial Number</p><p class="text-xl font-mono font-bold text-blue-700 underline">{{ l.sn }}</p></div>
-                <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</p><p class="inline-block px-4 py-1 bg-blue-900 text-white rounded-full font-black text-xs uppercase">{{ l.status }}</p></div>
-                <div class="text-right"><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Date</p><p class="text-sm font-bold">{{ l.tarikh }}</p></div>
-            </div>
-
-            <div class="mb-12">
-                <h3 class="text-xs font-black text-blue-900 uppercase tracking-widest border-b-2 border-blue-100 pb-2 mb-4">Maintenance Summary</h3>
-                <p class="text-sm leading-relaxed text-slate-600 italic">{{ l.tindakan }}</p>
-            </div>
-
-            <div class="mt-40 border-t-2 border-slate-100 pt-10">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-12">Certified By</p>
-                <p class="text-lg font-black text-blue-900 uppercase underline">{{ l.jurutera }}</p>
-                <p class="text-[10px] text-slate-400 font-bold italic">Authorized Avionic Engineer</p>
-            </div>
-        </div>
+    <div class="max-w-4xl mx-auto mb-6 flex justify-end no-print">
+        <button onclick="window.print()" class="bg-blue-900 text-white px-6 py-2 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-black transition">Cetak Sijil / Save PDF</button>
     </div>
 
-    <script>
-        window.onload = function() {
-            // Serta merta tanya nak save PDF bila page dibuka
-            const element = document.getElementById('pdf-content');
-            html2pdf().from(element).set({
-                margin: 0,
-                filename: 'MRO_Report_{{ l.sn }}.pdf',
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            }).save();
-        };
-    </script>
+    <div class="max-w-4xl mx-auto bg-white p-12 rounded-[2rem] shadow-2xl border border-slate-200 relative overflow-hidden">
+        
+        <div class="flex justify-between items-start border-b-4 border-blue-900 pb-8 mb-10">
+            <div>
+                <h1 class="text-4xl font-black text-blue-900 uppercase italic leading-none">Service Release<br>Certificate</h1>
+                <p class="text-slate-400 font-bold uppercase tracking-[0.3em] text-[10px] mt-2">Official Maintenance Report</p>
+            </div>
+            <div class="text-right">
+                <div class="bg-blue-900 text-white px-6 py-2 rounded-lg font-black text-xl italic tracking-tighter">AV-MRO</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-y-10 gap-x-12 mb-12">
+            <div>
+                <p class="text-[10px] font-black uppercase text-slate-400 mb-1">Equipment</p>
+                <p class="text-2xl font-black text-slate-800 uppercase tracking-tight">{{ l.peralatan }}</p>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] font-black uppercase text-slate-400 mb-1">Serial Number</p>
+                <p class="text-2xl font-black text-blue-600 font-mono italic">{{ l.sn }}</p>
+            </div>
+            <div>
+                <p class="text-[10px] font-black uppercase text-slate-400 mb-1">Status</p>
+                <span class="px-4 py-1 bg-blue-900 text-white rounded-full font-black uppercase text-xs italic">{{ l.status }}</span>
+            </div>
+            
+            <div class="text-right">
+                <p class="text-[10px] font-black uppercase text-slate-400 mb-1">Service Timeline</p>
+                <p class="text-sm font-black text-slate-700">IN: {{ l.date_in }}</p>
+                {% if l.date_out %}
+                <p class="text-sm font-black text-blue-800 uppercase">OUT: {{ l.date_out }}</p>
+                {% else %}
+                <p class="text-sm font-black text-slate-400 uppercase italic leading-none">OUT: Pending Release</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="mb-12">
+            <p class="text-[10px] font-black uppercase text-blue-900 border-b border-blue-100 pb-2 mb-4 tracking-widest">Maintenance Summary</p>
+            <div class="bg-slate-50 p-6 rounded-2xl min-h-[150px] border border-slate-100 italic text-slate-700 leading-relaxed font-medium">
+                {{ l.tindakan }}
+            </div>
+        </div>
+
+        <div class="flex justify-between items-end mt-16 pt-8 border-t border-slate-100">
+            <div>
+                <p class="text-[10px] font-black uppercase text-slate-400 mb-10">Authorized Personnel</p>
+                <p class="font-black text-slate-800 underline uppercase tracking-tighter">{{ l.jurutera }}</p>
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Lead Avionic Technician</p>
+            </div>
+            <div class="text-right opacity-20">
+                <p class="text-[8px] font-black uppercase tracking-[0.5em] text-slate-400 italic">Certificate ID: #MRO-{{ l.id }}-{{ l.sn[:4] }}</p>
+            </div>
+        </div>
+
+    </div>
+
+    <p class="text-center mt-8 text-[9px] font-bold text-slate-400 uppercase tracking-widest italic no-print">Dokumen ini dijana secara automatik oleh AV-MRO System 2026</p>
+
 </body>
 </html>

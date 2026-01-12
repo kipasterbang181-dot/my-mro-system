@@ -28,10 +28,17 @@
                 </div>
                 <div class="card-body p-4 p-md-5">
                     <form id="mroForm">
-                        <div class="mb-3">
-                            <label class="form-label">Tarikh Tugasan</label>
-                            <input type="date" id="tarikh" class="form-control" required>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Date In (Terima)</label>
+                                <input type="date" id="date_in" class="form-control" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Date Out (Siap)</label>
+                                <input type="date" id="date_out" class="form-control">
+                            </div>
                         </div>
+
                         <div class="mb-3">
                             <label class="form-label">Nama Peralatan / Komponen</label>
                             <input type="text" id="peralatan" class="form-control" placeholder="Contoh: Garmin G1000" required>
@@ -45,7 +52,7 @@
                             <select id="status" class="form-select form-control">
                                 <option value="Serviceable">Serviceable (Boleh Guna)</option>
                                 <option value="Unserviceable">Unserviceable (Rosak)</option>
-                                <option value="Pending">Pending (Menunggu Alat Ganti)</option>
+                                <option value="Beyond Economic Repair">Beyond Economic Repair (BER)</option>
                             </select>
                         </div>
                         <div class="mb-3">
@@ -68,11 +75,15 @@
 </div>
 
 <script>
+    // Auto-set tarikh hari ini untuk Date In
+    document.getElementById('date_in').valueAsDate = new Date();
+
     document.getElementById('mroForm').addEventListener('submit', function(e) {
         e.preventDefault();
         
         const formData = {
-            tarikh: document.getElementById('tarikh').value,
+            date_in: document.getElementById('date_in').value,
+            date_out: document.getElementById('date_out').value,
             peralatan: document.getElementById('peralatan').value,
             sn: document.getElementById('sn').value,
             status: document.getElementById('status').value,
@@ -80,7 +91,6 @@
             jurutera: document.getElementById('jurutera').value
         };
 
-        // Guna '/save' untuk hantar ke backend Flask di Render
         fetch('/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -96,6 +106,7 @@
             if (data.status === 'success') {
                 alert('✅ DATA BERJAYA DISIMPAN KE DATABASE!');
                 document.getElementById('mroForm').reset();
+                document.getElementById('date_in').valueAsDate = new Date(); // Reset tarikh balik
             }
         })
         .catch(error => {
