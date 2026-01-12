@@ -1,11 +1,12 @@
 import os
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "mro_key_2026"
 
-# --- DATABASE CONFIG (AWS-1 & PORT 6543) ---
+# --- DATABASE CONFIG ---
 DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
 
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
@@ -23,6 +24,8 @@ class RepairLog(db.Model):
     status = db.Column(db.String(50))
     tindakan = db.Column(db.Text)
     jurutera = db.Column(db.String(100))
+    # Tambahan: History Time (Masa data dimasukkan)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
 @app.route('/')
 def index():
@@ -44,28 +47,43 @@ def save():
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
-            session['admin'] = True
-            return redirect(url_for('admin'))
-    return render_template('login.html')
-
 @app.route('/admin')
 def admin():
-    if not session.get('admin'): 
-        return redirect(url_for('login'))
+    if not session.get('admin'): return redirect(url_for('login'))
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     return render_template('admin.html', logs=logs)
 
-# --- FUNGSI LOGOUT (Selesaikan 404 Logout) ---
+# --- FUNGSI BARU: EDIT DATA ---
+@app.route('/edit/<int:log_id>')
+def edit_log(log_id):
+    if not session.get('admin'): return redirect(url_for('login'))
+    log_data = RepairLog.query.get_or_404(log_id)
+    return render_template('edit.html', l=log_data)
+
+@app.route('/update/<int:log_id>', methods=['POST'])
+def update_log(log_id):
+    if not session.get('admin'): return redirect(url_for('login'))
+    log = RepairLog.query.get_or_404(log_id)
+    log.tarikh = request.form.get('tarikh')
+    log.status = request.form.get('status')
+    log.tindakan = request.form.get('tindakan')
+    db.session.commit()
+    return redirect(url_for('admin'))
+
+# --- FUNGSI BARU: PADAM DATA (TONG SAMPAH) ---
+@app.route('/delete/<int:log_id>', methods=['POST'])
+def delete_log(log_id):
+    if not session.get('admin'): return redirect(url_for('login'))
+    log = RepairLog.query.get_or_404(log_id)
+    db.session.delete(log)
+    db.session.commit()
+    return redirect(url_for('admin'))
+
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
 
-# --- FUNGSI VIEW (Gunakan 'l' supaya sepadan dengan HTML anda) ---
 @app.route('/view/<int:log_id>')
 def view_report(log_id):
     log_data = RepairLog.query.get_or_404(log_id)

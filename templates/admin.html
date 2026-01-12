@@ -39,7 +39,7 @@
                 <table class="w-full text-left border-collapse">
                     <thead class="bg-slate-50 border-b border-slate-100">
                         <tr class="text-[11px] font-black text-slate-400 uppercase tracking-[0.1em]">
-                            <th class="p-5 italic text-center">Tarikh</th>
+                            <th class="p-5 italic text-center">Tarikh & Masa</th>
                             <th class="p-5 italic text-center">Peralatan</th>
                             <th class="p-5 italic text-center">Serial Number</th>
                             <th class="p-5 italic text-center">Status</th>
@@ -49,7 +49,12 @@
                     <tbody class="divide-y divide-slate-100 italic">
                         {% for l in logs %}
                         <tr class="hover:bg-slate-50/50 transition-colors">
-                            <td class="p-5 text-sm font-medium text-slate-500 font-mono text-center">{{ l.tarikh }}</td>
+                            <td class="p-5 text-center">
+                                <p class="text-sm font-medium text-slate-500 font-mono">{{ l.tarikh }}</p>
+                                <p class="text-[9px] text-slate-300 font-bold uppercase tracking-tighter">
+                                    {{ l.created_at.strftime('%H:%M:%S') if l.created_at else '' }}
+                                </p>
+                            </td>
                             <td class="p-5 font-bold text-blue-900 uppercase tracking-tight text-center">{{ l.peralatan }}</td>
                             <td class="p-5 font-mono font-bold text-slate-700 bg-slate-50/30 text-center">{{ l.sn }}</td>
                             <td class="p-5 text-center">
@@ -59,15 +64,27 @@
                                     {{ l.status }}
                                 </span>
                             </td>
-                            <td class="p-5 flex justify-center gap-3 bg-blue-50/10">
+                            <td class="p-5 flex justify-center gap-2 bg-blue-50/10">
                                 <button onclick="paparQR('{{ l.id }}', '{{ l.sn }}')" 
-                                        class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase btn-hover shadow-sm">
-                                    QR Tag
+                                        class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-xl text-[9px] font-black uppercase btn-hover shadow-sm">
+                                    QR
                                 </button>
+                                
                                 <a href="/view/{{ l.id }}" target="_blank" 
-                                   class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase btn-hover shadow-sm">
-                                    PDF Report
+                                   class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl text-[9px] font-black uppercase btn-hover shadow-sm">
+                                    PDF
                                 </a>
+
+                                <a href="/edit/{{ l.id }}" 
+                                   class="bg-slate-800 hover:bg-black text-white px-3 py-2 rounded-xl text-[9px] font-black uppercase btn-hover shadow-sm">
+                                    Edit
+                                </a>
+
+                                <form action="/delete/{{ l.id }}" method="POST" onsubmit="return confirm('AMARAN: Padam rekod {{ l.sn }}?');">
+                                    <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-xl text-[9px] font-black uppercase btn-hover shadow-sm">
+                                        Buang
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                         {% else %}

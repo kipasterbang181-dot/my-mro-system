@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-10 bg-slate-100">
+    <div class="max-w-md mx-auto bg-white p-8 rounded-xl shadow">
+        <h2 class="text-xl font-bold mb-6">Edit Log: {{ l.sn }}</h2>
+        <form action="{{ url_for('update_log', log_id=l.id) }}" method="POST">
+            <div class="mb-4">
+                <label class="block text-xs font-bold mb-1">TARIKH BARU</label>
+                <input type="date" name="tarikh" value="{{ l.tarikh }}" class="w-full border p-2 rounded">
+            </div>
+            <div class="mb-4">
+                <label class="block text-xs font-bold mb-1">STATUS</label>
+                <select name="status" class="w-full border p-2 rounded">
+                    <option value="Serviceable" {% if l.status == 'Serviceable' %}selected{% endif %}>Serviceable</option>
+                    <option value="Unserviceable" {% if l.status == 'Unserviceable' %}selected{% endif %}>Unserviceable</option>
+                </select>
+            </div>
+            <div class="mb-6">
+                <label class="block text-xs font-bold mb-1">TINDAKAN KEMASKINI</label>
+                <textarea name="tindakan" class="w-full border p-2 rounded">{{ l.tindakan }}</textarea>
+            </div>
+            <button type="submit" class="w-full bg-blue-900 text-white py-2 rounded font-bold">SIMPAN KEMASKINI</button>
+            <a href="{{ url_for('admin') }}" class="block text-center mt-4 text-sm text-gray-500 underline">Batal</a>
+        </form>
+    </div>
+</body>
+</html>
