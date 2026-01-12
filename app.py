@@ -6,29 +6,23 @@ from datetime import datetime
 app = Flask(__name__)
 app.secret_key = "mro_system_2026"
 
-# --- CONFIG DATABASE ---
+# Database Configuration
 DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
-
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {"pool_pre_ping": True}
-
 db = SQLAlchemy(app)
 
-# --- MODEL DATABASE ---
 class RepairLog(db.Model):
     __tablename__ = 'repair_log'
     id = db.Column(db.Integer, primary_key=True)
-    tarikh = db.Column(db.String(50))
+    date_in = db.Column(db.String(50))
+    date_out = db.Column(db.String(50))
     peralatan = db.Column(db.String(100))
     sn = db.Column(db.String(100))
     status = db.Column(db.String(50))
     tindakan = db.Column(db.Text)
     jurutera = db.Column(db.String(100))
-    # Kolum untuk history masa
     created_at = db.Column(db.DateTime, default=datetime.now)
-
-# --- ROUTES SEDIA ADA (TIADA PERUBAHAN BESAR) ---
 
 @app.route('/')
 def index():
@@ -39,11 +33,12 @@ def save():
     try:
         data = request.json
         new_entry = RepairLog(
-            tarikh=data.get('tarikh'), 
+            date_in=data.get('date_in'),
+            date_out=data.get('date_out'),
             peralatan=data.get('peralatan'),
-            sn=data.get('sn'), 
+            sn=data.get('sn'),
             status=data.get('status'),
-            tindakan=data.get('tindakan'), 
+            tindakan=data.get('tindakan'),
             jurutera=data.get('jurutera')
         )
         db.session.add(new_entry)
@@ -56,28 +51,21 @@ def save():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form.get('u')
-        password = request.form.get('p')
-        if username == 'admin' and password == 'password123':
+        u, p = request.form.get('u'), request.form.get('p')
+        if u == 'admin' and p == 'password123':
             session['admin'] = True
             return redirect(url_for('admin'))
-        else:
-            return "Username atau Password salah! <a href='/login'>Cuba lagi</a>"
     return render_template('login.html')
 
 @app.route('/admin')
 def admin():
-    if not session.get('admin'): 
-        return redirect(url_for('login'))
+    if not session.get('admin'): return redirect(url_for('login'))
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     return render_template('admin.html', logs=logs)
-
-# --- TAMBAHAN UNTUK EDIT & PADAM (MINIMAL) ---
 
 @app.route('/edit/<int:log_id>')
 def edit_log(log_id):
     if not session.get('admin'): return redirect(url_for('login'))
-    # Gunakan 'l' supaya sepadan dengan kod edit.html anda
     log_data = RepairLog.query.get_or_404(log_id)
     return render_template('edit.html', l=log_data)
 
@@ -85,8 +73,8 @@ def edit_log(log_id):
 def update_log(log_id):
     if not session.get('admin'): return redirect(url_for('login'))
     log = RepairLog.query.get_or_404(log_id)
-    # Kemaskini data dari borang edit
-    log.tarikh = request.form.get('tarikh')
+    log.date_in = request.form.get('date_in')
+    log.date_out = request.form.get('date_out')
     log.status = request.form.get('status')
     log.tindakan = request.form.get('tindakan')
     db.session.commit()
@@ -107,7 +95,6 @@ def logout():
 
 @app.route('/view/<int:log_id>')
 def view_report(log_id):
-    # Gunakan 'l' supaya sepadan dengan kod view_pdf.html anda
     log_data = RepairLog.query.get_or_404(log_id)
     return render_template('view_pdf.html', l=log_data)
 

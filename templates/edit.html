@@ -1,29 +1,55 @@
 <!DOCTYPE html>
-<html>
+<html lang="ms">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Rekod - Avionic MRO</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="p-10 bg-slate-100">
-    <div class="max-w-md mx-auto bg-white p-8 rounded-xl shadow">
-        <h2 class="text-xl font-bold mb-6">Edit Log: {{ l.sn }}</h2>
-        <form action="{{ url_for('update_log', log_id=l.id) }}" method="POST">
-            <div class="mb-4">
-                <label class="block text-xs font-bold mb-1">TARIKH BARU</label>
-                <input type="date" name="tarikh" value="{{ l.tarikh }}" class="w-full border p-2 rounded">
+<body class="bg-slate-100 p-5 font-sans">
+    <div class="max-w-2xl mx-auto bg-white p-8 rounded-3xl shadow-xl border border-slate-200">
+        <h2 class="text-2xl font-black text-blue-900 uppercase mb-6 italic">Kemaskini Rekod Penyelenggaraan</h2>
+        
+        <form action="/update/{{ l.id }}" method="POST" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400">Date In (Received)</label>
+                    <input type="date" name="date_in" value="{{ l.date_in }}" class="w-full p-3 bg-slate-50 border rounded-xl font-bold text-slate-700 outline-blue-500" required>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400">Date Out (Ready/Sent)</label>
+                    <input type="date" name="date_out" value="{{ l.date_out }}" class="w-full p-3 bg-slate-50 border rounded-xl font-bold text-slate-700 outline-blue-500">
+                </div>
             </div>
-            <div class="mb-4">
-                <label class="block text-xs font-bold mb-1">STATUS</label>
-                <select name="status" class="w-full border p-2 rounded">
+
+            <div>
+                <label class="text-[10px] font-black uppercase text-slate-400">Peralatan</label>
+                <input type="text" value="{{ l.peralatan }}" class="w-full p-3 bg-slate-200 border rounded-xl font-bold text-slate-500 cursor-not-allowed" readonly>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-black uppercase text-slate-400">Serial Number</label>
+                <input type="text" value="{{ l.sn }}" class="w-full p-3 bg-slate-200 border rounded-xl font-mono text-slate-500 cursor-not-allowed" readonly>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-black uppercase text-slate-400">Status</label>
+                <select name="status" class="w-full p-3 bg-slate-50 border rounded-xl font-bold text-slate-700 outline-blue-500">
                     <option value="Serviceable" {% if l.status == 'Serviceable' %}selected{% endif %}>Serviceable</option>
                     <option value="Unserviceable" {% if l.status == 'Unserviceable' %}selected{% endif %}>Unserviceable</option>
+                    <option value="Beyond Economic Repair" {% if l.status == 'Beyond Economic Repair' %}selected{% endif %}>Beyond Economic Repair</option>
                 </select>
             </div>
-            <div class="mb-6">
-                <label class="block text-xs font-bold mb-1">TINDAKAN KEMASKINI</label>
-                <textarea name="tindakan" class="w-full border p-2 rounded">{{ l.tindakan }}</textarea>
+
+            <div>
+                <label class="text-[10px] font-black uppercase text-slate-400">Tindakan / Remarks</label>
+                <textarea name="tindakan" rows="4" class="w-full p-3 bg-slate-50 border rounded-xl font-medium text-slate-700 outline-blue-500">{{ l.tindakan }}</textarea>
             </div>
-            <button type="submit" class="w-full bg-blue-900 text-white py-2 rounded font-bold">SIMPAN KEMASKINI</button>
-            <a href="{{ url_for('admin') }}" class="block text-center mt-4 text-sm text-gray-500 underline">Batal</a>
+
+            <div class="flex gap-3 pt-4">
+                <button type="submit" class="flex-1 bg-blue-900 text-white font-black py-4 rounded-2xl hover:bg-blue-800 transition uppercase tracking-widest text-xs">Simpan Perubahan</button>
+                <a href="/admin" class="px-6 py-4 bg-slate-100 text-slate-500 font-black rounded-2xl hover:bg-slate-200 transition uppercase text-xs">Batal</a>
+            </div>
         </form>
     </div>
 </body>
