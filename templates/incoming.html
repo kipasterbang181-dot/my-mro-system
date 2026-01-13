@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-slate-100 p-6">
+    <div class="max-w-xl mx-auto bg-white rounded-[3rem] p-10 shadow-xl border-t-8 border-blue-900">
+        <h2 class="text-2xl font-black text-blue-900 uppercase italic mb-8">Incoming Entry</h2>
+        
+        <form action="/incoming" method="POST" class="space-y-4">
+            <input type="date" name="date_in" class="w-full p-4 bg-slate-50 rounded-2xl border" required>
+            <input type="text" name="peralatan" placeholder="EQUIPMENT NAME" class="w-full p-4 bg-slate-50 rounded-2xl border font-bold" required>
+            <input type="text" name="pn" placeholder="PART NUMBER" class="w-full p-4 bg-slate-50 rounded-2xl border font-bold" required>
+            <input type="text" name="sn" placeholder="SERIAL NUMBER" class="w-full p-4 bg-slate-50 rounded-2xl border font-bold" required>
+            <textarea name="defect" placeholder="DEFECT DESCRIPTION" class="w-full p-4 bg-slate-50 rounded-2xl border"></textarea>
+            <select name="status_type" class="w-full p-4 bg-slate-50 rounded-2xl border font-bold">
+                <option value="REPAIR">REPAIR</option>
+                <option value="WARRANTY">WARRANTY</option>
+            </select>
+            <input type="text" name="pic" placeholder="PIC NAME" class="w-full p-4 bg-slate-50 rounded-2xl border font-bold" required>
+            
+            <button type="submit" class="w-full bg-blue-900 text-white py-4 rounded-2xl font-black uppercase">Save to System</button>
+            <a href="/menu" class="block text-center text-slate-400 font-bold text-xs uppercase mt-4 text-[10px]">Back to Menu</a>
+        </form>
+    </div>
+</body>
+</html>
