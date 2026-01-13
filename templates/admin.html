@@ -2,102 +2,60 @@
 <html lang="ms">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avionic Admin Dashboard</title>
+    <title>Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #f8fafc; }
-        .btn-hover { transition: all 0.2s; }
-        .btn-hover:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        
-        @media print {
-            body * { visibility: hidden; }
-            #qr-modal, #qr-modal * { visibility: visible; }
-            #qr-modal { position: absolute; left: 0; top: 0; width: 100%; background: white; }
-            .no-print { display: none !important; }
-        }
-    </style>
 </head>
-<body class="text-slate-800 p-4 md:p-10">
-
-    <div class="max-w-7xl mx-auto">
-        <div class="flex flex-col md:flex-row justify-between items-center mb-8 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
+<body class="bg-slate-100 p-6 font-sans">
+    <div class="max-w-6xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 bg-white p-6 rounded-2xl shadow-sm gap-4 border border-slate-200">
             <div>
-                <h1 class="text-2xl font-black text-blue-900 uppercase italic tracking-tighter">Master Repair Log</h1>
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Pangkalan Data Penyelenggaraan Avionik</p>
+                <h1 class="text-2xl font-black text-blue-900 uppercase italic">Master Repair Log</h1>
+                <p class="text-[10px] font-bold text-slate-400">ADMIN CONTROL PANEL</p>
             </div>
-            <div class="flex gap-3 text-[10px] font-black uppercase">
-                <a href="/" class="px-5 py-2 bg-slate-100 text-slate-600 rounded-xl btn-hover border border-slate-200">Borang Baru</a>
-                <a href="/logout" class="px-5 py-2 bg-red-50 text-red-600 rounded-xl btn-hover border border-red-100">Logout</a>
+            <div class="flex gap-2">
+                <a href="/export_excel" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase hover:bg-blue-700">Download Excel</a>
+                <a href="/" class="bg-slate-200 text-slate-700 px-4 py-2 rounded-xl font-black text-[10px] uppercase">Borang Baru</a>
+                <a href="/logout" class="bg-red-50 text-red-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase">Logout</a>
             </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl mb-8 border border-slate-200 shadow-sm">
+            <form action="/import_excel" method="POST" enctype="multipart/form-data" class="flex items-center gap-4">
+                <p class="text-[10px] font-black uppercase text-slate-400">Bulk Upload:</p>
+                <input type="file" name="file" accept=".xlsx, .xls" class="text-[10px]">
+                <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-green-700">Upload Excel</button>
+            </form>
         </div>
 
         <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200">
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead class="bg-slate-50 border-b border-slate-100">
-                        <tr class="text-[11px] font-black text-slate-400 uppercase tracking-[0.1em]">
-                            <th class="p-5 italic text-center">Tarikh (In/Out)</th>
-                            <th class="p-5 italic text-center">Peralatan</th>
-                            <th class="p-5 italic text-center">Serial Number</th>
-                            <th class="p-5 italic text-center">Status</th>
-                            <th class="p-5 italic text-center bg-blue-50 text-blue-700">Tindakan Admin</th>
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 border-b">
+                        <tr class="text-[10px] font-black text-slate-400 uppercase">
+                            <th class="p-5 text-center">Tarikh</th>
+                            <th class="p-5">Peralatan</th>
+                            <th class="p-5">S/N</th>
+                            <th class="p-5 text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 italic">
                         {% for l in logs %}
-                        <tr class="hover:bg-slate-50/50 transition-colors">
+                        <tr class="hover:bg-slate-50/50">
                             <td class="p-5 text-center">
-                                <div class="flex flex-col items-center gap-1">
-                                    <span class="text-[10px] font-black px-2 py-0.5 bg-green-100 text-green-700 rounded border border-green-200">IN: {{ l.date_in }}</span>
-                                    {% if l.date_out %}
-                                    <span class="text-[10px] font-black px-2 py-0.5 bg-blue-100 text-blue-700 rounded border border-blue-200">OUT: {{ l.date_out }}</span>
-                                    {% else %}
-                                    <span class="text-[10px] font-black px-2 py-0.5 bg-slate-100 text-slate-400 rounded border border-slate-200">OUT: PENDING</span>
-                                    {% endif %}
-                                    <span class="text-[8px] text-slate-300 font-bold uppercase mt-1">{{ l.created_at.strftime('%H:%M:%S') if l.created_at else '' }}</span>
-                                </div>
+                                <p class="text-[10px] font-black text-green-600">IN: {{ l.date_in }}</p>
+                                <p class="text-[10px] font-black text-blue-600">OUT: {{ l.date_out or '-' }}</p>
                             </td>
-
-                            <td class="p-5 font-bold text-blue-900 uppercase tracking-tight text-center">{{ l.peralatan }}</td>
-                            <td class="p-5 font-mono font-bold text-slate-700 bg-slate-50/30 text-center">{{ l.sn }}</td>
-                            
-                            <td class="p-5 text-center">
-                                <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase
-                                    {% if 'Serviceable' in l.status %} bg-green-100 text-green-700 border border-green-200 
-                                    {% else %} bg-red-100 text-red-700 border border-red-200 {% endif %}">
-                                    {{ l.status }}
-                                </span>
-                            </td>
-
-                            <td class="p-5 flex justify-center gap-2 bg-blue-50/10">
-                                <button onclick="paparQR('{{ l.id }}', '{{ l.sn }}')" 
-                                        class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-xl text-[9px] font-black uppercase btn-hover shadow-sm">
-                                    QR
-                                </button>
-                                
-                                <a href="/view/{{ l.id }}" target="_blank" 
-                                   class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl text-[9px] font-black uppercase btn-hover shadow-sm">
-                                    PDF
-                                </a>
-
-                                <a href="/edit/{{ l.id }}" 
-                                   class="bg-slate-800 hover:bg-black text-white px-3 py-2 rounded-xl text-[9px] font-black uppercase btn-hover shadow-sm">
-                                    Edit
-                                </a>
-
-                                <form action="/delete/{{ l.id }}" method="POST" onsubmit="return confirm('AMARAN: Padam rekod {{ l.sn }}?');" class="inline">
-                                    <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-xl text-[9px] font-black uppercase btn-hover shadow-sm">
-                                        Buang
-                                    </button>
+                            <td class="p-5 font-bold text-blue-900 uppercase">{{ l.peralatan }}</td>
+                            <td class="p-5 font-mono font-bold text-slate-600">{{ l.sn }}</td>
+                            <td class="p-5 flex justify-center gap-2">
+                                <button onclick="paparQR('{{ l.id }}', '{{ l.sn }}')" class="bg-amber-500 text-white px-3 py-2 rounded-lg text-[9px] font-black uppercase">QR</button>
+                                <a href="/view/{{ l.id }}" target="_blank" class="bg-blue-600 text-white px-3 py-2 rounded-lg text-[9px] font-black uppercase">PDF</a>
+                                <a href="/edit/{{ l.id }}" class="bg-slate-800 text-white px-3 py-2 rounded-lg text-[9px] font-black uppercase">Edit</a>
+                                <form action="/delete/{{ l.id }}" method="POST" onsubmit="return confirm('Padam?')">
+                                    <button type="submit" class="bg-red-500 text-white px-3 py-2 rounded-lg text-[9px] font-black uppercase">Padam</button>
                                 </form>
                             </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="5" class="p-10 text-center text-slate-400 italic">Tiada rekod dijumpai.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -106,15 +64,12 @@
         </div>
     </div>
 
-    <div id="qr-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-6">
-        <div class="bg-white p-10 rounded-[2.5rem] shadow-2xl text-center max-w-sm w-full border border-slate-100">
-            <h2 class="text-blue-900 font-black text-lg uppercase italic mb-1">QR Digital Tag</h2>
-            <p id="modal-sn" class="text-xs font-bold text-slate-400 mb-8 font-mono tracking-widest uppercase"></p>
-            <div id="modal-qrcode" class="p-4 bg-white border-2 border-slate-100 rounded-2xl inline-block shadow-inner mb-8"></div>
-            <div class="flex flex-col gap-3 font-black text-[10px] uppercase no-print">
-                <button onclick="window.print()" class="w-full bg-blue-900 text-white py-4 rounded-2xl tracking-widest hover:bg-blue-800 shadow-lg btn-hover">Cetak QR Tag</button>
-                <button onclick="document.getElementById('qr-modal').classList.add('hidden')" class="w-full text-slate-400 hover:text-slate-600 py-2">Tutup</button>
-            </div>
+    <div id="qr-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-6">
+        <div class="bg-white p-8 rounded-[2rem] shadow-2xl text-center max-w-sm w-full">
+            <h2 class="text-blue-900 font-black text-lg uppercase italic mb-1">QR Tag</h2>
+            <p id="modal-sn" class="text-[10px] font-bold text-slate-400 mb-6 font-mono"></p>
+            <div id="modal-qrcode" class="p-4 bg-white border inline-block mb-6"></div>
+            <button onclick="document.getElementById('qr-modal').classList.add('hidden')" class="w-full text-slate-400 font-bold text-[10px] uppercase">Tutup</button>
         </div>
     </div>
 
@@ -122,18 +77,10 @@
         function paparQR(id, sn) {
             const modal = document.getElementById('qr-modal');
             const qrContainer = document.getElementById('modal-qrcode');
-            const snText = document.getElementById('modal-sn');
             qrContainer.innerHTML = "";
             const linkURL = window.location.origin + "/view/" + id;
-            new QRCode(qrContainer, {
-                text: linkURL,
-                width: 200,
-                height: 200,
-                colorDark: "#1e3a8a",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
-            });
-            snText.innerText = "S/N: " + sn;
+            new QRCode(qrContainer, { text: linkURL, width: 180, height: 180 });
+            document.getElementById('modal-sn').innerText = "S/N: " + sn;
             modal.classList.remove('hidden');
         }
     </script>
