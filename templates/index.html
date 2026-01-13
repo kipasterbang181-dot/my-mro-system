@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G7 Aerospace | Service Log</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-900 min-h-screen p-4 flex flex-col items-center justify-center">
+
+    <div class="max-w-2xl w-full bg-white p-10 rounded-[3rem] shadow-2xl border-t-8 border-blue-900 relative">
+        
+        <div class="text-center mb-10">
+            <h1 class="text-4xl font-black text-blue-900 uppercase italic leading-none tracking-tighter">
+                G7 <span class="text-slate-400">Aerospace</span>
+            </h1>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mt-3">Authorized Maintenance Log</p>
+        </div>
+
+        <form id="repairForm" class="space-y-6">
+            
+            <div>
+                <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Name Equipment</label>
+                <input type="text" id="peralatan" placeholder="ENTER EQUIPMENT TYPE" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 outline-none transition-all" required>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Part Number (P/N)</label>
+                <input type="text" id="pn" placeholder="ENTER P/N" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 uppercase focus:border-blue-900 outline-none transition-all" required>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Serial Number (S/N)</label>
+                <input type="text" id="sn" placeholder="ENTER S/N" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-mono font-black text-blue-600 uppercase focus:border-blue-900 outline-none transition-all" required>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Authorized ID (License No.)</label>
+                <input type="text" id="pic" placeholder="E.G. 12345" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-blue-900 focus:border-blue-900 outline-none transition-all" required>
+            </div>
+
+            <input type="hidden" id="date_in">
+
+            <div class="flex flex-col gap-4 pt-2">
+                <button type="submit" class="w-full bg-blue-900 text-white font-black py-6 rounded-[2rem] hover:bg-black transition-all shadow-xl uppercase tracking-widest text-sm italic">
+                    Confirm & Save Log
+                </button>
+                
+                <a href="/login" class="w-full bg-slate-100 text-slate-500 text-center font-black py-4 rounded-[2rem] hover:bg-slate-200 transition-all uppercase tracking-[0.3em] text-[10px]">
+                    Admin Access Portal
+                </a>
+            </div>
+        </form>
+
+        <div class="mt-8 text-center">
+            <p class="text-[8px] font-bold text-slate-300 uppercase tracking-widest">© 2026 G7 Aerospace Digital System</p>
+        </div>
+    </div>
+
+    <script>
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('date_in').value = today;
+        
+        document.getElementById('repairForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('date_in', document.getElementById('date_in').value);
+            formData.append('peralatan', document.getElementById('peralatan').value);
+            formData.append('pn', document.getElementById('pn').value);
+            formData.append('sn', document.getElementById('sn').value);
+            formData.append('pic', document.getElementById('pic').value);
+            formData.append('status_type', 'REPAIR');
+            formData.append('defect', 'N/A');
+
+            const response = await fetch('/incoming', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) { 
+                alert('Log entry saved successfully!'); 
+                location.reload(); 
+            } else {
+                alert('Error saving record.');
+            }
+        });
+    </script>
+</body>
+</html>
