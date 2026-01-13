@@ -7,6 +7,7 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import io
+import qrcode  # Tambahan untuk QR
 
 app = Flask(__name__)
 app.secret_key = "g7_aerospace_key_2026"
@@ -35,8 +36,7 @@ def keep_alive():
     time.sleep(20)
     while True:
         try:
-            # Ganti dengan URL Render anda selepas deploy nanti
-            # Contoh: requests.get("https://g7-system.onrender.com")
+            # Ganti dengan URL Render anda selepas deploy
             requests.get("http://127.0.0.1:5000")
             print("Ping Berkala: Server G7 Terjaga")
         except: pass
@@ -50,7 +50,6 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # Mengikut nama input 'u' dan 'p' dalam login.html
         if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
             session['admin'] = True
             return redirect(url_for('admin'))
@@ -64,78 +63,81 @@ def admin():
 
 @app.route('/incoming', methods=['POST'])
 def incoming():
-    if not session.get('admin'): return redirect(url_for('login'))
+    # Sesiapa boleh submit dari index.html, tapi kita kekalkan logik asal tuan
     new_log = RepairLog(
-        date_in=request.form.get('date_in'),
+        date_in=datetime.now().strftime("%Y-%m-%d"),
         peralatan=request.form.get('peralatan'),
         pn=request.form.get('pn'),
         sn=request.form.get('sn'),
-        defect=request.form.get('defect'),
-        status_type=request.form.get('status_type'),
-        pic=request.form.get('pic')
+        pic=request.form.get('pic'),
+        status_type="Active"
     )
     db.session.add(new_log)
     db.session.commit()
-    return redirect(url_for('admin'))
+    return redirect(url_for('index'))
 
-# --- TAMBAHAN: ROUTE UNTUK VIEW PDF / CERTIFICATE ---
-@app.route('/view/<int:log_id>')
-def view_log(log_id):
-    # Sesiapa sahaja (termasuk scan QR) boleh tengok tanpa login admin
-    log = RepairLog.query.get_or_404(log_id)
-    return render_template('view_tag.html', l=log)
+# --- ROUTE UNTUK VIEW PDF / QR TAG ---
+@app.route('/view_tag/<int:id>')
+def view_tag(id):
+    l = RepairLog.query.get_or_404(id)
+    
+    # Generate QR Code
+    if not os.path.exists('static'):
+        os.makedirs('static')
+    
+    qr_data = f"{request.url_root}view_tag/{id}"
+    qr = qrcode.QRCode(version=1, box_size=10, border=2)
+    qr.add_data(qr_data)
+    qr.make(fit=True)
+    
+    qr_filename = f"qr_{id}.png"
+    qr_path = os.path.join('static', qr_filename)
+    img = qr.make_image(fill_color="black", back_color="white")
+    img.save(qr_path)
+    
+    return render_template('view_tag.html', l=l, qr_code=qr_filename)
 
-# --- TAMBAHAN: EXPORT TO EXCEL (BACKEND OPTION) ---
 @app.route('/export')
 def export_excel():
     if not session.get('admin'): return redirect(url_for('login'))
     logs = RepairLog.query.all()
-    
     data = []
     for l in logs:
         data.append({
-            "Date In": l.date_in,
             "Equipment": l.peralatan,
             "P/N": l.pn,
             "S/N": l.sn,
-            "Status": l.status_type,
-            "PIC": l.pic,
-            "Defect": l.defect
+            "PIC": l.pic
         })
-    
     df = pd.DataFrame(data)
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='G7Logs')
+        df.to_excel(writer, index=False)
     output.seek(0)
-    
-    return send_file(output, attachment_filename="G7_Aerospace_Report.xlsx", as_attachment=True)
+    return send_file(output, download_name="G7_Report.xlsx", as_attachment=True)
 
-@app.route('/edit/<int:log_id>')
-def edit_page(log_id):
+@app.route('/edit/<int:id>')
+def edit(id):
     if not session.get('admin'): return redirect(url_for('login'))
-    log = RepairLog.query.get_or_404(log_id)
-    return render_template('edit.html', l=log)
+    l = RepairLog.query.get_or_404(id)
+    return render_template('edit.html', l=l)
 
-@app.route('/update/<int:log_id>', methods=['POST'])
-def update_log(log_id):
+@app.route('/update/<int:id>', methods=['POST'])
+def update(id):
     if not session.get('admin'): return redirect(url_for('login'))
-    log = RepairLog.query.get_or_404(log_id)
-    log.date_in = request.form.get('date_in')
-    log.peralatan = request.form.get('peralatan')
-    log.pn = request.form.get('pn')
-    log.sn = request.form.get('sn')
-    log.defect = request.form.get('defect')
-    log.status_type = request.form.get('status_type')
-    log.pic = request.form.get('pic')
+    l = RepairLog.query.get_or_404(id)
+    l.peralatan = request.form.get('peralatan')
+    l.pn = request.form.get('pn')
+    l.sn = request.form.get('sn')
+    l.pic = request.form.get('pic')
     db.session.commit()
     return redirect(url_for('admin'))
 
-@app.route('/delete/<int:log_id>', methods=['POST'])
-def delete_log(log_id):
+@app.route('/delete/<int:id>')
+def delete(id):
     if not session.get('admin'): return redirect(url_for('login'))
-    log = RepairLog.query.get_or_404(log_id)
-    db.session.delete(log)
+    l = RepairLog.query.get_or_404(id)
+    db.session.delete(l)
     db.session.commit()
     return redirect(url_for('admin'))
 
@@ -144,7 +146,6 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-# Mulakan Thread Anti-Tidur
 threading.Thread(target=keep_alive, daemon=True).start()
 
 if __name__ == '__main__':
