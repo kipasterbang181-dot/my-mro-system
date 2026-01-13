@@ -3,4 +3,6 @@ Flask-SQLAlchemy
 psycopg2-binary
 pandas
 openpyxl
+xlsxwriter
+requests
 gunicorn

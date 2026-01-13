@@ -3,66 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avionic MRO | Service Log</title>
+    <title>G7 Aerospace | Service Log</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
     </style>
 </head>
 <body class="bg-slate-900 min-h-screen p-4 md:p-10 flex flex-col items-center">
 
-    <div class="max-w-2xl w-full glass-card p-10 rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-t-8 border-blue-900 relative overflow-hidden">
-        
-        <div class="absolute -top-24 -right-24 w-48 h-48 bg-blue-900/5 rounded-full blur-3xl"></div>
+    <div class="max-w-2xl w-full bg-white p-10 rounded-[3rem] shadow-2xl border-t-8 border-blue-900 relative overflow-hidden">
         
         <div class="flex justify-between items-start mb-10 relative z-10">
             <div>
                 <h1 class="text-4xl font-black text-blue-900 uppercase italic leading-none tracking-tighter">
-                    Service<br>Log Entry
+                    G7 <span class="text-slate-400">Aerospace</span>
                 </h1>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mt-3">Official Avionic Maintenance</p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mt-3">Maintenance Service Log</p>
             </div>
-            <div class="flex flex-col gap-2 items-end">
-                <div class="bg-blue-900 text-white px-4 py-1 rounded-lg font-black text-xs italic">AV-MRO</div>
-                <a href="/export_excel" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg hover:shadow-blue-500/20 active:scale-95">
-                    Export Excel
-                </a>
-            </div>
+            <a href="/export_excel" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95">
+                Export Excel
+            </a>
         </div>
 
         <form id="repairForm" class="space-y-6 relative z-10">
-            
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block">Arrival Date</label>
-                    <input type="date" id="date_in" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 focus:border-blue-900 focus:bg-white outline-none transition-all shadow-sm" required>
+                    <input type="date" id="date_in" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 focus:border-blue-900 outline-none transition-all" required>
                 </div>
                 <div>
-                    <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block">Release Date (Opt)</label>
-                    <input type="date" id="date_out" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 focus:border-blue-900 focus:bg-white outline-none transition-all shadow-sm">
+                    <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block">Release Date</label>
+                    <input type="date" id="date_out" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 focus:border-blue-900 outline-none transition-all">
                 </div>
             </div>
 
             <div>
                 <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block">Equipment Name</label>
-                <input type="text" id="peralatan" placeholder="ENTER EQUIPMENT TYPE" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase placeholder:text-slate-300 focus:border-blue-900 outline-none transition-all shadow-sm" required>
+                <input type="text" id="peralatan" placeholder="ENTER EQUIPMENT TYPE" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 outline-none transition-all" required>
             </div>
 
             <div>
                 <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block">Part Serial Number</label>
-                <input type="text" id="sn" placeholder="S/N: 00000000" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-mono font-black text-blue-600 uppercase placeholder:text-slate-300 focus:border-blue-900 outline-none transition-all shadow-sm" required>
+                <input type="text" id="sn" placeholder="S/N: 00000000" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-mono font-black text-blue-600 uppercase focus:border-blue-900 outline-none transition-all" required>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block">Condition Status</label>
-                    <select id="status" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm appearance-none cursor-pointer">
+                    <select id="status" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-700 uppercase focus:border-blue-900 outline-none transition-all appearance-none cursor-pointer">
                         <option value="Serviceable">Serviceable</option>
                         <option value="Unserviceable">Unserviceable</option>
                         <option value="BER">Beyond Economic Repair</option>
@@ -70,38 +59,30 @@
                 </div>
                 <div>
                     <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block">Authorized Personnel</label>
-                    <input type="text" id="jurutera" placeholder="ENGINEER NAME" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
+                    <input type="text" id="jurutera" placeholder="ENGINEER NAME" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 outline-none transition-all" required>
                 </div>
             </div>
 
             <div>
-                <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block">Work Summary / Action Taken</label>
-                <textarea id="tindakan" rows="4" placeholder="DESCRIBE WORK PERFORMED..." class="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-3xl font-medium text-slate-700 focus:border-blue-900 outline-none transition-all shadow-sm resize-none" required></textarea>
+                <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block">Work Summary</label>
+                <textarea id="tindakan" rows="4" placeholder="DESCRIBE WORK PERFORMED..." class="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-3xl font-medium text-slate-700 focus:border-blue-900 outline-none transition-all resize-none" required></textarea>
             </div>
 
-            <button type="submit" class="w-full bg-blue-900 text-white font-black py-6 rounded-[2rem] hover:bg-black transition-all transform hover:-translate-y-1 shadow-[0_10px_30px_rgba(30,58,138,0.4)] active:scale-95 uppercase tracking-[0.2em] text-sm italic">
+            <button type="submit" class="w-full bg-blue-900 text-white font-black py-6 rounded-[2rem] hover:bg-black transition-all transform hover:-translate-y-1 shadow-xl uppercase tracking-widest text-sm italic">
                 Commit Log Entry
             </button>
         </form>
 
-        <div class="mt-12 pt-6 border-t border-slate-100 flex justify-between items-center relative z-10">
+        <div class="mt-12 pt-6 border-t border-slate-100 flex justify-between items-center">
             <a href="/login" class="text-[9px] font-black text-slate-400 hover:text-blue-900 uppercase tracking-widest transition-colors">Admin Portal</a>
-            <p class="text-[8px] font-bold text-slate-300 uppercase tracking-widest">System v2.0 © 2026 AV-MRO</p>
+            <p class="text-[8px] font-bold text-slate-300 uppercase tracking-widest">System v2.0 © 2026 G7 Aerospace</p>
         </div>
     </div>
 
-    <p class="mt-8 text-slate-500 text-[10px] font-bold uppercase tracking-[0.5em] italic opacity-50">Precision • Integrity • Safety</p>
-
     <script>
-        // Set tarikh harini secara automatik
         document.getElementById('date_in').valueAsDate = new Date();
-
         document.getElementById('repairForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = e.target.querySelector('button');
-            btn.innerText = 'PROCESSING...';
-            btn.disabled = true;
-
             const data = {
                 date_in: document.getElementById('date_in').value,
                 date_out: document.getElementById('date_out').value,
@@ -111,27 +92,12 @@
                 tindakan: document.getElementById('tindakan').value,
                 jurutera: document.getElementById('jurutera').value
             };
-
-            try {
-                const response = await fetch('/save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                
-                if (response.ok) {
-                    alert('SUCCESS: Record committed to database.');
-                    location.reload();
-                } else {
-                    alert('ERROR: System failure during save.');
-                    btn.innerText = 'COMMIT LOG ENTRY';
-                    btn.disabled = false;
-                }
-            } catch (err) {
-                alert('NETWORK ERROR: Connection lost.');
-                btn.innerText = 'COMMIT LOG ENTRY';
-                btn.disabled = false;
-            }
+            const response = await fetch('/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (response.ok) { alert('Record Saved!'); location.reload(); }
         });
     </script>
 </body>
