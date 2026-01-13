@@ -6,3 +6,4 @@ openpyxl
 xlsxwriter
 requests
 gunicorn
+qrcode[pil]
