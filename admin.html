@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <title>G7 Aerospace | Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="bg-slate-50 font-sans p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        
+        <div class="flex justify-between items-center mb-6 bg-white p-6 rounded-[2rem] shadow-sm border-b-4 border-blue-900">
+            <img src="{{ url_for('static', filename='logo.png') }}" class="h-10" onerror="this.src='https://via.placeholder.com/150x50?text=G7+Aerospace'">
+            <div class="flex gap-2">
+                <button onclick="exportExcel()" class="bg-emerald-600 text-white px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all">Excel Report</button>
+                <button onclick="bukaModal()" class="bg-blue-900 text-white px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-black transition-all">+ Incoming</button>
+                <a href="/logout" class="bg-red-50 text-red-500 px-5 py-3 rounded-2xl font-black text-[10px] uppercase">Logout</a>
+            </div>
+        </div>
+
+        <div class="flex flex-col md:flex-row gap-4 mb-6 items-center justify-between">
+            <div class="relative w-full md:w-96">
+                <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Cari Serial Number atau Peralatan..." class="w-full p-4 pl-12 bg-white rounded-2xl border-none shadow-sm font-bold text-sm focus:ring-2 focus:ring-blue-900 outline-none">
+                <span class="absolute left-4 top-4 opacity-20">🔍</span>
+            </div>
+            <div class="flex gap-4">
+                <div class="bg-white px-6 py-3 rounded-2xl shadow-sm border-l-4 border-blue-900">
+                    <p class="text-[9px] font-black text-slate-400 uppercase">Total Records</p>
+                    <p class="text-xl font-black text-blue-900">{{ logs|length }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-[2.5rem] shadow-xl overflow-hidden border border-slate-100">
+            <table class="w-full text-left" id="mainTable">
+                <thead class="bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest italic">
+                    <tr>
+                        <th class="p-6">Equipment / P/N</th>
+                        <th class="p-6">Serial Number</th>
+                        <th class="p-6">PIC</th>
+                        <th class="p-6 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y italic">
+                    {% for l in logs %}
+                    <tr class="hover:bg-blue-50/50 transition-all border-b border-slate-50">
+                        <td class="p-6">
+                            <p class="font-black text-blue-900 uppercase text-sm leading-tight">{{ l.peralatan }}</p>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{{ l.pn }}</p>
+                        </td>
+                        <td class="p-6 font-mono font-black text-slate-600 tracking-tighter">{{ l.sn }}</td>
+                        <td class="p-6 text-[10px] font-black uppercase text-slate-500">{{ l.pic }}</td>
+                        
+                        <td class="p-6">
+                            <div class="flex justify-center items-center gap-2">
+                                <a href="/view/{{ l.id }}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 flex items-center justify-center rounded-xl shadow-sm transition-all" title="View PDF">
+                                    <span class="text-[9px] font-black uppercase tracking-tighter text-center">PDF</span>
+                                </a>
+
+                                <button onclick="paparQR('{{l.id}}','{{l.sn}}','{{l.peralatan}}','{{l.pn}}')" class="bg-amber-500 hover:bg-amber-600 text-white w-10 h-10 flex items-center justify-center rounded-xl shadow-sm transition-all" title="Generate QR">
+                                    <span class="text-[9px] font-black uppercase tracking-tighter text-center">QR</span>
+                                </button>
+
+                                <a href="/edit/{{l.id}}" class="bg-slate-800 hover:bg-black text-white w-10 h-10 flex items-center justify-center rounded-xl shadow-sm transition-all" title="Edit Record">
+                                    <span class="text-[9px] font-black uppercase tracking-tighter text-center">Edit</span>
+                                </a>
+
+                                <form action="/delete/{{l.id}}" method="POST" onsubmit="return confirm('Confirm Delete S/N: {{ l.sn }}?')" class="inline">
+                                    <button type="submit" class="bg-red-500 hover:bg-red-700 text-white w-10 h-10 flex items-center justify-center rounded-xl shadow-sm transition-all" title="Delete">
+                                        <span class="text-[9px] font-black uppercase tracking-tighter text-center">Del</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="p-20 text-center text-slate-300 font-black uppercase tracking-widest">No Maintenance Logs Found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="modal-incoming" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-white w-full max-w-lg rounded-[3rem] p-10 border-t-[12px] border-blue-900 shadow-2xl">
+            <h2 class="text-2xl font-black text-blue-900 uppercase italic mb-6">New <span class="text-slate-400">Incoming</span></h2>
+            <form action="/incoming" method="POST" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="date" name="date_in" class="p-4 bg-slate-50 rounded-2xl border-2 border-slate-100 font-bold focus:border-blue-900 outline-none" required>
+                    <select name="status_type" class="p-4 bg-slate-50 rounded-2xl border-2 border-slate-100 font-black uppercase focus:border-blue-900 outline-none">
+                        <option value="REPAIR">REPAIR</option>
+                        <option value="WARRANTY">WARRANTY</option>
+                    </select>
+                </div>
+                <input type="text" name="peralatan" placeholder="EQUIPMENT DESCRIPTION" class="w-full p-4 bg-slate-50 rounded-2xl border-2 border-slate-100 font-black uppercase focus:border-blue-900 outline-none" required>
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="text" name="pn" placeholder="PART NO (P/N)" class="p-4 bg-slate-50 rounded-2xl border-2 border-slate-100 font-black focus:border-blue-900 outline-none" required>
+                    <input type="text" name="sn" placeholder="SERIAL NO (S/N)" class="p-4 bg-slate-50 rounded-2xl border-2 border-slate-100 font-black focus:border-blue-900 outline-none" required>
+                </div>
+                <input type="text" name="pic" placeholder="LEAD PIC NAME" class="w-full p-4 bg-slate-50 rounded-2xl border-2 border-slate-100 font-black uppercase focus:border-blue-900 outline-none" required>
+                <textarea name="defect" placeholder="DEFECT DESCRIPTION" class="w-full p-4 bg-slate-50 rounded-2xl border-2 border-slate-100 h-24 outline-none resize-none"></textarea>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="tutupModal()" class="w-1/3 text-slate-400 font-bold uppercase text-[10px]">Back</button>
+                    <button type="submit" class="w-2/3 bg-blue-900 text-white py-4 rounded-2xl font-black uppercase italic shadow-lg hover:bg-black transition-all">Save Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="qr-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-6 backdrop-blur-sm">
+        <div id="qr-area" class="bg-white p-8 rounded-[3rem] text-center max-w-sm w-full border-t-[12px] border-blue-900 shadow-2xl relative">
+            <h2 class="text-blue-900 font-black text-xl uppercase italic mb-6 tracking-tighter">G7 Aerospace <span class="text-slate-400">ID Tag</span></h2>
+            <div class="relative inline-block p-4 bg-white rounded-[2rem] border-2 border-slate-50 shadow-inner">
+                <div id="modal-qrcode"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="bg-white p-1 rounded-lg shadow-sm">
+                        <div class="bg-blue-900 text-white text-[10px] font-black px-2 py-0.5 rounded border border-blue-900 tracking-tighter">G7</div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 text-left space-y-1 px-2">
+                <p id="qr-name" class="text-[11px] font-black text-blue-900 uppercase truncate"></p>
+                <p id="qr-pn" class="text-[9px] font-bold text-slate-400 uppercase"></p>
+                <p id="qr-sn" class="text-md font-mono font-black text-slate-800 uppercase tracking-tighter"></p>
+            </div>
+            <button onclick="downloadQR()" class="mt-6 w-full bg-blue-900 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl">Download Image</button>
+            <button onclick="document.getElementById('qr-modal').classList.add('hidden')" class="mt-2 w-full text-slate-300 font-black text-[9px] uppercase">Close</button>
+        </div>
+    </div>
+
+    <script>
+        function bukaModal() { document.getElementById('modal-incoming').classList.remove('hidden'); }
+        function tutupModal() { document.getElementById('modal-incoming').classList.add('hidden'); }
+        
+        function filterTable() {
+            let input = document.getElementById("searchInput");
+            let filter = input.value.toUpperCase();
+            let table = document.getElementById("mainTable");
+            let tr = table.getElementsByTagName("tr");
+
+            for (let i = 1; i < tr.length; i++) {
+                let tdName = tr[i].getElementsByTagName("td")[0];
+                let tdSN = tr[i].getElementsByTagName("td")[1];
+                if (tdName || tdSN) {
+                    let textValue = (tdName.textContent || tdName.innerText) + (tdSN.textContent || tdSN.innerText);
+                    if (textValue.toUpperCase().indexOf(filter) > -1) {
+                        tr[i].style.display = "";
+                    } else {
+                        tr[i].style.display = "none";
+                    }
+                }
+            }
+        }
+
+        function exportExcel() {
+            let table = document.getElementById("mainTable");
+            let wb = XLSX.utils.table_to_book(table, {sheet: "G7_Maintenance_Logs"});
+            XLSX.writeFile(wb, "G7_Aerospace_Report.xlsx");
+        }
+
+        function paparQR(id, sn, name, pn) {
+            const qrContainer = document.getElementById('modal-qrcode');
+            qrContainer.innerHTML = "";
+            new QRCode(qrContainer, { 
+                text: window.location.origin + "/view/" + id, 
+                width: 180, 
+                height: 180, 
+                colorDark : "#0f172a", 
+                correctLevel : QRCode.CorrectLevel.H 
+            });
+            document.getElementById('qr-name').innerText = name;
+            document.getElementById('qr-pn').innerText = "P/N: " + pn;
+            document.getElementById('qr-sn').innerText = "S/N: " + sn;
+            document.getElementById('qr-modal').classList.remove('hidden');
+        }
+
+        function downloadQR() {
+            html2canvas(document.getElementById('qr-area'), { scale: 3, backgroundColor: "#ffffff" }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `G7_TAG_${document.getElementById('qr-sn').innerText}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        }
+    </script>
+</body>
+</html>
