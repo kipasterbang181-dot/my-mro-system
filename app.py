@@ -65,7 +65,7 @@ def incoming():
     db.session.commit()
     return redirect(url_for('index'))
 
-# --- FIX: VIEW TAG & QR ---
+# --- FIX QR CODE ---
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
     l = RepairLog.query.get_or_404(id)
@@ -79,40 +79,32 @@ def view_tag(id):
     img.save(buffered, format="PNG")
     qr_base64 = base64.b64encode(buffered.getvalue()).decode()
     
-    # Pastikan dalam view_tag.html tuan guna: <img src="data:image/png;base64,{{ qr_code }}">
-    return render_template('view_tag.html', l=l, qr_code=qr_base64, mode='view')
+    # Mode view untuk paparan skrin, mode print untuk PDF
+    mode = request.args.get('mode', 'view')
+    return render_template('view_tag.html', l=l, qr_code=qr_base64, mode=mode)
 
-# --- FIX: DOWNLOAD PDF (Print Mode) ---
-@app.route('/download_pdf/<int:id>')
-def download_pdf(id):
-    l = RepairLog.query.get_or_404(id)
-    return render_template('view_tag.html', l=l, mode='print')
-
-# --- FIX: EDIT & UPDATE ---
-@app.route('/edit/<int:id>')
-def edit(id):
-    if not session.get('admin'): return redirect(url_for('login'))
-    l = RepairLog.query.get_or_404(id)
-    return render_template('edit.html', l=l)
-
-@app.route('/update/<int:id>', methods=['POST'])
-def update(id):
-    l = RepairLog.query.get_or_404(id)
-    l.peralatan = request.form.get('peralatan').upper()
-    l.pn = request.form.get('pn').upper()
-    l.sn = request.form.get('sn').upper()
-    l.pic = request.form.get('pic').upper()
-    db.session.commit()
-    return redirect(url_for('admin'))
-
-# --- FIX: DELETE ---
-@app.route('/delete/<int:id>')
+# --- FIX DELETE (Benarkan GET supaya boleh klik terus) ---
+@app.route('/delete/<int:id>', methods=['GET', 'POST'])
 def delete(id):
     if not session.get('admin'): return redirect(url_for('login'))
     l = RepairLog.query.get_or_404(id)
     db.session.delete(l)
     db.session.commit()
     return redirect(url_for('admin'))
+
+# --- FIX EDIT & UPDATE ---
+@app.route('/edit/<int:id>', methods=['GET', 'POST'])
+def edit(id):
+    if not session.get('admin'): return redirect(url_for('login'))
+    l = RepairLog.query.get_or_404(id)
+    if request.method == 'POST':
+        l.peralatan = request.form.get('peralatan').upper()
+        l.pn = request.form.get('pn').upper()
+        l.sn = request.form.get('sn').upper()
+        l.pic = request.form.get('pic').upper()
+        db.session.commit()
+        return redirect(url_for('admin'))
+    return render_template('edit.html', l=l)
 
 @app.route('/logout')
 def logout():
