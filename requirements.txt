@@ -2,8 +2,7 @@ Flask
 Flask-SQLAlchemy
 psycopg2-binary
 pandas
-openpyxl
 xlsxwriter
+qrcode[pil]
 requests
 gunicorn
-qrcode[pil]
