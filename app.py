@@ -2,7 +2,7 @@ import os
 import io
 import base64
 import qrcode
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
@@ -10,22 +10,12 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 
 # --- DATABASE CONFIG ---
-# Kod ini akan cuba ambil DATABASE_URL dari Render. 
-# Jika tiada, baru dia guna link backup yang tuan bagi tadi.
-DB_URL = os.environ.get("DATABASE_URL")
-if not DB_URL:
-    DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
-
-# Fix untuk isu 'postgres://' vs 'postgresql://' di Render
-if DB_URL.startswith("postgres://"):
-    DB_URL = DB_URL.replace("postgres://", "postgresql://", 1)
-
+DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {"pool_pre_ping": True}
 db = SQLAlchemy(app)
 
-# Model Data (Sama macam kod lama tuan)
 class RepairLog(db.Model):
     __tablename__ = 'repair_log'
     id = db.Column(db.Integer, primary_key=True)
@@ -39,7 +29,6 @@ class RepairLog(db.Model):
     pic = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.now)
 
-# Buat table automatik
 with app.app_context():
     db.create_all()
 
@@ -50,11 +39,9 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # Gunakan password admin tuan
         if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
             session['admin'] = True
             return redirect(url_for('admin'))
-        return "ID atau Password Salah!"
     return render_template('login.html')
 
 @app.route('/admin')
@@ -65,27 +52,23 @@ def admin():
 
 @app.route('/incoming', methods=['POST'])
 def incoming():
-    try:
-        new_log = RepairLog(
-            date_in=datetime.now().strftime("%Y-%m-%d"),
-            peralatan=request.form.get('peralatan', '').upper(),
-            pn=request.form.get('pn', '').upper(),
-            sn=request.form.get('sn', '').upper(),
-            pic=request.form.get('pic', '').upper(),
-            status_type="ACTIVE",
-            defect="INITIAL ENTRY"
-        )
-        db.session.add(new_log)
-        db.session.commit()
-        return redirect(url_for('index'))
-    except Exception as e:
-        return f"Ralat Simpan: {str(e)}"
+    new_log = RepairLog(
+        date_in=datetime.now().strftime("%Y-%m-%d"),
+        peralatan=request.form.get('peralatan', '').upper(),
+        pn=request.form.get('pn', '').upper(),
+        sn=request.form.get('sn', '').upper(),
+        pic=request.form.get('pic', '').upper(),
+        status_type="ACTIVE",
+        defect="INITIAL ENTRY"
+    )
+    db.session.add(new_log)
+    db.session.commit()
+    return redirect(url_for('index'))
 
+# --- FIX: VIEW TAG & QR ---
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
     l = RepairLog.query.get_or_404(id)
-    
-    # Jana QR Code
     qr_data = f"{request.url_root}view_tag/{id}"
     qr = qrcode.QRCode(version=1, box_size=10, border=2)
     qr.add_data(qr_data)
@@ -96,8 +79,33 @@ def view_tag(id):
     img.save(buffered, format="PNG")
     qr_base64 = base64.b64encode(buffered.getvalue()).decode()
     
-    return render_template('view_tag.html', l=l, qr_code=qr_base64)
+    # Pastikan dalam view_tag.html tuan guna: <img src="data:image/png;base64,{{ qr_code }}">
+    return render_template('view_tag.html', l=l, qr_code=qr_base64, mode='view')
 
+# --- FIX: DOWNLOAD PDF (Print Mode) ---
+@app.route('/download_pdf/<int:id>')
+def download_pdf(id):
+    l = RepairLog.query.get_or_404(id)
+    return render_template('view_tag.html', l=l, mode='print')
+
+# --- FIX: EDIT & UPDATE ---
+@app.route('/edit/<int:id>')
+def edit(id):
+    if not session.get('admin'): return redirect(url_for('login'))
+    l = RepairLog.query.get_or_404(id)
+    return render_template('edit.html', l=l)
+
+@app.route('/update/<int:id>', methods=['POST'])
+def update(id):
+    l = RepairLog.query.get_or_404(id)
+    l.peralatan = request.form.get('peralatan').upper()
+    l.pn = request.form.get('pn').upper()
+    l.sn = request.form.get('sn').upper()
+    l.pic = request.form.get('pic').upper()
+    db.session.commit()
+    return redirect(url_for('admin'))
+
+# --- FIX: DELETE ---
 @app.route('/delete/<int:id>')
 def delete(id):
     if not session.get('admin'): return redirect(url_for('login'))
@@ -112,4 +120,5 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
