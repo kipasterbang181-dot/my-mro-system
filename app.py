@@ -82,7 +82,7 @@ def download_qr(id):
     buf.seek(0)
     return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f"QR_{l.sn}.png")
 
-# --- DELETE & EDIT (DIPASTIKAN BERFUNGSI) ---
+# --- DELETE ---
 @app.route('/delete/<int:id>')
 def delete(id):
     if not session.get('admin'): return redirect(url_for('login'))
@@ -91,18 +91,23 @@ def delete(id):
     db.session.commit()
     return redirect(url_for('admin'))
 
+# --- EDIT & UPDATE (TELAH DIBAIKI) ---
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
     if not session.get('admin'): return redirect(url_for('login'))
     l = RepairLog.query.get_or_404(id)
+    
     if request.method == 'POST':
-        l.peralatan = request.form.get('peralatan').upper()
-        l.pn = request.form.get('pn').upper()
-        l.sn = request.form.get('sn').upper()
-        l.pic = request.form.get('pic').upper()
+        l.peralatan = request.form.get('peralatan', '').upper()
+        l.pn = request.form.get('pn', '').upper()
+        l.sn = request.form.get('sn', '').upper()
+        l.pic = request.form.get('pic', '').upper()
+        l.status_type = request.form.get('status_type', l.status_type).upper()
         db.session.commit()
         return redirect(url_for('admin'))
-    return render_template('edit.html', l=l)
+    
+    # Render fail edit.html dengan data 'l'
+    return render_template('edit.html', item=l)
 
 @app.route('/logout')
 def logout():
