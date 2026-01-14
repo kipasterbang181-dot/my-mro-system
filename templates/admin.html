@@ -90,7 +90,7 @@
                             <td class="px-8 py-6">
                                 <div class="flex justify-end items-center gap-3">
                                     <div class="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
-                                        <button onclick="showQR('{{ item.sn }}', '{{ request.url_root }}view_tag/{{ item.id }}')" title="View QR Tag" class="p-2 text-slate-600 hover:text-blue-600 transition-colors">
+                                        <button onclick="showQR('{{ item.sn }}', '{{ request.url_root }}view_tag/{{ item.id }}', '{{ item.id }}')" title="View QR Tag" class="p-2 text-slate-600 hover:text-blue-600 transition-colors">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                                             </svg>
@@ -138,9 +138,11 @@
                 <div class="bg-white p-4 rounded-3xl border border-slate-100 inline-block mb-8 shadow-sm">
                     <div id="qrcode" class="flex justify-center p-2"></div>
                 </div>
-                <button onclick="window.print()" class="no-print w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-500/30 transition-all uppercase tracking-widest text-xs mb-4">
+                
+                <a id="downloadLink" href="#" class="no-print w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-500/30 transition-all uppercase tracking-widest text-xs mb-4 flex items-center justify-center no-underline">
                     Cetak QR Tag
-                </button>
+                </a>
+
                 <button onclick="closeQR()" class="no-print text-slate-500 hover:text-slate-700 font-black uppercase tracking-widest text-[10px] transition-colors">
                     Tutup
                 </button>
@@ -164,11 +166,18 @@
             }
         }
 
-        function showQR(sn, link) {
+        // Fungsi showQR dikemaskini untuk terima ID
+        function showQR(sn, link, id) {
             const modal = document.getElementById('qrModal');
             const content = document.getElementById('modalContent');
             const qrContainer = document.getElementById('qrcode');
+            const downloadBtn = document.getElementById('downloadLink');
+
             document.getElementById('modalSN').innerText = sn;
+            
+            // Set link download automatik ke route /download_qr/id
+            downloadBtn.href = "/download_qr/" + id;
+
             qrContainer.innerHTML = "";
             new QRCode(qrContainer, {
                 text: link,

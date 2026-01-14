@@ -71,16 +71,25 @@ def view_tag(id):
     l = RepairLog.query.get_or_404(id)
     return render_template('view_tag.html', l=l)
 
-# --- KHAS UNTUK DOWNLOAD QR SAHAJA ---
+# --- KHAS UNTUK DOWNLOAD QR SAHAJA (DIKEMASKINI) ---
 @app.route('/download_qr/<int:id>')
 def download_qr(id):
     l = RepairLog.query.get_or_404(id)
+    # Link yang akan disimpan dalam QR
     qr_link = f"{request.url_root}view_tag/{id}"
     qr = qrcode.make(qr_link)
+    
     buf = io.BytesIO()
     qr.save(buf, format="PNG")
     buf.seek(0)
-    return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f"QR_{l.sn}.png")
+    
+    # as_attachment=True memaksa browser muat turun fail
+    return send_file(
+        buf, 
+        mimetype='image/png', 
+        as_attachment=True, 
+        download_name=f"QR_{l.sn}.png"
+    )
 
 # --- DELETE ---
 @app.route('/delete/<int:id>')
@@ -91,7 +100,7 @@ def delete(id):
     db.session.commit()
     return redirect(url_for('admin'))
 
-# --- EDIT & UPDATE (TELAH DIKEMASKINI UNTUK STATUS) ---
+# --- EDIT & UPDATE ---
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
     if not session.get('admin'): return redirect(url_for('login'))
@@ -103,7 +112,6 @@ def edit(id):
         l.sn = request.form.get('sn', '').upper()
         l.pic = request.form.get('pic', '').upper()
         
-        # Bahagian ini akan mengambil status baru (ACTIVE/COMPLETED/dll) dari dropdown edit.html
         new_status = request.form.get('status_type')
         if new_status:
             l.status_type = new_status.upper()
@@ -111,7 +119,6 @@ def edit(id):
         db.session.commit()
         return redirect(url_for('admin'))
     
-    # Menghantar data ke edit.html dengan nama 'item'
     return render_template('edit.html', item=l)
 
 @app.route('/logout')
