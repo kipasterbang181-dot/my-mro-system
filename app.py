@@ -2,7 +2,7 @@ import os
 import io
 import base64
 import qrcode
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
@@ -65,29 +65,25 @@ def incoming():
     db.session.commit()
     return redirect(url_for('index'))
 
-# --- FIX QR GENERATE (Hanya betulkan cara hantar data) ---
+# --- VIEW DATA SAHAJA (PDF MODE) ---
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
     l = RepairLog.query.get_or_404(id)
-    
-    # Bina link QR
-    qr_link = f"{request.url_root}view_tag/{id}"
-    
-    # Generate QR gila-gila
-    qr = qrcode.QRCode(version=1, box_size=10, border=2)
-    qr.add_data(qr_link)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
-    
-    # Convert imej ke Base64 (WAJIB untuk Render)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    qr_b64 = base64.b64encode(buf.getvalue()).decode()
-    
-    # Hantar l dan qr_code ke HTML
-    return render_template('view_tag.html', l=l, qr_code=qr_b64)
+    return render_template('view_tag.html', l=l)
 
-@app.route('/delete/<int:id>', methods=['GET', 'POST'])
+# --- KHAS UNTUK DOWNLOAD QR SAHAJA ---
+@app.route('/download_qr/<int:id>')
+def download_qr(id):
+    l = RepairLog.query.get_or_404(id)
+    qr_link = f"{request.url_root}view_tag/{id}"
+    qr = qrcode.make(qr_link)
+    buf = io.BytesIO()
+    qr.save(buf, format="PNG")
+    buf.seek(0)
+    return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f"QR_{l.sn}.png")
+
+# --- DELETE & EDIT (DIPASTIKAN BERFUNGSI) ---
+@app.route('/delete/<int:id>')
 def delete(id):
     if not session.get('admin'): return redirect(url_for('login'))
     l = RepairLog.query.get_or_404(id)
