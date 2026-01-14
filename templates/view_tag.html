@@ -3,85 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G7 Aerospace | PDF Generator</title>
+    <title>G7-Tag-{{ l.sn }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Inter:wght@400;900&display=swap');
+        
         body { font-family: 'Inter', sans-serif; }
+        .tech-font { font-family: 'Space Grotesk', sans-serif; }
+        
+        /* Design untuk nampak premium */
+        .card-container {
+            background: #ffffff;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Watermark halus di latar belakang */
+        .bg-text {
+            position: absolute;
+            font-size: 12rem;
+            font-weight: 900;
+            color: rgba(0, 0, 0, 0.02);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-15deg);
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @media print {
+            .no-export { display: none !important; }
+            body { background: white !important; padding: 0 !important; }
+        }
     </style>
 </head>
-<body class="bg-slate-900 min-h-screen flex flex-col items-center justify-center p-4">
+<body class="bg-slate-50 min-h-screen flex flex-col items-center py-12 px-4">
 
-    <div id="loader" class="mb-6 text-center">
-        <div class="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-        <p class="text-white text-[10px] font-black uppercase tracking-[0.3em]">Generating Document... 🛠️</p>
+    <div class="no-export mb-10 flex gap-4 w-full max-w-[550px]">
+        <a href="/admin" class="flex-1 bg-white hover:bg-slate-100 text-slate-900 text-center py-4 rounded-full font-bold uppercase tracking-widest text-[10px] border border-slate-200 transition-all shadow-sm">
+            ← Dashboard
+        </a>
+        <button onclick="downloadNow()" class="flex-[2] bg-slate-900 hover:bg-blue-700 text-white py-4 rounded-full font-bold uppercase tracking-widest text-[10px] shadow-2xl transition-all flex items-center justify-center gap-2">
+            Generate Official PDF 
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+        </button>
     </div>
 
-    <div id="download-area" class="bg-white w-full max-w-md border-[4px] border-slate-900 shadow-2xl rounded-sm overflow-hidden">
+    <div id="tag-content" class="card-container w-full max-w-[550px] border-[1px] border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-3xl p-1 bg-white">
         
-        <div class="bg-slate-900 text-white p-6 text-center">
-            <h1 class="text-3xl font-black italic tracking-tighter uppercase leading-none">G7 Aerospace</h1>
-            <p class="text-[9px] font-bold uppercase tracking-[0.4em] mt-3 text-blue-400">Maintenance Identification Tag</p>
-        </div>
+        <div class="bg-text tech-font font-black italic">G7</div>
 
-        <div class="p-10">
-            <div class="space-y-8">
-                <div class="border-b-4 border-slate-100 pb-4 text-center">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Equipment Description</label>
-                    <p class="text-2xl font-black text-slate-900 uppercase italic">{{ l.peralatan }}</p>
+        <div class="relative z-10 p-10">
+            
+            <div class="flex justify-between items-start mb-16">
+                <div>
+                    <h1 class="text-4xl font-black italic tracking-tighter text-slate-900 leading-none">G7 <span class="text-blue-600">AEROSPACE</span></h1>
+                    <div class="h-1 w-12 bg-blue-600 mt-2"></div>
+                    <p class="text-[9px] font-bold uppercase tracking-[0.5em] text-slate-400 mt-4">Maintenance Identification Tag</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[8px] font-black text-slate-300 uppercase tracking-widest">Digital Record ID</p>
+                    <p class="text-xl font-black text-slate-900 tech-font">#{{ l.id }}</p>
+                </div>
+            </div>
+
+            <div class="space-y-10">
+                
+                <div>
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] block mb-2">Equipment Description</label>
+                    <p class="text-3xl font-black text-slate-900 uppercase leading-none border-l-4 border-slate-900 pl-4 py-1">{{ l.peralatan }}</p>
                 </div>
 
-                <div class="grid grid-cols-1 gap-8">
-                    <div class="flex justify-between items-end border-b-2 border-slate-50 pb-2">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Part Number (P/N)</label>
-                        <p class="text-lg font-bold text-slate-800 uppercase tracking-tight">{{ l.pn }}</p>
+                <div class="grid grid-cols-2 gap-12">
+                    <div class="relative">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] block mb-2">Part Number (P/N)</label>
+                        <p class="text-lg font-bold text-slate-700 uppercase tech-font">{{ l.pn }}</p>
+                        <div class="absolute -bottom-2 left-0 w-full h-[1px] bg-slate-100"></div>
                     </div>
-                    
-                    <div class="flex justify-between items-end border-b-2 border-slate-50 pb-2">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Serial Number (S/N)</label>
-                        <p class="text-xl font-black text-blue-700 font-mono tracking-tighter">{{ l.sn }}</p>
+                    <div class="relative">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] block mb-2">Serial Number (S/N)</label>
+                        <p class="text-lg font-black text-blue-600 uppercase tech-font">{{ l.sn }}</p>
+                        <div class="absolute -bottom-2 left-0 w-full h-[1px] bg-slate-100"></div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-10 pt-4">
-                    <div class="border-l-4 border-slate-100 pl-4">
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Date In</label>
-                        <p class="text-xs font-bold text-slate-700 uppercase">{{ l.date_in }}</p>
+                <div class="grid grid-cols-2 gap-12 pt-4">
+                    <div>
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] block mb-2">Certification Date</label>
+                        <p class="text-sm font-bold text-slate-800 uppercase">{{ l.date_in }}</p>
                     </div>
-                    <div class="border-l-4 border-blue-600 pl-4">
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Authorized JTP</label>
-                        <p class="text-sm font-black text-slate-900 uppercase italic">{{ l.pic }}</p>
+                    <div>
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] block mb-2">Authorized JTP</label>
+                        <p class="text-sm font-black text-slate-900 uppercase italic">ENG/{{ l.pic }}</p>
                     </div>
                 </div>
             </div>
 
-            <div class="mt-12 pt-6 border-t border-slate-100 text-center">
-                <p class="text-[8px] font-black text-slate-300 uppercase tracking-[0.5em] leading-loose">
-                    *** Official Digital Record ***
-                </p>
+            <div class="mt-20 pt-8 border-t border-slate-100 flex items-end justify-between">
+                <div class="max-w-[65%]">
+                    <p class="text-[7px] text-slate-400 uppercase font-bold leading-relaxed tracking-wider mb-2">
+                        Verification Statement:
+                    </p>
+                    <p class="text-[6px] text-slate-300 uppercase leading-normal italic">
+                        This document is a certified digital output from G7 Aerospace Maintenance System. Accuracy of this data is cross-referenced with internal engineering logs. Any unauthorized duplication is prohibited.
+                    </p>
+                </div>
+                <div class="relative group">
+                    <div class="absolute -inset-2 bg-blue-50 rounded-lg scale-0 group-hover:scale-100 transition-transform"></div>
+                    <img src="data:image/png;base64,{{ qr_code }}" class="relative w-14 h-14 opacity-80 mix-blend-multiply grayscale">
+                </div>
+            </div>
+
+            <div class="mt-8 flex gap-1 h-2 opacity-10">
+                <div class="flex-[4] bg-slate-900"></div>
+                <div class="flex-[1] bg-slate-900"></div>
+                <div class="flex-[2] bg-slate-900"></div>
+                <div class="flex-[8] bg-slate-900"></div>
+                <div class="flex-[1] bg-slate-900"></div>
             </div>
         </div>
     </div>
 
     <script>
-        window.onload = function() {
-            const element = document.getElementById('download-area');
+        function downloadNow() {
+            const snClean = "{{ l.sn }}".replace(/[^a-z0-9]/gi, '_');
+            const element = document.getElementById('tag-content');
+            
             const options = {
-                margin: 15,
-                filename: 'G7-Tag-{{ l.sn }}.pdf',
+                margin: [15, 15, 15, 15],
+                filename: 'G7-OFFICIAL-TAG-' + snClean + '.pdf',
                 image: { type: 'jpeg', quality: 1 },
-                html2canvas: { scale: 3, logging: false, useCORS: true },
+                html2canvas: { 
+                    scale: 3, 
+                    logging: false, 
+                    useCORS: true,
+                    backgroundColor: '#ffffff'
+                },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            html2pdf().set(options).from(element).save().then(() => {
-                document.getElementById('loader').innerHTML = "<p class='text-emerald-400 font-black uppercase text-[10px] tracking-widest animate-bounce'>✅ File Downloaded</p>";
-                setTimeout(() => {
-                    window.location.href = "/admin";
-                }, 1500);
-            });
-        };
+            html2pdf().set(options).from(element).save();
+        }
     </script>
 </body>
 </html>

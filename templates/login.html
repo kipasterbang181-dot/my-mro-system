@@ -4,8 +4,12 @@
     <meta charset="UTF-8">
     <title>Admin Login | G7 Aerospace</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
 </head>
-<body class="bg-slate-900 flex flex-col items-center justify-center min-h-screen p-6 font-sans">
+<body class="bg-slate-900 flex flex-col items-center justify-center min-h-screen p-6">
     
     <div class="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm mb-6 border-t-8 border-blue-900">
         <div class="text-center mb-8">
@@ -28,6 +32,12 @@
                 Authorize Login
             </button>
         </form>
+
+        <div class="mt-6 pt-6 border-t border-slate-100 text-center">
+            <a href="/" class="text-blue-500 text-[10px] font-black uppercase tracking-widest hover:text-blue-700 transition-all">
+                ← Back to Submission Form
+            </a>
+        </div>
     </div>
 
     <div class="w-full max-w-sm bg-white/5 p-4 rounded-3xl border border-white/10 text-center relative backdrop-blur-sm">
@@ -71,6 +81,8 @@
         function endGame() { gameActive = false; reviveScreen.classList.remove('hidden'); if(score > best) { best = score; localStorage.setItem('g7_best', best); } }
         function reviveGame() { heliY = 75; velocity = 0; obstacles = []; score = 0; gameActive = true; reviveScreen.classList.add('hidden'); update(); }
         canvas.addEventListener('mousedown', () => { if(gameActive) velocity = -3.8; });
+        // Support for touch devices
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); if(gameActive) velocity = -3.8; });
         update();
     </script>
 </body>
