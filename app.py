@@ -7,33 +7,28 @@ import base64
 
 app = Flask(__name__)
 
-# 1. KONFIGURASI SUPABASE
+# --- BAHAGIAN YANG DITUKAR (UNTUK FIX ERROR 500) ---
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
-# Inisialisasi awal sebagai None untuk elak ralat 'not defined'
-supabase = None
+# Kita letak None dulu supaya sistem kenal nama 'supabase'
+supabase = None 
 
 if SUPABASE_URL and SUPABASE_KEY:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     except Exception as e:
-        print(f"Gagal sambung ke Supabase: {e}")
-else:
-    print("AMARAN: Maklumat SUPABASE_URL/KEY tidak dijumpai di Render Environment!")
+        print(f"Error connect: {e}")
+# --------------------------------------------------
 
-# 2. HALAMAN UTAMA
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# 3. SIMPAN DATA (DENGAN CHECK SUPABASE)
 @app.route('/incoming', methods=['POST'])
 def incoming():
-    # Semak jika supabase sudah didefinisikan
-    if supabase is None:
-        return "Ralat: Sambungan Database tidak dijumpai. Sila masukkan SUPABASE_URL di Render!"
-        
+    # Tambah check ini supaya tak crash
+    if supabase is None: return "Database link tak jumpa!"
     try:
         data = {
             "peralatan": request.form.get("peralatan"),
@@ -49,7 +44,6 @@ def incoming():
     except Exception as e:
         return f"Ralat Simpan Data: {str(e)}"
 
-# 4. ADMIN LOGIN
 @app.route('/login', methods=['POST'])
 def login():
     user = request.form.get('u')
@@ -58,26 +52,23 @@ def login():
         return redirect(url_for('admin'))
     return "ID atau Password Salah!"
 
-# 5. DASHBOARD ADMIN
 @app.route('/admin')
 def admin():
-    if supabase is None:
-        return "Database tidak bersambung."
+    if supabase is None: return "Database error"
     try:
         res = supabase.table("tag_mro").select("*").order("id", desc=True).execute()
         return render_template('admin.html', l=res.data)
     except Exception as e:
         return f"Database Error: {str(e)}"
 
-# 6. VIEW TAG & QR
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
-    if supabase is None:
-        return "Database tidak bersambung."
+    if supabase is None: return "Database error"
     try:
         res = supabase.table("tag_mro").select("*").eq("id", id).single().execute()
         record = res.data
         
+        # Link ikut domain render tuan
         qr_link = f"https://my-mro-system.onrender.com/view_tag/{id}"
         qr = qrcode.QRCode(version=1, box_size=10, border=2)
         qr.add_data(qr_link)
@@ -92,22 +83,20 @@ def view_tag(id):
     except Exception as e:
         return f"Ralat View Tag: {str(e)}"
 
-# 7. DELETE RECORD
+# --- BAHAGIAN YANG DITUKAR (UNTUK FIX ERROR 405) ---
 @app.route('/delete/<int:id>')
 def delete(id):
-    if supabase is None:
-        return "Database tidak bersambung."
+    if supabase is None: return "Database error"
     try:
         supabase.table("tag_mro").delete().eq("id", id).execute()
         return redirect(url_for('admin'))
     except Exception as e:
         return f"Gagal Padam Data: {str(e)}"
+# --------------------------------------------------
 
-# 8. UPDATE RECORD
 @app.route('/update/<int:id>', methods=['POST'])
 def update(id):
-    if supabase is None:
-        return "Database tidak bersambung."
+    if supabase is None: return "Database error"
     try:
         data = {
             "peralatan": request.form.get("peralatan"),
