@@ -11,20 +11,29 @@ app = Flask(__name__)
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
-# Baiki bahagian ini sahaja supaya tidak ralat jika URL kosong
-if SUPABASE_URL and SUPABASE_KEY:
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-else:
-    print("AMARAN: SUPABASE_URL atau SUPABASE_KEY tidak dijumpai dalam Environment Variables!")
+# Inisialisasi awal sebagai None untuk elak ralat 'not defined'
+supabase = None
 
-# 2. HALAMAN UTAMA (BORANG)
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception as e:
+        print(f"Gagal sambung ke Supabase: {e}")
+else:
+    print("AMARAN: Maklumat SUPABASE_URL/KEY tidak dijumpai di Render Environment!")
+
+# 2. HALAMAN UTAMA
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# 3. SIMPAN DATA KE SUPABASE
+# 3. SIMPAN DATA (DENGAN CHECK SUPABASE)
 @app.route('/incoming', methods=['POST'])
 def incoming():
+    # Semak jika supabase sudah didefinisikan
+    if supabase is None:
+        return "Ralat: Sambungan Database tidak dijumpai. Sila masukkan SUPABASE_URL di Render!"
+        
     try:
         data = {
             "peralatan": request.form.get("peralatan"),
@@ -45,29 +54,31 @@ def incoming():
 def login():
     user = request.form.get('u')
     pwd = request.form.get('p')
-    if user == "admin" and pwd == "g7aero":  # Password anda
+    if user == "admin" and pwd == "g7aero":
         return redirect(url_for('admin'))
     return "ID atau Password Salah!"
 
 # 5. DASHBOARD ADMIN
 @app.route('/admin')
 def admin():
+    if supabase is None:
+        return "Database tidak bersambung."
     try:
         res = supabase.table("tag_mro").select("*").order("id", desc=True).execute()
         return render_template('admin.html', l=res.data)
     except Exception as e:
         return f"Database Error: {str(e)}"
 
-# 6. VIEW TAG & QR GENERATOR (FIX QR PROBLEM)
+# 6. VIEW TAG & QR
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
+    if supabase is None:
+        return "Database tidak bersambung."
     try:
         res = supabase.table("tag_mro").select("*").eq("id", id).single().execute()
         record = res.data
         
-        # Jana QR Link
         qr_link = f"https://my-mro-system.onrender.com/view_tag/{id}"
-        
         qr = qrcode.QRCode(version=1, box_size=10, border=2)
         qr.add_data(qr_link)
         qr.make(fit=True)
@@ -81,9 +92,11 @@ def view_tag(id):
     except Exception as e:
         return f"Ralat View Tag: {str(e)}"
 
-# 7. DELETE RECORD (Guna GET supaya mudah klik)
+# 7. DELETE RECORD
 @app.route('/delete/<int:id>')
 def delete(id):
+    if supabase is None:
+        return "Database tidak bersambung."
     try:
         supabase.table("tag_mro").delete().eq("id", id).execute()
         return redirect(url_for('admin'))
@@ -93,6 +106,8 @@ def delete(id):
 # 8. UPDATE RECORD
 @app.route('/update/<int:id>', methods=['POST'])
 def update(id):
+    if supabase is None:
+        return "Database tidak bersambung."
     try:
         data = {
             "peralatan": request.form.get("peralatan"),
