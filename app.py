@@ -65,21 +65,28 @@ def incoming():
     db.session.commit()
     return redirect(url_for('index'))
 
-# --- FIX QR & PDF VIEW ---
+# --- FIX QR GENERATE (Hanya betulkan cara hantar data) ---
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
     l = RepairLog.query.get_or_404(id)
+    
+    # Bina link QR
     qr_link = f"{request.url_root}view_tag/{id}"
+    
+    # Generate QR gila-gila
     qr = qrcode.QRCode(version=1, box_size=10, border=2)
     qr.add_data(qr_link)
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Convert imej ke Base64 (WAJIB untuk Render)
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     qr_b64 = base64.b64encode(buf.getvalue()).decode()
+    
+    # Hantar l dan qr_code ke HTML
     return render_template('view_tag.html', l=l, qr_code=qr_b64)
 
-# --- FIX DELETE (Tambah GET & POST) ---
 @app.route('/delete/<int:id>', methods=['GET', 'POST'])
 def delete(id):
     if not session.get('admin'): return redirect(url_for('login'))
@@ -88,7 +95,6 @@ def delete(id):
     db.session.commit()
     return redirect(url_for('admin'))
 
-# --- FIX EDIT & UPDATE ---
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
     if not session.get('admin'): return redirect(url_for('login'))
@@ -102,7 +108,6 @@ def edit(id):
         return redirect(url_for('admin'))
     return render_template('edit.html', l=l)
 
-# --- FIX LOGOUT ---
 @app.route('/logout')
 def logout():
     session.clear()
