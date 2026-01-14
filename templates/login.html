@@ -6,7 +6,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .game-card { transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.1); }
     </style>
 </head>
 <body class="bg-slate-900 flex flex-col items-center justify-center min-h-screen p-6">
@@ -34,24 +35,34 @@
         </form>
 
         <div class="mt-6 pt-6 border-t border-slate-100 text-center">
-            <a href="/" class="text-blue-500 text-[10px] font-black uppercase tracking-widest hover:text-blue-700 transition-all">
+            <a href="/" class="text-blue-500 text-[10px] font-black uppercase tracking-widest hover:text-blue-700 transition-all no-underline">
                 ← Back to Submission Form
             </a>
         </div>
     </div>
 
-    <div class="w-full max-w-sm bg-white/5 p-4 rounded-3xl border border-white/10 text-center relative backdrop-blur-sm">
-        <h3 class="text-[10px] font-black text-white/40 uppercase mb-3 italic tracking-widest">Sky Racer 🚁</h3>
-        <div class="relative">
-            <canvas id="gameCanvas" width="300" height="150" class="mx-auto rounded-2xl bg-sky-500/10 border border-white/10"></canvas>
-            <div id="revive-screen" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-2xl">
-                <p class="text-white font-black text-xs mb-3 uppercase italic text-red-500">System Failure</p>
-                <button onclick="reviveGame()" class="bg-amber-500 text-white px-8 py-2 rounded-xl font-black uppercase text-[10px]">Revive Engine 🚁</button>
+    <div class="w-full max-w-sm bg-slate-800/50 p-4 rounded-3xl border border-white/10 text-center relative backdrop-blur-sm game-card">
+        <div class="flex justify-between items-center mb-3">
+            <h3 class="text-[10px] font-black text-blue-400 uppercase italic tracking-widest">G7 Starfighter ✈️</h3>
+            <span id="game-score" class="text-white font-black text-[10px]">Score: 0</span>
+        </div>
+        
+        <div class="relative overflow-hidden rounded-2xl bg-black shadow-inner border border-white/5">
+            <canvas id="gameCanvas" width="300" height="200" class="mx-auto"></canvas>
+            
+            <div id="revive-screen" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
+                <p class="text-red-500 font-black text-xs mb-1 uppercase tracking-tighter">Aircraft Destroyed</p>
+                <p id="final-score" class="text-white/40 text-[9px] mb-4 uppercase">Meteors Cleared: 0</p>
+                <button onclick="reviveGame()" class="bg-white text-black px-6 py-2 rounded-xl font-black uppercase text-[10px] hover:bg-blue-400 transition-colors">Restart Mission</button>
+            </div>
+
+            <div id="start-msg" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <p class="text-blue-400/50 font-black text-[9px] uppercase tracking-[0.2em] animate-pulse">Use WASD or Arrows to Move</p>
             </div>
         </div>
-        <div class="flex justify-between px-2 mt-3">
-            <span id="game-score" class="text-sky-400 font-black text-[10px] uppercase">Dist: 0m</span>
-            <span id="high-score" class="text-white/20 font-black text-[10px] uppercase">Best: 0m</span>
+        
+        <div class="mt-2 text-center">
+            <span id="high-score" class="text-white/20 font-black text-[9px] uppercase tracking-widest">High Score: 0</span>
         </div>
     </div>
 
@@ -59,31 +70,118 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const reviveScreen = document.getElementById('revive-screen');
-        let heliY = 75, velocity = 0, obstacles = [], score = 0, gameActive = true;
-        let best = localStorage.getItem('g7_best') || 0;
-        document.getElementById('high-score').innerText = "Best: " + best + "m";
+        const startMsg = document.getElementById('start-msg');
+        
+        let gameActive = false;
+        let score = 0;
+        let best = localStorage.getItem('g7_meteor_best') || 0;
+        document.getElementById('high-score').innerText = "High Score: " + best;
 
-        function update() {
-            if(!gameActive) return;
-            ctx.clearRect(0, 0, 300, 150);
-            velocity += 0.15; heliY += velocity;
-            ctx.fillStyle = "#fbbf24"; ctx.fillRect(40, heliY, 20, 10);
-            ctx.fillStyle = "white"; ctx.fillRect(35, heliY-2, 30, 2);
-            if(Math.random() < 0.035) obstacles.push({x: 300, y: Math.random()*130});
-            obstacles.forEach((o, i) => {
-                o.x -= 2.8; ctx.fillStyle = "#ef4444"; ctx.fillRect(o.x, o.y, 15, 15);
-                if(40 < o.x+15 && 60 > o.x && heliY < o.y+15 && heliY+10 > o.y) endGame();
-            });
-            if(heliY > 145 || heliY < 0) endGame();
-            score++; document.getElementById('game-score').innerText = "Dist: " + score + "m";
-            requestAnimationFrame(update);
+        const player = { x: 140, y: 160, w: 25, h: 20, speed: 4 };
+        let meteors = [];
+        let bullets = [];
+        let keys = {};
+
+        window.addEventListener('keydown', e => { 
+            keys[e.code] = true; 
+            if(!gameActive && !reviveScreen.classList.contains('hidden') === false) {
+                gameActive = true;
+                startMsg.classList.add('hidden');
+                gameLoop();
+            }
+        });
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        function reviveGame() {
+            score = 0;
+            meteors = [];
+            bullets = [];
+            player.x = 140;
+            player.y = 160;
+            gameActive = true;
+            reviveScreen.classList.add('hidden');
+            document.getElementById('game-score').innerText = "Score: 0";
+            gameLoop();
         }
-        function endGame() { gameActive = false; reviveScreen.classList.remove('hidden'); if(score > best) { best = score; localStorage.setItem('g7_best', best); } }
-        function reviveGame() { heliY = 75; velocity = 0; obstacles = []; score = 0; gameActive = true; reviveScreen.classList.add('hidden'); update(); }
-        canvas.addEventListener('mousedown', () => { if(gameActive) velocity = -3.8; });
-        // Support for touch devices
-        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); if(gameActive) velocity = -3.8; });
-        update();
+
+        function gameLoop() {
+            if(!gameActive) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Player Movement
+            if ((keys['ArrowLeft'] || keys['KeyA']) && player.x > 0) player.x -= player.speed;
+            if ((keys['ArrowRight'] || keys['KeyD']) && player.x < canvas.width - player.w) player.x += player.speed;
+            if ((keys['ArrowUp'] || keys['KeyW']) && player.y > 0) player.y -= player.speed;
+            if ((keys['ArrowDown'] || keys['KeyS']) && player.y < canvas.height - player.h) player.y += player.speed;
+
+            // Draw Player (Ship shape)
+            ctx.fillStyle = "#60a5fa";
+            ctx.beginPath();
+            ctx.moveTo(player.x + player.w/2, player.y);
+            ctx.lineTo(player.x, player.y + player.h);
+            ctx.lineTo(player.x + player.w, player.y + player.h);
+            ctx.fill();
+            // Engine Glow
+            ctx.fillStyle = "#ef4444";
+            ctx.fillRect(player.x + player.w/2 - 2, player.y + player.h, 4, 3);
+
+            // Shooting Logic
+            if(Date.now() % 15 === 0) {
+                bullets.push({x: player.x + player.w/2 - 2, y: player.y, w: 4, h: 10});
+            }
+
+            // Update Bullets
+            bullets.forEach((b, i) => {
+                b.y -= 6;
+                ctx.fillStyle = "#fbbf24";
+                ctx.fillRect(b.x, b.y, b.w, b.h);
+                if(b.y < 0) bullets.splice(i, 1);
+            });
+
+            // Meteor Logic
+            if(Math.random() < 0.04) {
+                meteors.push({x: Math.random() * (canvas.width - 20), y: -20, size: 15 + Math.random() * 15, speed: 1 + Math.random() * 2});
+            }
+
+            meteors.forEach((m, mi) => {
+                m.y += m.speed;
+                // Draw Meteor
+                ctx.fillStyle = "#475569";
+                ctx.beginPath();
+                ctx.arc(m.x, m.y, m.size/2, 0, Math.PI*2);
+                ctx.fill();
+
+                // Collision with Bullet
+                bullets.forEach((b, bi) => {
+                    if(b.x < m.x + m.size/2 && b.x + b.w > m.x - m.size/2 && b.y < m.y + m.size/2 && b.y + b.h > m.y - m.size/2) {
+                        meteors.splice(mi, 1);
+                        bullets.splice(bi, 1);
+                        score += 10;
+                        document.getElementById('game-score').innerText = "Score: " + score;
+                    }
+                });
+
+                // Collision with Player
+                if(player.x < m.x + m.size/2 && player.x + player.w > m.x - m.size/2 && player.y < m.y + m.size/2 && player.y + player.h > m.y - m.size/2) {
+                    endGame();
+                }
+
+                if(m.y > canvas.height) meteors.splice(mi, 1);
+            });
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function endGame() {
+            gameActive = false;
+            reviveScreen.classList.remove('hidden');
+            document.getElementById('final-score').innerText = "Meteors Cleared: " + score;
+            if(score > best) {
+                best = score;
+                localStorage.setItem('g7_meteor_best', best);
+                document.getElementById('high-score').innerText = "High Score: " + best;
+            }
+        }
     </script>
 </body>
 </html>
