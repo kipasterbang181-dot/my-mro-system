@@ -43,8 +43,17 @@
                 <input type="text" name="pic" value="{{ item.pic }}" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all" required>
             </div>
 
+            <div>
+                <label class="text-[9px] font-black uppercase text-slate-400 ml-4 mb-1 block tracking-widest">Authorization Status</label>
+                <select name="status_type" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all cursor-pointer">
+                    <option value="ACTIVE" {% if item.status_type == 'ACTIVE' %}selected{% endif %}>ACTIVE</option>
+                    <option value="COMPLETED" {% if item.status_type == 'COMPLETED' %}selected{% endif %}>COMPLETED</option>
+                    <option value="INSPECTED" {% if item.status_type == 'INSPECTED' %}selected{% endif %}>INSPECTED</option>
+                    <option value="SERVICEABLE" {% if item.status_type == 'SERVICEABLE' %}selected{% endif %}>SERVICEABLE</option>
+                </select>
+            </div>
+
             <input type="hidden" name="date_in" value="{{ item.date_in }}">
-            <input type="hidden" name="status_type" value="{{ item.status_type }}">
             <input type="hidden" name="defect" value="{{ item.defect }}">
 
             <div class="flex gap-4 pt-4">
@@ -53,7 +62,7 @@
                 </a>
                 <button type="submit" class="w-2/3 bg-blue-900 text-white font-black py-5 rounded-[2rem] hover:bg-black shadow-xl transition-all uppercase tracking-widest text-[10px] italic">
                     Save Changes
-                </a>
+                </button>
             </div>
         </form>
     </div>

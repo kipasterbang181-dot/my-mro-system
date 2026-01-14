@@ -91,7 +91,7 @@ def delete(id):
     db.session.commit()
     return redirect(url_for('admin'))
 
-# --- EDIT & UPDATE (TELAH DIBAIKI) ---
+# --- EDIT & UPDATE (TELAH DIKEMASKINI UNTUK STATUS) ---
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
     if not session.get('admin'): return redirect(url_for('login'))
@@ -102,11 +102,16 @@ def edit(id):
         l.pn = request.form.get('pn', '').upper()
         l.sn = request.form.get('sn', '').upper()
         l.pic = request.form.get('pic', '').upper()
-        l.status_type = request.form.get('status_type', l.status_type).upper()
+        
+        # Bahagian ini akan mengambil status baru (ACTIVE/COMPLETED/dll) dari dropdown edit.html
+        new_status = request.form.get('status_type')
+        if new_status:
+            l.status_type = new_status.upper()
+            
         db.session.commit()
         return redirect(url_for('admin'))
     
-    # Render fail edit.html dengan data 'l'
+    # Menghantar data ke edit.html dengan nama 'item'
     return render_template('edit.html', item=l)
 
 @app.route('/logout')
