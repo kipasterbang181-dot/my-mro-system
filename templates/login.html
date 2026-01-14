@@ -6,14 +6,21 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
-        .game-card { transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.1); }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            /* Dibenarkan skrol semula */
+            overflow-y: auto; 
+            background-color: #0f172a;
+        }
+        .game-card { border: 1px solid rgba(255,255,255,0.1); }
+        /* Hanya kawasan canvas yang sekat skrol untuk kawalan game */
+        #gameCanvas { touch-action: none; cursor: crosshair; }
     </style>
 </head>
-<body class="bg-slate-900 flex flex-col items-center justify-center min-h-screen p-6">
+<body class="flex flex-col items-center min-h-screen p-4 py-10">
     
-    <div class="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm mb-6 border-t-8 border-blue-900">
-        <div class="text-center mb-8">
+    <div class="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm mb-10 border-t-8 border-blue-900">
+        <div class="text-center mb-6">
             <h2 class="text-3xl font-black text-blue-900 uppercase italic leading-none tracking-tighter">
                 G7 <span class="text-slate-400">Aerospace</span>
             </h2>
@@ -23,13 +30,13 @@
         <form action="/login" method="POST" class="space-y-4">
             <div>
                 <label class="text-[10px] font-black uppercase text-slate-400 ml-2 mb-1 block">Username</label>
-                <input type="text" name="u" placeholder="Admin ID" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none focus:border-blue-900 transition-all" required>
+                <input type="text" name="u" placeholder="Admin ID" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none focus:border-blue-900 transition-all text-sm" required>
             </div>
             <div>
                 <label class="text-[10px] font-black uppercase text-slate-400 ml-2 mb-1 block">Password</label>
-                <input type="password" name="p" placeholder="••••••••" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none focus:border-blue-900 transition-all" required>
+                <input type="password" name="p" placeholder="••••••••" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none focus:border-blue-900 transition-all text-sm" required>
             </div>
-            <button type="submit" class="w-full bg-blue-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition shadow-lg active:scale-95">
+            <button type="submit" class="w-full bg-blue-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition shadow-lg active:scale-95 text-xs">
                 Authorize Login
             </button>
         </form>
@@ -41,28 +48,32 @@
         </div>
     </div>
 
-    <div class="w-full max-w-sm bg-slate-800/50 p-4 rounded-3xl border border-white/10 text-center relative backdrop-blur-sm game-card">
-        <div class="flex justify-between items-center mb-3">
-            <h3 class="text-[10px] font-black text-blue-400 uppercase italic tracking-widest">G7 Starfighter ✈️</h3>
+    <div class="w-full max-w-sm bg-slate-800/50 p-4 rounded-3xl border border-white/10 text-center relative backdrop-blur-sm game-card mb-10">
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="text-[9px] font-black text-blue-400 uppercase italic tracking-widest">G7 Starfighter ✈️</h3>
             <span id="game-score" class="text-white font-black text-[10px]">Score: 0</span>
         </div>
         
-        <div class="relative overflow-hidden rounded-2xl bg-black shadow-inner border border-white/5">
-            <canvas id="gameCanvas" width="300" height="200" class="mx-auto"></canvas>
+        <div class="relative overflow-hidden rounded-2xl bg-black shadow-inner border border-white/5 h-[220px]">
+            <canvas id="gameCanvas" width="300" height="220" class="mx-auto"></canvas>
             
-            <div id="revive-screen" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
-                <p class="text-red-500 font-black text-xs mb-1 uppercase tracking-tighter">Aircraft Destroyed</p>
-                <p id="final-score" class="text-white/40 text-[9px] mb-4 uppercase">Meteors Cleared: 0</p>
-                <button onclick="reviveGame()" class="bg-white text-black px-6 py-2 rounded-xl font-black uppercase text-[10px] hover:bg-blue-400 transition-colors">Restart Mission</button>
+            <div id="revive-screen" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm z-50">
+                <p class="text-red-500 font-black text-xs mb-1 uppercase tracking-widest">Aircraft Destroyed</p>
+                <p id="final-score" class="text-white/40 text-[9px] mb-4 uppercase">Meteors: 0</p>
+                <button onclick="reviveGame()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-black uppercase text-[10px] hover:bg-blue-500 shadow-lg shadow-blue-500/20">Repair & Restart</button>
             </div>
 
             <div id="start-msg" class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <p class="text-blue-400/50 font-black text-[9px] uppercase tracking-[0.2em] animate-pulse">Use WASD or Arrows to Move</p>
+                <div class="text-center">
+                    <p class="text-blue-400 font-black text-[9px] uppercase tracking-[0.2em] animate-pulse">Touch or WASD to Move</p>
+                    <p class="text-white/20 text-[8px] mt-1 uppercase">Auto-firing active</p>
+                </div>
             </div>
         </div>
         
-        <div class="mt-2 text-center">
-            <span id="high-score" class="text-white/20 font-black text-[9px] uppercase tracking-widest">High Score: 0</span>
+        <div class="mt-2 flex justify-between px-1">
+            <span id="high-score" class="text-white/20 font-black text-[8px] uppercase tracking-widest">High Score: 0</span>
+            <span class="text-white/20 font-black text-[8px] uppercase tracking-widest italic">G7 Aerospace Tech</span>
         </div>
     </div>
 
@@ -77,83 +88,113 @@
         let best = localStorage.getItem('g7_meteor_best') || 0;
         document.getElementById('high-score').innerText = "High Score: " + best;
 
-        const player = { x: 140, y: 160, w: 25, h: 20, speed: 4 };
+        const player = { x: 140, y: 180, w: 22, h: 20, speed: 5 };
         let meteors = [];
         let bullets = [];
         let keys = {};
 
+        // Keyboard Controls
         window.addEventListener('keydown', e => { 
             keys[e.code] = true; 
-            if(!gameActive && !reviveScreen.classList.contains('hidden') === false) {
-                gameActive = true;
-                startMsg.classList.add('hidden');
-                gameLoop();
-            }
+            if(!gameActive && reviveScreen.classList.contains('hidden')) startGame();
         });
         window.addEventListener('keyup', e => keys[e.code] = false);
+
+        // Touch Controls (Hanya aktif dalam canvas)
+        canvas.addEventListener('touchstart', handleTouch, {passive: false});
+        canvas.addEventListener('touchmove', handleTouch, {passive: false});
+
+        function handleTouch(e) {
+            e.preventDefault(); // Sekat skrol skrin hanya bila sentuh kotak game
+            if(!gameActive && reviveScreen.classList.contains('hidden')) startGame();
+            
+            let rect = canvas.getBoundingClientRect();
+            let touch = e.touches[0];
+            let touchX = (touch.clientX - rect.left) * (canvas.width / rect.width);
+            let touchY = (touch.clientY - rect.top) * (canvas.height / rect.height);
+            
+            // Gerakkan kapal ke posisi jari
+            player.x = Math.max(0, Math.min(canvas.width - player.w, touchX - player.w/2));
+            player.y = Math.max(0, Math.min(canvas.height - player.h, touchY - player.h/2));
+        }
+
+        function startGame() {
+            if(gameActive) return;
+            gameActive = true;
+            startMsg.classList.add('hidden');
+            gameLoop();
+        }
 
         function reviveGame() {
             score = 0;
             meteors = [];
             bullets = [];
             player.x = 140;
-            player.y = 160;
-            gameActive = true;
+            player.y = 180;
             reviveScreen.classList.add('hidden');
             document.getElementById('game-score').innerText = "Score: 0";
-            gameLoop();
+            startGame();
         }
 
         function gameLoop() {
             if(!gameActive) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Player Movement
+            // PC Movement
             if ((keys['ArrowLeft'] || keys['KeyA']) && player.x > 0) player.x -= player.speed;
             if ((keys['ArrowRight'] || keys['KeyD']) && player.x < canvas.width - player.w) player.x += player.speed;
             if ((keys['ArrowUp'] || keys['KeyW']) && player.y > 0) player.y -= player.speed;
             if ((keys['ArrowDown'] || keys['KeyS']) && player.y < canvas.height - player.h) player.y += player.speed;
 
-            // Draw Player (Ship shape)
-            ctx.fillStyle = "#60a5fa";
+            // Draw Ship (Aerospace Style)
+            ctx.fillStyle = "#3b82f6";
             ctx.beginPath();
             ctx.moveTo(player.x + player.w/2, player.y);
             ctx.lineTo(player.x, player.y + player.h);
             ctx.lineTo(player.x + player.w, player.y + player.h);
             ctx.fill();
+            
             // Engine Glow
-            ctx.fillStyle = "#ef4444";
-            ctx.fillRect(player.x + player.w/2 - 2, player.y + player.h, 4, 3);
+            ctx.fillStyle = (Date.now() % 200 < 100) ? "#ef4444" : "#f97316";
+            ctx.fillRect(player.x + player.w/2 - 3, player.y + player.h, 6, 4);
 
-            // Shooting Logic
-            if(Date.now() % 15 === 0) {
-                bullets.push({x: player.x + player.w/2 - 2, y: player.y, w: 4, h: 10});
+            // Auto-Firing
+            if(Date.now() % 160 < 20) {
+                bullets.push({x: player.x + player.w/2 - 1.5, y: player.y, w: 3, h: 10});
             }
 
-            // Update Bullets
             bullets.forEach((b, i) => {
-                b.y -= 6;
+                b.y -= 7;
                 ctx.fillStyle = "#fbbf24";
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = "#fbbf24";
                 ctx.fillRect(b.x, b.y, b.w, b.h);
+                ctx.shadowBlur = 0;
                 if(b.y < 0) bullets.splice(i, 1);
             });
 
             // Meteor Logic
             if(Math.random() < 0.04) {
-                meteors.push({x: Math.random() * (canvas.width - 20), y: -20, size: 15 + Math.random() * 15, speed: 1 + Math.random() * 2});
+                meteors.push({
+                    x: Math.random() * (canvas.width - 20), 
+                    y: -30, 
+                    size: 12 + Math.random() * 18, 
+                    speed: 1.2 + (score/500) + Math.random() * 2
+                });
             }
 
             meteors.forEach((m, mi) => {
                 m.y += m.speed;
-                // Draw Meteor
                 ctx.fillStyle = "#475569";
                 ctx.beginPath();
                 ctx.arc(m.x, m.y, m.size/2, 0, Math.PI*2);
                 ctx.fill();
 
-                // Collision with Bullet
+                // Check Hit
                 bullets.forEach((b, bi) => {
-                    if(b.x < m.x + m.size/2 && b.x + b.w > m.x - m.size/2 && b.y < m.y + m.size/2 && b.y + b.h > m.y - m.size/2) {
+                    let dx = b.x - m.x;
+                    let dy = b.y - m.y;
+                    if(Math.sqrt(dx*dx + dy*dy) < m.size/2 + 5) {
                         meteors.splice(mi, 1);
                         bullets.splice(bi, 1);
                         score += 10;
@@ -161,26 +202,24 @@
                     }
                 });
 
-                // Collision with Player
-                if(player.x < m.x + m.size/2 && player.x + player.w > m.x - m.size/2 && player.y < m.y + m.size/2 && player.y + player.h > m.y - m.size/2) {
-                    endGame();
+                // Check Collision
+                let pdx = (player.x + player.w/2) - m.x;
+                let pdy = (player.y + player.h/2) - m.y;
+                if(Math.sqrt(pdx*pdx + pdy*pdy) < m.size/2 + 8) {
+                    gameActive = false;
+                    reviveScreen.classList.remove('hidden');
+                    document.getElementById('final-score').innerText = "Meteors: " + score;
+                    if(score > best) {
+                        best = score;
+                        localStorage.setItem('g7_meteor_best', best);
+                        document.getElementById('high-score').innerText = "High Score: " + best;
+                    }
                 }
 
-                if(m.y > canvas.height) meteors.splice(mi, 1);
+                if(m.y > canvas.height + 50) meteors.splice(mi, 1);
             });
 
             requestAnimationFrame(gameLoop);
-        }
-
-        function endGame() {
-            gameActive = false;
-            reviveScreen.classList.remove('hidden');
-            document.getElementById('final-score').innerText = "Meteors Cleared: " + score;
-            if(score > best) {
-                best = score;
-                localStorage.setItem('g7_meteor_best', best);
-                document.getElementById('high-score').innerText = "High Score: " + best;
-            }
         }
     </script>
 </body>
