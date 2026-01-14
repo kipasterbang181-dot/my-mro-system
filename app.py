@@ -1,125 +1,87 @@
 import os
 from flask import Flask, render_template, request, redirect, url_for
-from supabase import create_client, Client
+from flask_sqlalchemy import SQLAlchemy
 import qrcode
 import io
 import base64
 
 app = Flask(__name__)
 
-# 1. KONFIGURASI SUPABASE (Ambil dari Render Environment)
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+# GUNA BALIK DATABASE URL ASAL TUAN
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
+db = SQLAlchemy(app)
 
-# Kita sediakan variable ini supaya tidak keluar ralat 'not defined'
-supabase = None
+# Model Data Asal
+class TagMRO(db.Model):
+    __tablename__ = 'tag_mro'
+    id = db.Column(db.Integer, primary_key=True)
+    peralatan = db.Column(db.String)
+    pn = db.Column(db.String)
+    sn = db.Column(db.String)
+    pic = db.Column(db.String)
+    defect = db.Column(db.String)
+    status_type = db.Column(db.String)
+    date_in = db.Column(db.String)
 
-if SUPABASE_URL and SUPABASE_KEY:
-    try:
-        # Gunakan kunci yang tuan beri tadi
-        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    except Exception as e:
-        print(f"Gagal sambung database: {e}")
-
-# 2. HALAMAN UTAMA (BORANG)
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# 3. SIMPAN DATA KE SUPABASE
 @app.route('/incoming', methods=['POST'])
 def incoming():
-    if supabase is None:
-        return "Database link tak jumpa! Sila masukkan URL & KEY di Render Environment."
     try:
-        data = {
-            "peralatan": request.form.get("peralatan"),
-            "pn": request.form.get("pn"),
-            "sn": request.form.get("sn"),
-            "pic": request.form.get("pic"),
-            "defect": request.form.get("defect"),
-            "status_type": request.form.get("status_type"),
-            "date_in": request.form.get("date_in")
-        }
-        supabase.table("tag_mro").insert(data).execute()
+        new_tag = TagMRO(
+            peralatan=request.form.get("peralatan"),
+            pn=request.form.get("pn"),
+            sn=request.form.get("sn"),
+            pic=request.form.get("pic"),
+            defect=request.form.get("defect"),
+            status_type=request.form.get("status_type"),
+            date_in=request.form.get("date_in")
+        )
+        db.session.add(new_tag)
+        db.session.commit()
         return redirect(url_for('index'))
     except Exception as e:
-        return f"Ralat Simpan Data: {str(e)}"
+        return f"Ralat Simpan: {str(e)}"
 
-# 4. ADMIN LOGIN (FIX ERROR 405)
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    user = request.form.get('u')
-    pwd = request.form.get('p')
-    # Password tuan: g7aero
-    if user == "admin" and pwd == "g7aero":
-        return redirect(url_for('admin'))
-    return "ID atau Password Salah!"
+    if request.method == 'POST':
+        user = request.form.get('u')
+        pwd = request.form.get('p')
+        if user == "admin" and pwd == "g7aero":
+            return redirect(url_for('admin'))
+        return "Salah Password!"
+    return render_template('login.html') # Pastikan ada fail login.html
 
-# 5. DASHBOARD ADMIN
 @app.route('/admin')
 def admin():
-    if supabase is None:
-        return "Database tidak bersambung."
-    try:
-        res = supabase.table("tag_mro").select("*").order("id", desc=True).execute()
-        return render_template('admin.html', l=res.data)
-    except Exception as e:
-        return f"Database Error: {str(e)}"
+    data_list = TagMRO.query.order_by(TagMRO.id.desc()).all()
+    return render_template('admin.html', l=data_list)
 
-# 6. VIEW TAG & QR GENERATOR
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
-    if supabase is None:
-        return "Database tidak bersambung."
-    try:
-        res = supabase.table("tag_mro").select("*").eq("id", id).single().execute()
-        record = res.data
-        
-        # Link QR (Gunakan domain Render tuan)
-        qr_link = f"https://my-mro-system.onrender.com/view_tag/{id}"
-        
-        qr = qrcode.QRCode(version=1, box_size=10, border=2)
-        qr.add_data(qr_link)
-        qr.make(fit=True)
-        
-        img = qr.make_image(fill_color="black", back_color="white")
-        buf = io.BytesIO()
-        img.save(buf)
-        qr_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
-        
-        return render_template('view_tag.html', l=record, qr_code=qr_b64)
-    except Exception as e:
-        return f"Ralat View Tag: {str(e)}"
+    record = TagMRO.query.get(id)
+    qr_link = f"https://my-mro-system.onrender.com/view_tag/{id}"
+    
+    qr = qrcode.QRCode(version=1, box_size=10, border=2)
+    qr.add_data(qr_link)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    buf = io.BytesIO()
+    img.save(buf)
+    qr_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+    
+    return render_template('view_tag.html', l=record, qr_code=qr_b64)
 
-# 7. DELETE RECORD (FIX ERROR 405)
 @app.route('/delete/<int:id>')
 def delete(id):
-    if supabase is None:
-        return "Database tidak bersambung."
-    try:
-        # Padam mengikut ID
-        supabase.table("tag_mro").delete().eq("id", id).execute()
-        return redirect(url_for('admin'))
-    except Exception as e:
-        return f"Gagal Padam Data: {str(e)}"
-
-# 8. UPDATE RECORD
-@app.route('/update/<int:id>', methods=['POST'])
-def update(id):
-    if supabase is None:
-        return "Database tidak bersambung."
-    try:
-        data = {
-            "peralatan": request.form.get("peralatan"),
-            "pn": request.form.get("pn"),
-            "sn": request.form.get("sn"),
-            "pic": request.form.get("pic")
-        }
-        supabase.table("tag_mro").update(data).eq("id", id).execute()
-        return redirect(url_for('admin'))
-    except Exception as e:
-        return f"Gagal Kemaskini: {str(e)}"
+    record = TagMRO.query.get(id)
+    db.session.delete(record)
+    db.session.commit()
+    return redirect(url_for('admin'))
 
 if __name__ == '__main__':
     app.run(debug=True)
