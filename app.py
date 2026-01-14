@@ -9,7 +9,7 @@ from datetime import datetime
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 
-# --- DATABASE CONFIG (Kekal Sama) ---
+# --- DATABASE CONFIG ---
 DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -65,30 +65,22 @@ def incoming():
     db.session.commit()
     return redirect(url_for('index'))
 
-# --- FIX QR GENERATE ---
+# --- FIX QR & PDF VIEW ---
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
     l = RepairLog.query.get_or_404(id)
-    
-    # Jana link untuk QR
     qr_link = f"{request.url_root}view_tag/{id}"
-    
-    # Proses buat gambar QR
     qr = qrcode.QRCode(version=1, box_size=10, border=2)
     qr.add_data(qr_link)
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
-    
-    # Convert gambar ke Base64 supaya keluar di HTML
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     qr_b64 = base64.b64encode(buf.getvalue()).decode()
-    
-    # Hantar data 'l' dan 'qr_code' ke HTML
     return render_template('view_tag.html', l=l, qr_code=qr_b64)
 
-# --- FUNGSI DELETE & EDIT (TIDAK BERUBAH) ---
-@app.route('/delete/<int:id>')
+# --- FIX DELETE (Tambah GET & POST) ---
+@app.route('/delete/<int:id>', methods=['GET', 'POST'])
 def delete(id):
     if not session.get('admin'): return redirect(url_for('login'))
     l = RepairLog.query.get_or_404(id)
@@ -96,6 +88,7 @@ def delete(id):
     db.session.commit()
     return redirect(url_for('admin'))
 
+# --- FIX EDIT & UPDATE ---
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
     if not session.get('admin'): return redirect(url_for('login'))
@@ -108,6 +101,12 @@ def edit(id):
         db.session.commit()
         return redirect(url_for('admin'))
     return render_template('edit.html', l=l)
+
+# --- FIX LOGOUT ---
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
