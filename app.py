@@ -7,21 +7,32 @@ import base64
 
 app = Flask(__name__)
 
-# GUNA BALIK DATABASE URL ASAL TUAN
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
+# AMBIL LINK DARI RENDER ENVIRONMENT
+uri = os.environ.get("DATABASE_URL")
+# Fix untuk Render/Heroku (tukar postgres:// kepada postgresql:// jika perlu)
+if uri and uri.startswith("postgres://"):
+    uri = uri.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = uri
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 db = SQLAlchemy(app)
 
-# Model Data Asal
+# Model Data
 class TagMRO(db.Model):
     __tablename__ = 'tag_mro'
     id = db.Column(db.Integer, primary_key=True)
-    peralatan = db.Column(db.String)
-    pn = db.Column(db.String)
-    sn = db.Column(db.String)
-    pic = db.Column(db.String)
-    defect = db.Column(db.String)
-    status_type = db.Column(db.String)
-    date_in = db.Column(db.String)
+    peralatan = db.Column(db.String(100))
+    pn = db.Column(db.String(100))
+    sn = db.Column(db.String(100))
+    pic = db.Column(db.String(100))
+    defect = db.Column(db.Text)
+    status_type = db.Column(db.String(50))
+    date_in = db.Column(db.String(50))
+
+# AUTO CREATE TABLE (Penting!)
+with app.app_context():
+    db.create_all()
 
 @app.route('/')
 def index():
@@ -52,17 +63,21 @@ def login():
         pwd = request.form.get('p')
         if user == "admin" and pwd == "g7aero":
             return redirect(url_for('admin'))
-        return "Salah Password!"
-    return render_template('login.html') # Pastikan ada fail login.html
+        return "ID atau Password Salah!"
+    return render_template('login.html')
 
 @app.route('/admin')
 def admin():
-    data_list = TagMRO.query.order_by(TagMRO.id.desc()).all()
-    return render_template('admin.html', l=data_list)
+    try:
+        data_list = TagMRO.query.order_by(TagMRO.id.desc()).all()
+        return render_template('admin.html', l=data_list)
+    except Exception as e:
+        return f"Database Error: {str(e)}"
 
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
-    record = TagMRO.query.get(id)
+    record = TagMRO.query.get_or_404(id)
+    # Gunakan domain tuan
     qr_link = f"https://my-mro-system.onrender.com/view_tag/{id}"
     
     qr = qrcode.QRCode(version=1, box_size=10, border=2)
@@ -78,7 +93,7 @@ def view_tag(id):
 
 @app.route('/delete/<int:id>')
 def delete(id):
-    record = TagMRO.query.get(id)
+    record = TagMRO.query.get_or_404(id)
     db.session.delete(record)
     db.session.commit()
     return redirect(url_for('admin'))
