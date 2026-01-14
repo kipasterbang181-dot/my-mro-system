@@ -13,11 +13,11 @@ app = Flask(__name__)
 app.secret_key = "g7_aerospace_key_2026"
 
 # --- DATABASE CONFIG (SUPABASE) ---
-# Menggunakan SSL mode require untuk kestabilan di Render
+# Menggunakan PostgreSQL Direct Connection dari Supabase
 DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {"pool_pre_ping": True} # Elak database "sleep"
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {"pool_pre_ping": True}
 db = SQLAlchemy(app)
 
 # --- DATABASE MODEL ---
@@ -38,9 +38,7 @@ def keep_alive():
     time.sleep(20)
     while True:
         try:
-            # Render akan bagi ralat jika kita ping 127.0.0.1, 
-            # sebaiknya ping URL sebenar atau biarkan kosong jika guna cron job
-            print("Server G7 Aerospace: Sistem Aktif...")
+            print("G7 Aerospace System: Monitoring Heartbeat...")
         except: pass
         time.sleep(600)
 
@@ -53,7 +51,7 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # Gunakan username/password yang lebih pro
+        # Admin Credentials
         if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
             session['admin'] = True
             return redirect(url_for('admin'))
@@ -71,10 +69,10 @@ def incoming():
     try:
         new_log = RepairLog(
             date_in=datetime.now().strftime("%Y-%m-%d"),
-            peralatan=request.form.get('peralatan'),
-            pn=request.form.get('pn'),
-            sn=request.form.get('sn'),
-            pic=request.form.get('pic'),
+            peralatan=request.form.get('peralatan').upper(),
+            pn=request.form.get('pn').upper(),
+            sn=request.form.get('sn').upper(),
+            pic=request.form.get('pic').upper(), # JTP disimpan di sini
             status_type="REPAIR",
             defect="N/A"
         )
@@ -82,20 +80,21 @@ def incoming():
         db.session.commit()
         return redirect(url_for('index'))
     except Exception as e:
-        return f"Database Error: {str(e)}", 500
+        print(f"Error: {e}")
+        return "Internal Server Error 500: Database Connection Failed", 500
 
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
     l = RepairLog.query.get_or_404(id)
     
-    # Folder static untuk simpan QR
+    # Ensure static folder exists for QR
     if not os.path.exists('static'):
         os.makedirs('static')
     
     # Generate QR Code Link
-    qr_data = f"{request.url_root}view_tag/{id}"
+    qr_url = f"{request.url_root}view_tag/{id}"
     qr = qrcode.QRCode(version=1, box_size=10, border=2)
-    qr.add_data(qr_data)
+    qr.add_data(qr_url)
     qr.make(fit=True)
     
     qr_filename = f"qr_{id}.png"
@@ -103,13 +102,22 @@ def view_tag(id):
     img = qr.make_image(fill_color="black", back_color="white")
     img.save(qr_path)
     
-    return render_template('view_tag.html', l=l, qr_code=qr_filename)
+    return render_template('view_tag.html', l=l, qr_code=qr_filename, print_mode=False)
 
 @app.route('/download_pdf/<int:id>')
 def download_pdf(id):
-    # Route ini panggil view_tag tapi dalam mode auto-print (PDF)
     l = RepairLog.query.get_or_404(id)
-    return render_template('view_tag.html', l=l, print_mode=True)
+    # Generate QR also for PDF view
+    if not os.path.exists('static'): os.makedirs('static')
+    qr_url = f"{request.url_root}view_tag/{id}"
+    qr = qrcode.QRCode(version=1, box_size=10, border=2)
+    qr.add_data(qr_url)
+    qr.make(fit=True)
+    qr_filename = f"qr_{id}.png"
+    img = qr.make_image(fill_color="black", back_color="white")
+    img.save(os.path.join('static', qr_filename))
+
+    return render_template('view_tag.html', l=l, qr_code=qr_filename, print_mode=True)
 
 @app.route('/export')
 def export_excel():
@@ -122,8 +130,8 @@ def export_excel():
         data.append({
             "Date In": l.date_in,
             "Equipment": l.peralatan,
-            "P/N": l.pn,
-            "S/N": l.sn,
+            "Part Number": l.pn,
+            "Serial Number": l.sn,
             "JTP (PIC)": l.pic,
             "Status": l.status_type
         })
@@ -131,12 +139,12 @@ def export_excel():
     df = pd.DataFrame(data)
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='Maintenance_Log')
+        df.to_excel(writer, index=False, sheet_name='G7_Logs')
     output.seek(0)
     
     return send_file(
         output, 
-        download_name=f"G7_Aerospace_Report_{datetime.now().strftime('%Y%m%d')}.xlsx", 
+        download_name=f"G7_Report_{datetime.now().strftime('%Y%m%d')}.xlsx", 
         as_attachment=True
     )
 
@@ -150,14 +158,14 @@ def edit(id):
 def update(id):
     if not session.get('admin'): return redirect(url_for('login'))
     l = RepairLog.query.get_or_404(id)
-    l.peralatan = request.form.get('peralatan')
-    l.pn = request.form.get('pn')
-    l.sn = request.form.get('sn')
-    l.pic = request.form.get('pic')
+    l.peralatan = request.form.get('peralatan').upper()
+    l.pn = request.form.get('pn').upper()
+    l.sn = request.form.get('sn').upper()
+    l.pic = request.form.get('pic').upper()
     db.session.commit()
     return redirect(url_for('admin'))
 
-@app.route('/delete/<int:id>', methods=['POST']) # Gunakan POST untuk keselamatan
+@app.route('/delete/<int:id>', methods=['POST', 'GET'])
 def delete(id):
     if not session.get('admin'): return redirect(url_for('login'))
     l = RepairLog.query.get_or_404(id)
@@ -170,7 +178,7 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-# Jalankan Thread Anti-Tidur
+# Keep alive thread
 threading.Thread(target=keep_alive, daemon=True).start()
 
 if __name__ == '__main__':
