@@ -6,7 +6,6 @@ xlsxwriter
 qrcode[pil]
 requests
 gunicorn
-supabase
 realtime
 postgrest
 gotrue
