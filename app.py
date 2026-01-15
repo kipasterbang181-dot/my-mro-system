@@ -66,7 +66,7 @@ def incoming():
     db.session.commit()
     return redirect(url_for('index'))
 
-# --- FUNGSI IMPORT EXCEL YANG TELAH DILAJUKAN ---
+# --- FUNGSI IMPORT EXCEL DENGAN PEMBAIKAN "KOSONG/NAN" ---
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
     if not session.get('admin'): return redirect(url_for('login'))
@@ -75,51 +75,59 @@ def import_excel():
     if not file: return "Tiada fail dipilih"
 
     try:
-        df = pd.read_excel(file)
-        logs_to_add = [] # Senarai untuk bulk insert
+        # Baca excel dan tukar semua NaN kepada string kosong terus
+        df = pd.read_excel(file).fillna("")
+        logs_to_add = []
 
         def mapping_status(val):
-            s = str(val).upper()
+            s = str(val).strip().upper()
             if any(x in s for x in ['SERVICEABLE', 'SIAP', 'COMPLETED']): return 'SERVICEABLE'
             if any(x in s for x in ['BER', 'BEYOND REPAIR', 'SCRAPPED', 'DAMAGE']): return 'UNSERVICEABLE'
             if any(x in s for x in ['INSPECTED', 'CHECKED']): return 'INSPECTED'
             return 'ACTIVE'
 
+        # Fungsi helper untuk ambil data supaya tak "Kosong"
+        def clean_val(row, keys, default="N/A"):
+            for k in keys:
+                val = row.get(k, "")
+                # Jika val bukan kosong dan bukan string 'nan'
+                if str(val).strip() != "" and str(val).strip().lower() != "nan":
+                    return str(val).strip().upper()
+            return default
+
         for _, row in df.iterrows():
-            # Pengurusan Tarikh In
-            raw_in = row.get('DATE IN')
-            if pd.isna(raw_in) or str(raw_in).strip() == "" or str(raw_in).strip().lower() == "nan":
+            # Kemaskini nama kolum (buang space kalau ada pada tajuk kolum Excel)
+            row_data = {str(k).strip(): v for k, v in row.items()}
+
+            # Logik Tarikh Masuk
+            raw_in = row_data.get('DATE IN', "")
+            if str(raw_in).strip() == "" or str(raw_in).strip().lower() == "nan":
                 d_in = datetime.now().strftime("%Y-%m-%d")
             else:
                 d_in = str(raw_in).strip()[:10]
 
-            # Pengurusan Tarikh Out
-            raw_out = row.get('DATE OUT')
-            if pd.isna(raw_out) or str(raw_out).strip() == "" or str(raw_out).strip() == "-" or str(raw_out).strip().lower() == "nan":
+            # Logik Tarikh Keluar
+            raw_out = row_data.get('DATE OUT', "")
+            if str(raw_out).strip() == "" or str(raw_out).strip().lower() in ["nan", "-"]:
                 d_out = "-"
             else:
                 d_out = str(raw_out).strip()[:10]
 
-            # Pengurusan JTP/PIC
-            val_pic = row.get('JTP', row.get('PIC', row.get('REF')))
-            if pd.isna(val_pic) or str(val_pic).strip() == "" or str(val_pic).strip().lower() == "nan":
-                val_pic = "N/A"
-            else:
-                val_pic = str(val_pic).strip().upper()
+            # Logik JTP / PIC (Cari JTP dulu, kemudian PIC, kemudian REF)
+            val_pic = clean_val(row_data, ['JTP', 'PIC', 'REF'], "N/A")
             
             new_log = RepairLog(
-                peralatan=str(row.get('DESCRIPTION', row.get('EQUIPMENT', 'N/A'))).strip().upper(),
-                pn=str(row.get('PART NO', row.get('P/N', 'N/A'))).strip().upper(),
-                sn=str(row.get('SERIAL NO', row.get('S/N', 'N/A'))).strip().upper(),
+                peralatan=clean_val(row_data, ['DESCRIPTION', 'EQUIPMENT'], "N/A"),
+                pn=clean_val(row_data, ['PART NO', 'P/N', 'PN'], "N/A"),
+                sn=clean_val(row_data, ['SERIAL NO', 'S/N', 'SN'], "N/A"),
                 date_in=d_in,
                 date_out=d_out,
-                status_type=mapping_status(row.get('STATUS', 'ACTIVE')),
+                status_type=mapping_status(row_data.get('STATUS', 'ACTIVE')),
                 pic=val_pic,
-                defect=str(row.get('DEFECT', row.get('REMARKS', 'INITIAL ENTRY'))).strip().upper()
+                defect=clean_val(row_data, ['DEFECT', 'REMARKS'], "INITIAL ENTRY")
             )
             logs_to_add.append(new_log)
         
-        # Hantar semua sekali gus
         if logs_to_add:
             db.session.bulk_save_objects(logs_to_add)
             db.session.commit()
