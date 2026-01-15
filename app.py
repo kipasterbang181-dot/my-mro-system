@@ -84,10 +84,8 @@ def import_excel():
             return 'ACTIVE'
 
         for _, row in df.iterrows():
-            # --- TAMBAHAN UNTUK DATE & JTP ---
             d_in = str(row.get('DATE IN', datetime.now().strftime("%Y-%m-%d")))
             d_out = str(row.get('DATE OUT', '-'))
-            # Cari JTP atau PIC dari Excel
             val_pic = str(row.get('JTP', row.get('PIC', 'BULK IMPORT'))).upper()
             
             new_log = RepairLog(
@@ -135,6 +133,23 @@ def delete(id):
     db.session.commit()
     return redirect(url_for('admin'))
 
+# --- FUNGSI BARU: DELETE TERUS BANYAK (BULK) ---
+@app.route('/delete_bulk', methods=['POST'])
+def delete_bulk():
+    if not session.get('admin'): return redirect(url_for('login'))
+    selected_ids = request.form.getlist('selected_ids')
+    if selected_ids:
+        try:
+            # Tukar ID dari string ke integer
+            ids_to_delete = [int(i) for i in selected_ids]
+            # Padam semua rekod yang dipilih
+            RepairLog.query.filter(RepairLog.id.in_(ids_to_delete)).delete(synchronize_session=False)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return f"Ralat semasa bulk delete: {str(e)}"
+    return redirect(url_for('admin'))
+
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
     if not session.get('admin'): return redirect(url_for('login'))
@@ -145,7 +160,6 @@ def edit(id):
         l.pn = request.form.get('pn', '').upper()
         l.sn = request.form.get('sn', '').upper()
         l.pic = request.form.get('pic', '').upper()
-        
         l.date_in = request.form.get('date_in')
         l.date_out = request.form.get('date_out')
         
