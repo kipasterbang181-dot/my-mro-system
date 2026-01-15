@@ -13,7 +13,7 @@
 </head>
 <body class="bg-slate-900 min-h-screen p-4 flex flex-col items-center justify-center">
 
-    <div class="max-w-2xl w-full bg-white p-10 rounded-[3rem] shadow-2xl border-t-8 border-blue-900 relative">
+    <div class="max-w-2xl w-full bg-white p-10 rounded-[3rem] shadow-2xl border-t-8 border-blue-900 relative my-10">
         
         <div class="text-center mb-10">
             <h1 class="text-4xl font-black text-blue-900 uppercase italic leading-none tracking-tighter">
@@ -41,11 +41,6 @@
             </div>
 
             <div>
-                <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">JTP</label>
-                <input type="text" name="pic" placeholder="ENTER JTP NO." class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-blue-900 focus:border-blue-900 outline-none transition-all shadow-sm" required>
-            </div>
-
-            <div>
                 <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Authorization Status</label>
                 <select name="status" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm appearance-none cursor-pointer">
                     <option value="ACTIVE">ACTIVE</option>
@@ -57,7 +52,7 @@
 
             <input type="hidden" name="status_type" value="REPAIR">
             <input type="hidden" name="defect" value="N/A">
-            <input type="hidden" name="date_in" id="current_date">
+            <input type="hidden" name="pic" value="N/A"> <input type="hidden" name="date_in" id="current_date">
 
             <div class="flex flex-col gap-4 pt-2">
                 <button type="submit" class="w-full bg-blue-900 text-white font-black py-6 rounded-[2rem] hover:bg-black transition-all shadow-xl uppercase tracking-widest text-sm italic">
@@ -119,7 +114,6 @@
                 
                 let headerRowIndex = -1;
                 for(let i=0; i<rows.length; i++){
-                    // Mencari baris tajuk dalam Excel
                     if(rows[i] && (rows[i].includes('DESCRIPTION') || rows[i].includes('PART NO'))){
                         headerRowIndex = i;
                         break;
@@ -137,7 +131,7 @@
                     peralatan: row['DESCRIPTION'] || row['Description'] || '', 
                     pn: row['PART NO'] || row['PART NUMBER'] || row['Part Number'] || '',
                     sn: row['SERIAL NO'] || row['Serial Number'] || row['Serial No'] || '',
-                    pic: row['JTP'] || row['PIC'] || 'N/A',
+                    pic: 'N/A', // Set N/A secara automatik
                     status: 'ACTIVE',
                     status_type: 'REPAIR',
                     defect: row['DEFECT'] || row['REMARKS'] || 'N/A',
