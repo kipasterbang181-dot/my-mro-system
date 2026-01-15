@@ -194,6 +194,7 @@
             const downloadBtn = document.getElementById('downloadLink');
 
             document.getElementById('modalSN').innerText = sn;
+            // Link cetak QR Tag dihantar ke route download backend
             downloadBtn.href = "/download_qr/" + id;
 
             qrContainer.innerHTML = "";

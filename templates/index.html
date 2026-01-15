@@ -90,7 +90,7 @@
     </div>
 
     <script>
-        // Set tarikh hari ini secara automatik
+        // Set tarikh hari ini secara automatik YYYY-MM-DD
         document.getElementById('current_date').value = new Date().toISOString().split('T')[0];
 
         const excelInput = document.getElementById('excelInput');
@@ -119,7 +119,8 @@
                 
                 let headerRowIndex = -1;
                 for(let i=0; i<rows.length; i++){
-                    if(rows[i].includes('DESCRIPTION') || rows[i].includes('PART NO')){
+                    // Mencari baris tajuk dalam Excel
+                    if(rows[i] && (rows[i].includes('DESCRIPTION') || rows[i].includes('PART NO'))){
                         headerRowIndex = i;
                         break;
                     }
