@@ -66,7 +66,7 @@ def incoming():
     db.session.commit()
     return redirect(url_for('index'))
 
-# --- FUNGSI IMPORT EXCEL: FOKUS FIX JTP/PIC & DATA KOSONG ---
+# --- FUNGSI IMPORT EXCEL DENGAN FIX JPT & TARIKH ---
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
     if not session.get('admin'): return redirect(url_for('login'))
@@ -75,8 +75,8 @@ def import_excel():
     if not file: return "Tiada fail dipilih"
 
     try:
-        # fillna("") tukar semua NaN kepada string kosong terus
-        df = pd.read_excel(file).fillna("")
+        # Paksa semua jadi string dan buang 'nan' supaya JTP/Tarikh tak kosong
+        df = pd.read_excel(file).astype(str).replace('nan', '')
         logs_to_add = []
 
         def mapping_status(val):
@@ -86,46 +86,60 @@ def import_excel():
             if any(x in s for x in ['INSPECTED', 'CHECKED']): return 'INSPECTED'
             return 'ACTIVE'
 
-        # Fungsi helper untuk ambil data secara fleksibel (Cari nama kolum yang mungkin berbeza)
-        def get_clean_val(row_dict, keys, default="N/A"):
-            for k in keys:
-                # Kita check header dalam huruf besar dan tanpa space
-                val = row_dict.get(k.upper(), "")
-                if str(val).strip() != "" and str(val).strip().lower() != "nan":
-                    return str(val).strip().upper()
-            return default
-
         for _, row in df.iterrows():
-            # Kemaskini nama kolum: Buang space dan tukar jadi HURUF BESAR
-            row_data = {str(k).strip().upper(): v for k, v in row.items()}
+            # Kemaskini nama kolum: Buang space dan buat HURUF BESAR
+            row_data = {str(k).strip().upper(): str(v).strip() for k, v in row.items()}
 
-            # Logik Tarikh Masuk
-            raw_in = row_data.get('DATE IN', "")
-            if str(raw_in).strip() == "" or str(raw_in).strip().lower() == "nan":
-                d_in = datetime.now().strftime("%Y-%m-%d")
-            else:
-                d_in = str(raw_in).strip()[:10]
+            # 1. Cari JTP / PIC (Cari pelbagai kemungkinan nama kolum)
+            val_pic = "N/A"
+            for k in ['JTP', 'PIC', 'STAFF', 'REPAIRER', 'REF']:
+                if k in row_data and row_data[k] != "":
+                    val_pic = row_data[k].upper()
+                    break
 
-            # Logik Tarikh Keluar
-            raw_out = row_data.get('DATE OUT', "")
-            if str(raw_out).strip() == "" or str(raw_out).strip().lower() in ["nan", "-"]:
-                d_out = "-"
-            else:
-                d_out = str(raw_out).strip()[:10]
+            # 2. Cari Tarikh Masuk (DATE IN)
+            d_in = ""
+            for k in ['DATE IN', 'TARIKH MASUK', 'DATEIN', 'IN']:
+                if k in row_data and row_data[k] != "":
+                    d_in = row_data[k][:10] # Ambil YYYY-MM-DD sahaja
+                    break
+            if not d_in or d_in == "": d_in = datetime.now().strftime("%Y-%m-%d")
 
-            # --- PEMBAIKAN JTP / PIC ---
-            # Sistem akan cari kolum JTP, kalau tak jumpa cari PIC, STAFF, atau REF
-            val_pic = get_clean_val(row_data, ['JTP', 'PIC', 'STAFF', 'REPAIRER', 'REF'], "N/A")
+            # 3. Cari Tarikh Keluar (DATE OUT)
+            d_out = "-"
+            for k in ['DATE OUT', 'TARIKH KELUAR', 'DATEOUT', 'OUT']:
+                if k in row_data and row_data[k] != "" and row_data[k] != "-":
+                    d_out = row_data[k][:10]
+                    break
+
+            # 4. Cari Peralatan, PN, SN
+            peralatan = "N/A"
+            for k in ['DESCRIPTION', 'EQUIPMENT', 'PERALATAN']:
+                if k in row_data and row_data[k] != "":
+                    peralatan = row_data[k].upper()
+                    break
             
+            pn = "N/A"
+            for k in ['PART NO', 'P/N', 'PN', 'PART NUMBER']:
+                if k in row_data and row_data[k] != "":
+                    pn = row_data[k].upper()
+                    break
+
+            sn = "N/A"
+            for k in ['SERIAL NO', 'S/N', 'SN', 'SERIAL NUMBER']:
+                if k in row_data and row_data[k] != "":
+                    sn = row_data[k].upper()
+                    break
+
             new_log = RepairLog(
-                peralatan=get_clean_val(row_data, ['DESCRIPTION', 'EQUIPMENT', 'PERALATAN'], "N/A"),
-                pn=get_clean_val(row_data, ['PART NO', 'P/N', 'PN', 'PART NUMBER'], "N/A"),
-                sn=get_clean_val(row_data, ['SERIAL NO', 'S/N', 'SN', 'SERIAL NUMBER'], "N/A"),
+                peralatan=peralatan,
+                pn=pn,
+                sn=sn,
                 date_in=d_in,
                 date_out=d_out,
                 status_type=mapping_status(row_data.get('STATUS', 'ACTIVE')),
                 pic=val_pic,
-                defect=get_clean_val(row_data, ['DEFECT', 'REMARKS', 'KEROSAKAN'], "INITIAL ENTRY")
+                defect=row_data.get('DEFECT', row_data.get('REMARKS', 'INITIAL ENTRY')).upper()
             )
             logs_to_add.append(new_log)
         
