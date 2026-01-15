@@ -84,13 +84,20 @@ def import_excel():
             return 'ACTIVE'
 
         for _, row in df.iterrows():
+            # --- TAMBAHAN UNTUK DATE & JTP ---
+            d_in = str(row.get('DATE IN', datetime.now().strftime("%Y-%m-%d")))
+            d_out = str(row.get('DATE OUT', '-'))
+            # Cari JTP atau PIC dari Excel
+            val_pic = str(row.get('JTP', row.get('PIC', 'BULK IMPORT'))).upper()
+            
             new_log = RepairLog(
                 peralatan=str(row.get('DESCRIPTION', 'N/A')).upper(),
                 pn=str(row.get('PART NO', 'N/A')).upper(),
                 sn=str(row.get('SERIAL NO', 'N/A')).upper(),
-                date_in=str(row.get('DATE IN', datetime.now().strftime("%Y-%m-%d"))),
+                date_in=d_in,
+                date_out=d_out,
                 status_type=mapping_status(row.get('STATUS', 'ACTIVE')),
-                pic="BULK IMPORT",
+                pic=val_pic,
                 defect=str(row.get('DEFECT', row.get('REMARKS', 'INITIAL ENTRY'))).upper()
             )
             db.session.add(new_log)
@@ -139,10 +146,8 @@ def edit(id):
         l.sn = request.form.get('sn', '').upper()
         l.pic = request.form.get('pic', '').upper()
         
-        # --- INI SAHAJA YANG SAYA TAMBAH ---
         l.date_in = request.form.get('date_in')
         l.date_out = request.form.get('date_out')
-        # ----------------------------------
         
         new_status = request.form.get('status_type')
         if new_status:
