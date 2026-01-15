@@ -90,10 +90,8 @@
     </div>
 
     <script>
-        // Set tarikh hari ini
         document.getElementById('current_date').value = new Date().toISOString().split('T')[0];
 
-        // Logik Import Excel
         const excelInput = document.getElementById('excelInput');
         const fileNameDisplay = document.getElementById('fileName');
         const uploadBtn = document.getElementById('uploadBtn');
@@ -115,19 +113,37 @@
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                
+                // Menggunakan header: 1 untuk membaca secara row-by-row bagi mencari tajuk sebenar
+                const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+                
+                let headerRowIndex = -1;
+                // Cari baris yang mengandungi 'DESCRIPTION' atau 'PART NO'
+                for(let i=0; i<rows.length; i++){
+                    if(rows[i].includes('DESCRIPTION') || rows[i].includes('PART NO')){
+                        headerRowIndex = i;
+                        break;
+                    }
+                }
 
-                // Mapping mengikut kolom dalam fail Excel yang tuan beri
+                if(headerRowIndex === -1) {
+                    alert('Sistem tidak menjumpai tajuk DESCRIPTION atau PART NO dalam Excel tuan.');
+                    return;
+                }
+
+                // Baca semula data bermula dari baris tajuk yang dijumpai
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, {range: headerRowIndex});
+
                 const formattedData = jsonData.map(row => ({
                     peralatan: row['DESCRIPTION'] || row['Description'] || '', 
-                    pn: row['PART NUMBER'] || row['PART NO'] || row['Part Number'] || '',
-                    sn: row['SERIAL NO'] || row['Serial Number'] || '',
-                    pic: row['JTP'] || 'N/A',
-                    status: 'ACTIVE', // Status default
+                    pn: row['PART NO'] || row['PART NUMBER'] || row['Part Number'] || '',
+                    sn: row['SERIAL NO'] || row['Serial Number'] || row['Serial No'] || '',
+                    pic: row['JTP'] || row['PIC'] || 'N/A',
+                    status: 'ACTIVE',
                     status_type: 'REPAIR',
-                    defect: row['DEFECT'] || 'N/A',
+                    defect: row['DEFECT'] || row['REMARKS'] || 'N/A',
                     date_in: new Date().toISOString().split('T')[0]
-                })).filter(item => item.peralatan !== ''); // Buang baris kosong
+                })).filter(item => item.peralatan !== '' && item.peralatan !== 'DESCRIPTION');
 
                 if(formattedData.length > 0) {
                     processImport(formattedData);
