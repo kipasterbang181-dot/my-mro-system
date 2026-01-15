@@ -66,7 +66,7 @@ def incoming():
     db.session.commit()
     return redirect(url_for('index'))
 
-# --- FUNGSI IMPORT EXCEL DENGAN PEMBAIKAN "KOSONG/NAN" ---
+# --- FUNGSI IMPORT EXCEL: FOKUS FIX JTP/PIC & DATA KOSONG ---
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
     if not session.get('admin'): return redirect(url_for('login'))
@@ -75,7 +75,7 @@ def import_excel():
     if not file: return "Tiada fail dipilih"
 
     try:
-        # Baca excel dan tukar semua NaN kepada string kosong terus
+        # fillna("") tukar semua NaN kepada string kosong terus
         df = pd.read_excel(file).fillna("")
         logs_to_add = []
 
@@ -86,18 +86,18 @@ def import_excel():
             if any(x in s for x in ['INSPECTED', 'CHECKED']): return 'INSPECTED'
             return 'ACTIVE'
 
-        # Fungsi helper untuk ambil data supaya tak "Kosong"
-        def clean_val(row, keys, default="N/A"):
+        # Fungsi helper untuk ambil data secara fleksibel (Cari nama kolum yang mungkin berbeza)
+        def get_clean_val(row_dict, keys, default="N/A"):
             for k in keys:
-                val = row.get(k, "")
-                # Jika val bukan kosong dan bukan string 'nan'
+                # Kita check header dalam huruf besar dan tanpa space
+                val = row_dict.get(k.upper(), "")
                 if str(val).strip() != "" and str(val).strip().lower() != "nan":
                     return str(val).strip().upper()
             return default
 
         for _, row in df.iterrows():
-            # Kemaskini nama kolum (buang space kalau ada pada tajuk kolum Excel)
-            row_data = {str(k).strip(): v for k, v in row.items()}
+            # Kemaskini nama kolum: Buang space dan tukar jadi HURUF BESAR
+            row_data = {str(k).strip().upper(): v for k, v in row.items()}
 
             # Logik Tarikh Masuk
             raw_in = row_data.get('DATE IN', "")
@@ -113,18 +113,19 @@ def import_excel():
             else:
                 d_out = str(raw_out).strip()[:10]
 
-            # Logik JTP / PIC (Cari JTP dulu, kemudian PIC, kemudian REF)
-            val_pic = clean_val(row_data, ['JTP', 'PIC', 'REF'], "N/A")
+            # --- PEMBAIKAN JTP / PIC ---
+            # Sistem akan cari kolum JTP, kalau tak jumpa cari PIC, STAFF, atau REF
+            val_pic = get_clean_val(row_data, ['JTP', 'PIC', 'STAFF', 'REPAIRER', 'REF'], "N/A")
             
             new_log = RepairLog(
-                peralatan=clean_val(row_data, ['DESCRIPTION', 'EQUIPMENT'], "N/A"),
-                pn=clean_val(row_data, ['PART NO', 'P/N', 'PN'], "N/A"),
-                sn=clean_val(row_data, ['SERIAL NO', 'S/N', 'SN'], "N/A"),
+                peralatan=get_clean_val(row_data, ['DESCRIPTION', 'EQUIPMENT', 'PERALATAN'], "N/A"),
+                pn=get_clean_val(row_data, ['PART NO', 'P/N', 'PN', 'PART NUMBER'], "N/A"),
+                sn=get_clean_val(row_data, ['SERIAL NO', 'S/N', 'SN', 'SERIAL NUMBER'], "N/A"),
                 date_in=d_in,
                 date_out=d_out,
                 status_type=mapping_status(row_data.get('STATUS', 'ACTIVE')),
                 pic=val_pic,
-                defect=clean_val(row_data, ['DEFECT', 'REMARKS'], "INITIAL ENTRY")
+                defect=get_clean_val(row_data, ['DEFECT', 'REMARKS', 'KEROSAKAN'], "INITIAL ENTRY")
             )
             logs_to_add.append(new_log)
         
