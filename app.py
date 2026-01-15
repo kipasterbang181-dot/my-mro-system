@@ -66,6 +66,7 @@ def incoming():
     db.session.commit()
     return redirect(url_for('index'))
 
+# --- FUNGSI IMPORT EXCEL YANG TELAH DILAJUKAN ---
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
     if not session.get('admin'): return redirect(url_for('login'))
@@ -75,6 +76,7 @@ def import_excel():
 
     try:
         df = pd.read_excel(file)
+        logs_to_add = [] # Senarai untuk bulk insert
 
         def mapping_status(val):
             s = str(val).upper()
@@ -84,24 +86,21 @@ def import_excel():
             return 'ACTIVE'
 
         for _, row in df.iterrows():
-            # --- PEMBAIKAN TARIKH MASUK (DATE IN) ---
-            raw_date_in = row.get('DATE IN')
-            # Cek jika kosong atau NaN
-            if pd.isna(raw_date_in) or str(raw_date_in).strip() == "" or str(raw_date_in).strip().lower() == "nan":
+            # Pengurusan Tarikh In
+            raw_in = row.get('DATE IN')
+            if pd.isna(raw_in) or str(raw_in).strip() == "" or str(raw_in).strip().lower() == "nan":
                 d_in = datetime.now().strftime("%Y-%m-%d")
             else:
-                # Ambil data dari excel, pastikan dalam format string YYYY-MM-DD
-                d_in = str(raw_date_in).strip()[:10]
+                d_in = str(raw_in).strip()[:10]
 
-            # --- PEMBAIKAN TARIKH KELUAR (DATE OUT) ---
-            raw_date_out = row.get('DATE OUT')
-            if pd.isna(raw_date_out) or str(raw_date_out).strip() == "" or str(raw_date_out).strip() == "-" or str(raw_date_out).strip().lower() == "nan":
+            # Pengurusan Tarikh Out
+            raw_out = row.get('DATE OUT')
+            if pd.isna(raw_out) or str(raw_out).strip() == "" or str(raw_out).strip() == "-" or str(raw_out).strip().lower() == "nan":
                 d_out = "-"
             else:
-                d_out = str(raw_date_out).strip()[:10]
+                d_out = str(raw_out).strip()[:10]
 
-            # --- PEMBAIKAN JTP / PIC ---
-            # Cari dalam kolum JTP, kalau tak jumpa cari PIC, kalau tak jumpa cari REF
+            # Pengurusan JTP/PIC
             val_pic = row.get('JTP', row.get('PIC', row.get('REF')))
             if pd.isna(val_pic) or str(val_pic).strip() == "" or str(val_pic).strip().lower() == "nan":
                 val_pic = "N/A"
@@ -118,9 +117,13 @@ def import_excel():
                 pic=val_pic,
                 defect=str(row.get('DEFECT', row.get('REMARKS', 'INITIAL ENTRY'))).strip().upper()
             )
-            db.session.add(new_log)
+            logs_to_add.append(new_log)
         
-        db.session.commit()
+        # Hantar semua sekali gus
+        if logs_to_add:
+            db.session.bulk_save_objects(logs_to_add)
+            db.session.commit()
+            
         return redirect(url_for('admin'))
     except Exception as e:
         db.session.rollback()
