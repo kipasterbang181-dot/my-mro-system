@@ -2,6 +2,7 @@ import os
 import io
 import base64
 import qrcode
+import pandas as pd  # <--- TAMBAH INI UNTUK BACA EXCEL
 from flask import Flask, render_template, request, redirect, url_for, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
@@ -65,25 +66,58 @@ def incoming():
     db.session.commit()
     return redirect(url_for('index'))
 
+# --- FUNGSI BARU: IMPORT EXCEL (MAPPING LOGIC) ---
+@app.route('/import_excel', methods=['POST'])
+def import_excel():
+    if not session.get('admin'): return redirect(url_for('login'))
+    
+    file = request.files.get('file_excel')
+    if not file: return "Tiada fail dipilih"
+
+    try:
+        # Baca Excel. Engine openpyxl diperlukan untuk fail .xlsx
+        df = pd.read_excel(file)
+
+        def mapping_status(val):
+            s = str(val).upper()
+            if any(x in s for x in ['SERVICEABLE', 'SIAP']): return 'SERVICEABLE'
+            if any(x in s for x in ['BER', 'BEYOND REPAIR', 'SCRAPPED', 'DAMAGE']): return 'UNSERVICEABLE'
+            if any(x in s for x in ['INSPECTED']): return 'INSPECTED'
+            return 'ACTIVE'
+
+        for _, row in df.iterrows():
+            new_log = RepairLog(
+                # Mapping kolum dari Excel ke Database
+                peralatan=str(row.get('DESCRIPTION', 'N/A')).upper(),
+                pn=str(row.get('PART NO', 'N/A')).upper(),
+                sn=str(row.get('SERIAL NO', 'N/A')).upper(),
+                date_in=str(row.get('DATE IN', datetime.now().strftime("%Y-%m-%d"))),
+                status_type=mapping_status(row.get('STATUS', 'ACTIVE')),
+                pic="BULK IMPORT",
+                defect=str(row.get('DEFECT', 'N/A')).upper()
+            )
+            db.session.add(new_log)
+        
+        db.session.commit()
+        return redirect(url_for('admin'))
+    except Exception as e:
+        return f"Ralat semasa proses Excel: {str(e)}"
+
 # --- VIEW DATA SAHAJA (PDF MODE) ---
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
     l = RepairLog.query.get_or_404(id)
     return render_template('view_tag.html', l=l)
 
-# --- KHAS UNTUK DOWNLOAD QR SAHAJA (DIKEMASKINI) ---
+# --- KHAS UNTUK DOWNLOAD QR SAHAJA ---
 @app.route('/download_qr/<int:id>')
 def download_qr(id):
     l = RepairLog.query.get_or_404(id)
-    # Link yang akan disimpan dalam QR
     qr_link = f"{request.url_root}view_tag/{id}"
     qr = qrcode.make(qr_link)
-    
     buf = io.BytesIO()
     qr.save(buf, format="PNG")
     buf.seek(0)
-    
-    # as_attachment=True memaksa browser muat turun fail
     return send_file(
         buf, 
         mimetype='image/png', 
