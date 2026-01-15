@@ -84,25 +84,46 @@ def import_excel():
             return 'ACTIVE'
 
         for _, row in df.iterrows():
-            d_in = str(row.get('DATE IN', datetime.now().strftime("%Y-%m-%d")))
-            d_out = str(row.get('DATE OUT', '-'))
-            val_pic = str(row.get('JTP', row.get('PIC', 'BULK IMPORT'))).upper()
+            # --- PEMBAIKAN TARIKH MASUK (DATE IN) ---
+            raw_date_in = row.get('DATE IN')
+            # Cek jika kosong atau NaN
+            if pd.isna(raw_date_in) or str(raw_date_in).strip() == "" or str(raw_date_in).strip().lower() == "nan":
+                d_in = datetime.now().strftime("%Y-%m-%d")
+            else:
+                # Ambil data dari excel, pastikan dalam format string YYYY-MM-DD
+                d_in = str(raw_date_in).strip()[:10]
+
+            # --- PEMBAIKAN TARIKH KELUAR (DATE OUT) ---
+            raw_date_out = row.get('DATE OUT')
+            if pd.isna(raw_date_out) or str(raw_date_out).strip() == "" or str(raw_date_out).strip() == "-" or str(raw_date_out).strip().lower() == "nan":
+                d_out = "-"
+            else:
+                d_out = str(raw_date_out).strip()[:10]
+
+            # --- PEMBAIKAN JTP / PIC ---
+            # Cari dalam kolum JTP, kalau tak jumpa cari PIC, kalau tak jumpa cari REF
+            val_pic = row.get('JTP', row.get('PIC', row.get('REF')))
+            if pd.isna(val_pic) or str(val_pic).strip() == "" or str(val_pic).strip().lower() == "nan":
+                val_pic = "N/A"
+            else:
+                val_pic = str(val_pic).strip().upper()
             
             new_log = RepairLog(
-                peralatan=str(row.get('DESCRIPTION', 'N/A')).upper(),
-                pn=str(row.get('PART NO', 'N/A')).upper(),
-                sn=str(row.get('SERIAL NO', 'N/A')).upper(),
+                peralatan=str(row.get('DESCRIPTION', row.get('EQUIPMENT', 'N/A'))).strip().upper(),
+                pn=str(row.get('PART NO', row.get('P/N', 'N/A'))).strip().upper(),
+                sn=str(row.get('SERIAL NO', row.get('S/N', 'N/A'))).strip().upper(),
                 date_in=d_in,
                 date_out=d_out,
                 status_type=mapping_status(row.get('STATUS', 'ACTIVE')),
                 pic=val_pic,
-                defect=str(row.get('DEFECT', row.get('REMARKS', 'INITIAL ENTRY'))).upper()
+                defect=str(row.get('DEFECT', row.get('REMARKS', 'INITIAL ENTRY'))).strip().upper()
             )
             db.session.add(new_log)
         
         db.session.commit()
         return redirect(url_for('admin'))
     except Exception as e:
+        db.session.rollback()
         return f"Ralat semasa proses Excel: {str(e)}"
 
 @app.route('/view_tag/<int:id>')
@@ -133,16 +154,13 @@ def delete(id):
     db.session.commit()
     return redirect(url_for('admin'))
 
-# --- FUNGSI BARU: DELETE TERUS BANYAK (BULK) ---
 @app.route('/delete_bulk', methods=['POST'])
 def delete_bulk():
     if not session.get('admin'): return redirect(url_for('login'))
     selected_ids = request.form.getlist('selected_ids')
     if selected_ids:
         try:
-            # Tukar ID dari string ke integer
             ids_to_delete = [int(i) for i in selected_ids]
-            # Padam semua rekod yang dipilih
             RepairLog.query.filter(RepairLog.id.in_(ids_to_delete)).delete(synchronize_session=False)
             db.session.commit()
         except Exception as e:
