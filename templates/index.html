@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>G7 Aerospace | Service Log</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
@@ -44,6 +45,16 @@
                 <input type="text" name="pic" placeholder="ENTER JTP NO." class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-blue-900 focus:border-blue-900 outline-none transition-all shadow-sm" required>
             </div>
 
+            <div>
+                <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Authorization Status</label>
+                <select name="status" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm appearance-none cursor-pointer">
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="COMPLETED">COMPLETED</option>
+                    <option value="INSPECTED">INSPECTED</option>
+                    <option value="SERVICEABLE">SERVICEABLE</option>
+                </select>
+            </div>
+
             <input type="hidden" name="status_type" value="REPAIR">
             <input type="hidden" name="defect" value="N/A">
             <input type="hidden" name="date_in" id="current_date">
@@ -59,13 +70,95 @@
             </div>
         </form>
 
+        <div class="mt-10 pt-8 border-t-2 border-slate-50">
+            <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-3 block tracking-widest">Bulk Import (Excel)</label>
+            <div class="relative group">
+                <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden">
+                <label for="excelInput" class="w-full flex items-center justify-between p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-blue-900 transition-all group">
+                    <span id="fileName" class="text-xs font-bold text-slate-400 uppercase">Pilih fail Excel tuan...</span>
+                    <span class="bg-slate-200 text-slate-600 text-[10px] font-black px-4 py-2 rounded-xl uppercase group-hover:bg-blue-900 group-hover:text-white transition-colors">Browse</span>
+                </label>
+            </div>
+            <button onclick="uploadExcel()" id="uploadBtn" class="w-full mt-4 bg-emerald-600 text-white font-black py-4 rounded-[2rem] hover:bg-black transition-all shadow-lg uppercase tracking-widest text-[10px] hidden">
+                🚀 Start Import Data
+            </button>
+        </div>
+
         <div class="mt-8 text-center">
             <p class="text-[8px] font-bold text-slate-300 uppercase tracking-widest">© 2026 G7 Aerospace Digital System</p>
         </div>
     </div>
 
     <script>
+        // Set tarikh hari ini
         document.getElementById('current_date').value = new Date().toISOString().split('T')[0];
+
+        // Logik Import Excel
+        const excelInput = document.getElementById('excelInput');
+        const fileNameDisplay = document.getElementById('fileName');
+        const uploadBtn = document.getElementById('uploadBtn');
+
+        excelInput.addEventListener('change', function(e) {
+            if(e.target.files.length > 0) {
+                fileNameDisplay.innerText = e.target.files[0].name;
+                fileNameDisplay.classList.remove('text-slate-400');
+                fileNameDisplay.classList.add('text-blue-900');
+                uploadBtn.classList.remove('hidden');
+            }
+        });
+
+        function uploadExcel() {
+            const file = excelInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                // Mapping mengikut kolom dalam fail Excel yang tuan beri
+                const formattedData = jsonData.map(row => ({
+                    peralatan: row['DESCRIPTION'] || row['Description'] || '', 
+                    pn: row['PART NUMBER'] || row['PART NO'] || row['Part Number'] || '',
+                    sn: row['SERIAL NO'] || row['Serial Number'] || '',
+                    pic: row['JTP'] || 'N/A',
+                    status: 'ACTIVE', // Status default
+                    status_type: 'REPAIR',
+                    defect: row['DEFECT'] || 'N/A',
+                    date_in: new Date().toISOString().split('T')[0]
+                })).filter(item => item.peralatan !== ''); // Buang baris kosong
+
+                if(formattedData.length > 0) {
+                    processImport(formattedData);
+                } else {
+                    alert('Tiada data ditemui dalam fail Excel tersebut.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function processImport(dataList) {
+            uploadBtn.innerText = "IMPORTING... PLEASE WAIT";
+            uploadBtn.disabled = true;
+            let successCount = 0;
+
+            for (let item of dataList) {
+                try {
+                    const response = await fetch('/incoming', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams(item)
+                    });
+                    if(response.ok) successCount++;
+                } catch (err) {
+                    console.error("Gagal import:", item.sn);
+                }
+            }
+
+            alert(`Berjaya import ${successCount} rekod ke dalam sistem!`);
+            window.location.reload();
+        }
     </script>
 </body>
 </html>
