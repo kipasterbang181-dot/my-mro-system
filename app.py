@@ -66,7 +66,7 @@ def incoming():
     db.session.commit()
     return redirect(url_for('index'))
 
-# --- FUNGSI IMPORT EXCEL YANG TELAH DIBAIKI (FIX HEADER & DATE) ---
+# --- FUNGSI IMPORT EXCEL (VERSI FIX MAPPING JTP & DATE) ---
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
     if not session.get('admin'): return redirect(url_for('login'))
@@ -75,12 +75,12 @@ def import_excel():
     if not file: return "Tiada fail dipilih"
 
     try:
-        # 1. SCAN HEADER (Cari baris mana yang ada "PART NO")
+        # 1. SCAN HEADER (Cari baris yang ada tajuk utama)
         df_scan = pd.read_excel(file, header=None)
         header_idx = 0
         for i, row in df_scan.iterrows():
-            row_str = [str(x).upper() for x in row.values]
-            if any(k in s for s in row_str for k in ['PART NO', 'SERIAL NO', 'P/N']):
+            row_str = [str(x).upper() for x in row.values if pd.notna(x)]
+            if any(k in s for s in row_str for k in ['PART NO', 'SERIAL NO', 'P/N', 'DESCRIPTION']):
                 header_idx = i
                 break
         
@@ -89,14 +89,14 @@ def import_excel():
         df = pd.read_excel(file, skiprows=header_idx)
         df.columns = [str(c).strip().upper() for c in df.columns]
 
-        # 3. FUNGSI CUCI DATA (Fix Tarikh Excel Nombor)
+        # 3. FUNGSI CUCI DATA (Fix Tarikh & String)
         def clean_val(val, is_date=False):
-            if pd.isna(val) or str(val).strip().lower() in ['nan', '0', '', '-']: 
+            if pd.isna(val) or str(val).strip().lower() in ['nan', '0', '0.0', '', '-']: 
                 return None if is_date else "N/A"
             
             if is_date:
                 try:
-                    # Kalau format nombor Excel (cth: 45281)
+                    # Tukar format nombor Excel (cth: 45281) ke Tarikh
                     if isinstance(val, (int, float)):
                         return pd.to_datetime(val, unit='D', origin='1899-12-30').strftime('%Y-%m-%d')
                     return pd.to_datetime(str(val)).strftime('%Y-%m-%d')
@@ -106,21 +106,29 @@ def import_excel():
 
         logs_to_add = []
         for _, row in df.iterrows():
-            # Cari SN, kalau takda abaikan baris tu
+            # Wajib ada Serial Number
             sn = clean_val(row.get('SERIAL NO', row.get('S/N', row.get('SERIAL NUMBER', ''))))
             if sn == "N/A": continue
 
-            # Mapping JTP masuk ke PIC
-            jtp = clean_val(row.get('JTP', row.get('PIC', row.get('REMARKS', ''))))
+            # Pemetaan (Mapping) Kolum
+            d_in = clean_val(row.get('DATE IN'), True)
+            
+            # Cari Date Out (utama) atau Date Out 2
+            d_out = clean_val(row.get('DATE OUT', row.get('DATE OUT2', '')), True) or "-"
+            
+            # Cari JTP (utama) atau PIC
+            jtp_val = clean_val(row.get('JTP', row.get('PIC', '')))
+            if jtp_val == "N/A":
+                jtp_val = clean_val(row.get('REMARKS', ''))
 
             new_log = RepairLog(
                 peralatan=clean_val(row.get('DESCRIPTION', row.get('PERALATAN', ''))),
                 pn=clean_val(row.get('PART NO', row.get('P/N', ''))),
                 sn=sn,
-                date_in=clean_val(row.get('DATE IN'), True) or datetime.now().strftime("%Y-%m-%d"),
-                date_out=clean_val(row.get('DATE OUT'), True) or "-",
+                date_in=d_in or datetime.now().strftime("%Y-%m-%d"),
+                date_out=d_out,
                 status_type=str(row.get('STATUS', 'ACTIVE')).upper(),
-                pic=jtp,
+                pic=jtp_val,
                 defect=clean_val(row.get('DEFECT', row.get('REMARKS', 'IMPORT')))
             )
             logs_to_add.append(new_log)
