@@ -3,7 +3,6 @@ import io
 import base64
 import qrcode
 import pandas as pd
-import numpy as np
 from flask import Flask, render_template, request, redirect, url_for, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
@@ -12,7 +11,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 
 # --- DATABASE CONFIG ---
-DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
+DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {"pool_pre_ping": True}
@@ -33,29 +32,6 @@ class RepairLog(db.Model):
 
 with app.app_context():
     db.create_all()
-
-# --- FUNGSI PEMBANTU (HELPER) ---
-def fix_date(val):
-    """Menukar format tarikh pelik Excel atau string kepada YYYY-MM-DD"""
-    if pd.isna(val) or str(val).strip().lower() in ['nan', '0', '', 'none', '-']:
-        return None
-    try:
-        # Jika format nombor Excel (cth: 45281)
-        if isinstance(val, (int, float)) or str(val).replace('.','').isdigit():
-            return pd.to_datetime(float(val), unit='D', origin='1899-12-30').strftime('%Y-%m-%d')
-        # Jika format string (cth: 21/08/2024)
-        return pd.to_datetime(str(val)).strftime('%Y-%m-%d')
-    except:
-        return str(val)[:10]
-
-def mapping_status(val):
-    s = str(val).strip().upper()
-    if any(x in s for x in ['SERVICEABLE', 'SIAP', 'COMPLETED']): return 'SERVICEABLE'
-    if any(x in s for x in ['BER', 'BEYOND REPAIR', 'SCRAPPED', 'DAMAGE']): return 'UNSERVICEABLE'
-    if any(x in s for x in ['INSPECTED', 'CHECKED']): return 'INSPECTED'
-    return 'ACTIVE'
-
-# --- ROUTES ---
 
 @app.route('/')
 def index():
@@ -90,9 +66,7 @@ def incoming():
     db.session.commit()
     return redirect(url_for('index'))
 
-
-
-# --- FUNGSI IMPORT EXCEL (VERSI POWER & FLEXIBLE) ---
+# --- FUNGSI IMPORT EXCEL YANG TELAH DIBAIKI (FIX HEADER & DATE) ---
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
     if not session.get('admin'): return redirect(url_for('login'))
@@ -101,51 +75,53 @@ def import_excel():
     if not file: return "Tiada fail dipilih"
 
     try:
-        # 1. Cari Header secara automatik
-        df_raw = pd.read_excel(file, header=None)
-        header_row_index = 0
-        for i, row in df_raw.iterrows():
+        # 1. SCAN HEADER (Cari baris mana yang ada "PART NO")
+        df_scan = pd.read_excel(file, header=None)
+        header_idx = 0
+        for i, row in df_scan.iterrows():
             row_str = [str(x).upper() for x in row.values]
-            if any(k in s for s in row_str for k in ['PART NO', 'SERIAL NO', 'P/N', 'PART NUMBER']):
-                header_row_index = i
+            if any(k in s for s in row_str for k in ['PART NO', 'SERIAL NO', 'P/N']):
+                header_idx = i
                 break
-
-        # 2. Baca semula dari baris header tersebut
+        
+        # 2. BACA SEMULA guna header yang betul
         file.seek(0)
-        df = pd.read_excel(file, skiprows=header_row_index)
+        df = pd.read_excel(file, skiprows=header_idx)
         df.columns = [str(c).strip().upper() for c in df.columns]
 
+        # 3. FUNGSI CUCI DATA (Fix Tarikh Excel Nombor)
+        def clean_val(val, is_date=False):
+            if pd.isna(val) or str(val).strip().lower() in ['nan', '0', '', '-']: 
+                return None if is_date else "N/A"
+            
+            if is_date:
+                try:
+                    # Kalau format nombor Excel (cth: 45281)
+                    if isinstance(val, (int, float)):
+                        return pd.to_datetime(val, unit='D', origin='1899-12-30').strftime('%Y-%m-%d')
+                    return pd.to_datetime(str(val)).strftime('%Y-%m-%d')
+                except:
+                    return str(val)[:10]
+            return str(val).strip().upper()
+
         logs_to_add = []
-
         for _, row in df.iterrows():
-            # Cari Serial Number (Wajib ada)
-            sn_val = str(row.get('SERIAL NO', row.get('S/N', row.get('SERIAL NUMBER', '')))).strip()
-            if sn_val == "" or sn_val.lower() == 'nan':
-                continue
+            # Cari SN, kalau takda abaikan baris tu
+            sn = clean_val(row.get('SERIAL NO', row.get('S/N', row.get('SERIAL NUMBER', ''))))
+            if sn == "N/A": continue
 
-            # Mapping flexible untuk setiap column
-            peralatan = str(row.get('DESCRIPTION', row.get('EQUIPMENT', row.get('PERALATAN', 'N/A')))).upper()
-            pn = str(row.get('PART NO', row.get('P/N', row.get('PN', row.get('PART NUMBER', 'N/A'))))).upper()
-            
-            # Cari JTP dalam column JTP atau REMARKS atau PIC
-            val_pic = str(row.get('JTP', row.get('PIC', row.get('REMARKS', 'N/A')))).upper()
-            
-            # Proses Tarikh
-            d_in = fix_date(row.get('DATE IN', row.get('TARIKH MASUK', row.get('DATEIN'))))
-            if not d_in: d_in = datetime.now().strftime("%Y-%m-%d")
-            
-            d_out = fix_date(row.get('DATE OUT', row.get('TARIKH KELUAR', row.get('DATEOUT'))))
-            if not d_out: d_out = "-"
+            # Mapping JTP masuk ke PIC
+            jtp = clean_val(row.get('JTP', row.get('PIC', row.get('REMARKS', ''))))
 
             new_log = RepairLog(
-                peralatan=peralatan,
-                pn=pn,
-                sn=sn_val.upper(),
-                date_in=d_in,
-                date_out=d_out,
-                status_type=mapping_status(row.get('STATUS', 'ACTIVE')),
-                pic=val_pic,
-                defect=str(row.get('DEFECT', row.get('REMARKS', 'IMPORT DARI EXCEL'))).upper()
+                peralatan=clean_val(row.get('DESCRIPTION', row.get('PERALATAN', ''))),
+                pn=clean_val(row.get('PART NO', row.get('P/N', ''))),
+                sn=sn,
+                date_in=clean_val(row.get('DATE IN'), True) or datetime.now().strftime("%Y-%m-%d"),
+                date_out=clean_val(row.get('DATE OUT'), True) or "-",
+                status_type=str(row.get('STATUS', 'ACTIVE')).upper(),
+                pic=jtp,
+                defect=clean_val(row.get('DEFECT', row.get('REMARKS', 'IMPORT')))
             )
             logs_to_add.append(new_log)
         
@@ -156,7 +132,7 @@ def import_excel():
         return redirect(url_for('admin'))
     except Exception as e:
         db.session.rollback()
-        return f"Ralat semasa proses Excel: {str(e)}"
+        return f"Error: {str(e)}"
 
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
@@ -192,7 +168,7 @@ def delete_bulk():
             db.session.commit()
         except Exception as e:
             db.session.rollback()
-            return f"Ralat semasa bulk delete: {str(e)}"
+            return f"Ralat: {str(e)}"
     return redirect(url_for('admin'))
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
