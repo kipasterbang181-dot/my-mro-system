@@ -2,7 +2,7 @@ import os
 import io
 import base64
 import qrcode
-import pandas as pd  # <--- DITAMBAH UNTUK BACA EXCEL
+import pandas as pd
 from flask import Flask, render_template, request, redirect, url_for, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
@@ -66,7 +66,6 @@ def incoming():
     db.session.commit()
     return redirect(url_for('index'))
 
-# --- FUNGSI BARU: IMPORT EXCEL DENGAN PEMETAAN STATUS ---
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
     if not session.get('admin'): return redirect(url_for('login'))
@@ -75,23 +74,20 @@ def import_excel():
     if not file: return "Tiada fail dipilih"
 
     try:
-        # Baca Excel menggunakan pandas
         df = pd.read_excel(file)
 
-        # Logik Penukaran Status mengikut perbincangan
         def mapping_status(val):
             s = str(val).upper()
             if any(x in s for x in ['SERVICEABLE', 'SIAP', 'COMPLETED']): return 'SERVICEABLE'
             if any(x in s for x in ['BER', 'BEYOND REPAIR', 'SCRAPPED', 'DAMAGE']): return 'UNSERVICEABLE'
             if any(x in s for x in ['INSPECTED', 'CHECKED']): return 'INSPECTED'
-            return 'ACTIVE' # Default untuk TDI, Pending, dll.
+            return 'ACTIVE'
 
         for _, row in df.iterrows():
-            # Menggunakan get() supaya jika kolum tiada, sistem tidak crash
             new_log = RepairLog(
-                peralatan=str(row.get('DESCRIPTION', 'N/A')).upper(), # Name Equipment
-                pn=str(row.get('PART NO', 'N/A')).upper(),           # Part Number
-                sn=str(row.get('SERIAL NO', 'N/A')).upper(),         # Serial Number
+                peralatan=str(row.get('DESCRIPTION', 'N/A')).upper(),
+                pn=str(row.get('PART NO', 'N/A')).upper(),
+                sn=str(row.get('SERIAL NO', 'N/A')).upper(),
                 date_in=str(row.get('DATE IN', datetime.now().strftime("%Y-%m-%d"))),
                 status_type=mapping_status(row.get('STATUS', 'ACTIVE')),
                 pic="BULK IMPORT",
@@ -104,13 +100,11 @@ def import_excel():
     except Exception as e:
         return f"Ralat semasa proses Excel: {str(e)}"
 
-# --- VIEW DATA SAHAJA (PDF MODE) ---
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
     l = RepairLog.query.get_or_404(id)
     return render_template('view_tag.html', l=l)
 
-# --- KHAS UNTUK DOWNLOAD QR SAHAJA ---
 @app.route('/download_qr/<int:id>')
 def download_qr(id):
     l = RepairLog.query.get_or_404(id)
@@ -126,7 +120,6 @@ def download_qr(id):
         download_name=f"QR_{l.sn}.png"
     )
 
-# --- DELETE ---
 @app.route('/delete/<int:id>')
 def delete(id):
     if not session.get('admin'): return redirect(url_for('login'))
@@ -135,7 +128,6 @@ def delete(id):
     db.session.commit()
     return redirect(url_for('admin'))
 
-# --- EDIT & UPDATE ---
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
     if not session.get('admin'): return redirect(url_for('login'))
@@ -146,6 +138,11 @@ def edit(id):
         l.pn = request.form.get('pn', '').upper()
         l.sn = request.form.get('sn', '').upper()
         l.pic = request.form.get('pic', '').upper()
+        
+        # --- INI SAHAJA YANG SAYA TAMBAH ---
+        l.date_in = request.form.get('date_in')
+        l.date_out = request.form.get('date_out')
+        # ----------------------------------
         
         new_status = request.form.get('status_type')
         if new_status:
