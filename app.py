@@ -2,7 +2,7 @@ import os
 import io
 import base64
 import qrcode
-import pandas as pd  # <--- TAMBAH INI UNTUK BACA EXCEL
+import pandas as pd  # <--- DITAMBAH UNTUK BACA EXCEL
 from flask import Flask, render_template, request, redirect, url_for, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
@@ -66,7 +66,7 @@ def incoming():
     db.session.commit()
     return redirect(url_for('index'))
 
-# --- FUNGSI BARU: IMPORT EXCEL (MAPPING LOGIC) ---
+# --- FUNGSI BARU: IMPORT EXCEL DENGAN PEMETAAN STATUS ---
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
     if not session.get('admin'): return redirect(url_for('login'))
@@ -75,26 +75,27 @@ def import_excel():
     if not file: return "Tiada fail dipilih"
 
     try:
-        # Baca Excel. Engine openpyxl diperlukan untuk fail .xlsx
+        # Baca Excel menggunakan pandas
         df = pd.read_excel(file)
 
+        # Logik Penukaran Status mengikut perbincangan
         def mapping_status(val):
             s = str(val).upper()
-            if any(x in s for x in ['SERVICEABLE', 'SIAP']): return 'SERVICEABLE'
+            if any(x in s for x in ['SERVICEABLE', 'SIAP', 'COMPLETED']): return 'SERVICEABLE'
             if any(x in s for x in ['BER', 'BEYOND REPAIR', 'SCRAPPED', 'DAMAGE']): return 'UNSERVICEABLE'
-            if any(x in s for x in ['INSPECTED']): return 'INSPECTED'
-            return 'ACTIVE'
+            if any(x in s for x in ['INSPECTED', 'CHECKED']): return 'INSPECTED'
+            return 'ACTIVE' # Default untuk TDI, Pending, dll.
 
         for _, row in df.iterrows():
+            # Menggunakan get() supaya jika kolum tiada, sistem tidak crash
             new_log = RepairLog(
-                # Mapping kolum dari Excel ke Database
-                peralatan=str(row.get('DESCRIPTION', 'N/A')).upper(),
-                pn=str(row.get('PART NO', 'N/A')).upper(),
-                sn=str(row.get('SERIAL NO', 'N/A')).upper(),
+                peralatan=str(row.get('DESCRIPTION', 'N/A')).upper(), # Name Equipment
+                pn=str(row.get('PART NO', 'N/A')).upper(),           # Part Number
+                sn=str(row.get('SERIAL NO', 'N/A')).upper(),         # Serial Number
                 date_in=str(row.get('DATE IN', datetime.now().strftime("%Y-%m-%d"))),
                 status_type=mapping_status(row.get('STATUS', 'ACTIVE')),
                 pic="BULK IMPORT",
-                defect=str(row.get('DEFECT', 'N/A')).upper()
+                defect=str(row.get('DEFECT', row.get('REMARKS', 'INITIAL ENTRY'))).upper()
             )
             db.session.add(new_log)
         

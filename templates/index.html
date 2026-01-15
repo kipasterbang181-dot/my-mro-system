@@ -90,6 +90,7 @@
     </div>
 
     <script>
+        // Set tarikh hari ini secara automatik
         document.getElementById('current_date').value = new Date().toISOString().split('T')[0];
 
         const excelInput = document.getElementById('excelInput');
@@ -114,11 +115,9 @@
                 const workbook = XLSX.read(data, {type: 'array'});
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                 
-                // Menggunakan header: 1 untuk membaca secara row-by-row bagi mencari tajuk sebenar
                 const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
                 
                 let headerRowIndex = -1;
-                // Cari baris yang mengandungi 'DESCRIPTION' atau 'PART NO'
                 for(let i=0; i<rows.length; i++){
                     if(rows[i].includes('DESCRIPTION') || rows[i].includes('PART NO')){
                         headerRowIndex = i;
@@ -131,7 +130,6 @@
                     return;
                 }
 
-                // Baca semula data bermula dari baris tajuk yang dijumpai
                 const jsonData = XLSX.utils.sheet_to_json(firstSheet, {range: headerRowIndex});
 
                 const formattedData = jsonData.map(row => ({
