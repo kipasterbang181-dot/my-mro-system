@@ -110,14 +110,15 @@
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array', cellDates: true});
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    // Ambil raw rows untuk cari header
                     const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
                     
                     let headerRowIndex = -1;
                     for(let i=0; i<rows.length; i++){
-                        if(rows[i]){
-                            // Kita sanitize tajuk untuk cari kolum utama
-                            const checkRow = rows[i].map(v => String(v).trim().toUpperCase());
-                            if(checkRow.includes('DESCRIPTION') || checkRow.includes('PART NO') || checkRow.includes('PART NUMBER') || checkRow.includes('P/N')){
+                        if(rows[i] && rows[i].length > 0){
+                            // Scan baris yang ada perkataan kunci
+                            const rowStr = rows[i].join("|").toUpperCase();
+                            if(rowStr.includes('DESCRIPTION') || rowStr.includes('PART NO') || rowStr.includes('SERIAL NO')){
                                 headerRowIndex = i;
                                 break;
                             }
@@ -125,37 +126,37 @@
                     }
 
                     if(headerRowIndex === -1) {
-                        alert('Tajuk (DESCRIPTION/PART NO) tidak dijumpai. Pastikan fail Excel betul.');
+                        alert('Tajuk (DESCRIPTION/PART NO) tidak dijumpai. Sila pastikan fail Excel ada tajuk kolum tersebut.');
                         return;
                     }
 
+                    // Baca data bermula dari baris tajuk yang dijumpai
                     const jsonData = XLSX.utils.sheet_to_json(firstSheet, {range: headerRowIndex});
 
                     const formattedData = jsonData.map(row => {
-                        // FIX JTP DAN TARIKH
-                        let picVal = row['JTP'] || row['PIC'] || row['REMARKS'] || 'N/A';
-                        
+                        // Mapping kolum mengikut nama yang ada dalam Excel tuan
+                        let picVal = row['JTP'] || row['JTP/PIC'] || row['PIC'] || row['REMARKS'] || 'N/A';
                         let dateInVal = row['DATE IN'] ? new Date(row['DATE IN']).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
                         let dateOutVal = row['DATE OUT'] || row['DATE OUT2'] || '-';
                         if (dateOutVal instanceof Date) dateOutVal = dateOutVal.toISOString().split('T')[0];
 
                         return {
                             peralatan: row['DESCRIPTION'] || row['Description'] || '', 
-                            pn: row['PART NO'] || row['PART NUMBER'] || row['P/N'] || '',
-                            sn: row['SERIAL NO'] || row['Serial Number'] || row['S/N'] || '',
-                            pic: picVal,
+                            pn: row['PART NO.'] || row['PART NO'] || row['PART NUMBER'] || row['P/N'] || '',
+                            sn: row['SERIAL NO.'] || row['SERIAL NO'] || row['Serial Number'] || row['S/N'] || '',
+                            pic: String(picVal).trim(),
                             status: row['STATUS'] || 'ACTIVE',
                             status_type: 'REPAIR',
                             defect: row['DEFECT'] || row['REMARKS'] || 'IMPORT',
                             date_in: dateInVal,
                             date_out: dateOutVal
                         };
-                    }).filter(item => item.sn && item.sn !== '' && item.sn !== 'N/A');
+                    }).filter(item => item.sn && item.sn !== '' && item.sn !== 'N/A' && item.sn !== 'SERIAL NO.');
 
                     if(formattedData.length > 0) {
                         processImport(formattedData);
                     } else {
-                        alert('Tiada data ditemui.');
+                        alert('Tiada data ditemui di bawah tajuk.');
                     }
                 } catch (err) {
                     alert("Ralat memproses fail: " + err.message);
@@ -165,7 +166,7 @@
         }
 
         async function processImport(dataList) {
-            uploadBtn.innerText = "IMPORTING... PLEASE WAIT";
+            uploadBtn.innerText = "IMPORTING " + dataList.length + " ITEMS...";
             uploadBtn.disabled = true;
             let successCount = 0;
 
