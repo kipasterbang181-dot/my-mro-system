@@ -72,6 +72,14 @@
                     <span class="bg-slate-200 text-slate-600 text-[10px] font-black px-4 py-2 rounded-xl uppercase group-hover:bg-blue-900 group-hover:text-white transition-colors">Browse</span>
                 </label>
             </div>
+
+            <div id="progressContainer" class="mt-4 hidden">
+                <div class="w-full bg-slate-100 rounded-full h-4 overflow-hidden border border-slate-200">
+                    <div id="progressBar" class="bg-emerald-500 h-full w-0 transition-all duration-300"></div>
+                </div>
+                <p id="progressText" class="text-[10px] font-black text-emerald-600 uppercase mt-2 text-center tracking-widest">Sedia untuk import...</p>
+            </div>
+
             <button onclick="uploadExcel()" id="uploadBtn" class="w-full mt-4 bg-emerald-600 text-white font-black py-4 rounded-[2rem] hover:bg-black transition-all shadow-lg uppercase tracking-widest text-[10px] hidden">
                 🚀 Start Import Data
             </button>
@@ -88,6 +96,9 @@
         const excelInput = document.getElementById('excelInput');
         const fileNameDisplay = document.getElementById('fileName');
         const uploadBtn = document.getElementById('uploadBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
 
         excelInput.addEventListener('change', function(e) {
             if(e.target.files.length > 0) {
@@ -95,6 +106,7 @@
                 fileNameDisplay.classList.remove('text-slate-400');
                 fileNameDisplay.classList.add('text-blue-900');
                 uploadBtn.classList.remove('hidden');
+                progressContainer.classList.add('hidden'); // Reset progress bar if new file picked
             }
         });
 
@@ -140,12 +152,17 @@
                             return foundKey ? row[foundKey] : "";
                         };
 
+                        // PEMBETULAN: Ambil tepat mengikut nama kolum
                         let peralatan = getVal(["DESCRIPTION", "COMPONENT", "EQUIPMENT"]);
                         let pn = getVal(["PART NO", "PART NO.", "PART NUMBER", "P/N"]);
                         let sn = getVal(["SERIAL NO", "SERIAL NO.", "SERIAL NUMBER", "S/N"]);
                         let status = getVal(["STATUS"]) || "ACTIVE";
-                        let pic = getVal(["JTP", "PIC", "REMARKS"]) || "N/A";
-                        let defect = getVal(["DEFECT", "REMARKS"]) || "IMPORT";
+                        
+                        // HANYA ambil dari JTP atau PIC. Abaikan REMARKS (WARRANTY G7)
+                        let pic = getVal(["JTP", "PIC"]) || "N/A";
+                        
+                        // HANYA ambil dari DEFECT. Abaikan REMARKS
+                        let defect = getVal(["DEFECT"]) || "N/A";
                         
                         let dateInRaw = getVal(["DATE IN", "DATE_IN"]);
                         let dateOutRaw = getVal(["DATE OUT", "DATE OUT2", "DATE_OUT", "DATE OUT 1"]);
@@ -176,11 +193,14 @@
         }
 
         async function processImport(dataList) {
-            uploadBtn.innerText = `IMPORTING ${dataList.length} REKOD...`;
-            uploadBtn.disabled = true;
+            uploadBtn.classList.add('hidden');
+            progressContainer.classList.remove('hidden');
+            
             let successCount = 0;
+            const total = dataList.length;
 
-            for (let item of dataList) {
+            for (let i = 0; i < total; i++) {
+                const item = dataList[i];
                 try {
                     const response = await fetch('/incoming', {
                         method: 'POST',
@@ -191,10 +211,20 @@
                 } catch (err) {
                     console.error("Gagal simpan S/N:", item.sn);
                 }
+
+                // Kemaskini Progress Bar
+                const percentage = Math.round(((i + 1) / total) * 100);
+                progressBar.style.width = percentage + "%";
+                progressText.innerText = `IMPORTING: ${percentage}% (${i + 1}/${total})`;
             }
 
-            alert(`Selesai! ${successCount} daripada ${dataList.length} rekod berjaya dimasukkan.`);
-            window.location.reload();
+            progressText.innerText = `SELESAI! ${successCount} REKOD BERJAYA.`;
+            progressText.classList.replace('text-emerald-600', 'text-blue-900');
+            
+            setTimeout(() => {
+                alert(`Selesai! ${successCount} rekod berjaya dimasukkan.`);
+                window.location.reload();
+            }, 500);
         }
     </script>
 </body>

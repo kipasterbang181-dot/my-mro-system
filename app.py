@@ -59,7 +59,7 @@ def incoming():
     sn = request.form.get('sn', '').upper()
     date_in = request.form.get('date_in') or datetime.now().strftime("%Y-%m-%d")
     date_out = request.form.get('date_out', '') 
-    defect = request.form.get('defect', 'INITIAL ENTRY').upper()
+    defect = request.form.get('defect', 'N/A').upper()
     status = request.form.get('status', request.form.get('status_type', 'ACTIVE')).upper()
     pic = request.form.get('pic', 'N/A').upper()
 
@@ -81,7 +81,7 @@ def incoming():
         
     return redirect(url_for('index'))
 
-# --- FUNGSI IMPORT EXCEL (TELAH DIBAIKI) ---
+# --- FUNGSI IMPORT EXCEL (DIBAIKI) ---
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
     if not session.get('admin'): return redirect(url_for('login'))
@@ -123,13 +123,13 @@ def import_excel():
             d_in = clean_val(row.get('DATE IN'), True)
             d_out = clean_val(row.get('DATE OUT', row.get('DATE OUT2', '')), True) or "-"
             
-            # AMBIL JTP: Hanya dari kolum JTP
+            # --- PEMBETULAN DISINI: HANYA AMBIL DARI KOLUM YANG SEPATUTNYA ---
+            # PIC/JTP hanya ambil dari kolum JTP
             jtp_val = clean_val(row.get('JTP', 'N/A'))
             
-            # AMBIL DEFECT: Utamakan kolum DEFECT, jika kosong baru ambil REMARKS
-            defect_val = clean_val(row.get('DEFECT'))
-            if defect_val == "N/A":
-                defect_val = clean_val(row.get('REMARKS', 'IMPORT'))
+            # Defect hanya ambil dari kolum DEFECT. Data REMARKS (WARRANTY) diabaikan.
+            defect_val = clean_val(row.get('DEFECT', 'N/A'))
+            # ---------------------------------------------------------------
 
             new_log = RepairLog(
                 peralatan=clean_val(row.get('DESCRIPTION', row.get('PERALATAN', ''))),
