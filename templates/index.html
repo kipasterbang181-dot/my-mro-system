@@ -41,12 +41,7 @@
 
             <div>
                 <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Authorization Status</label>
-                <select name="status" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm appearance-none cursor-pointer">
-                    <option value="ACTIVE">ACTIVE</option>
-                    <option value="COMPLETED">COMPLETED</option>
-                    <option value="INSPECTED">INSPECTED</option>
-                    <option value="SERVICEABLE">SERVICEABLE</option>
-                </select>
+                <input type="text" name="status" placeholder="ENTER STATUS (E.G. ACTIVE, SERVICEABLE...)" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
             </div>
 
             <input type="hidden" name="status_type" value="REPAIR">
@@ -101,7 +96,6 @@
 
         function parseExcelDate(val) {
             if (!val || val === "0" || val === "" || val === 0) return "";
-            // Jika val adalah number (format tarikh Excel), SheetJS akan uruskan jika cellDates: true
             let d = new Date(val);
             if (isNaN(d.getTime())) return "";
             return d.toISOString().split('T')[0];
@@ -114,7 +108,6 @@
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    // cellDates: true penting untuk baca tarikh Excel dengan betul
                     const workbook = XLSX.read(data, {type: 'array', cellDates: true});
                     const firstSheetName = workbook.SheetNames[0];
                     const firstSheet = workbook.Sheets[firstSheetName];
@@ -150,7 +143,6 @@
                         let pic = getVal(["JTP", "PIC", "REMARKS"]) || "N/A";
                         let defect = getVal(["DEFECT", "REMARKS"]) || "IMPORT";
                         
-                        // Mapping DATE OUT yang lebih meluas
                         let dateInRaw = getVal(["DATE IN", "DATE_IN"]);
                         let dateOutRaw = getVal(["DATE OUT", "DATE OUT2", "DATE_OUT", "DATE OUT 1"]);
 
@@ -163,7 +155,7 @@
                             status_type: 'REPAIR',
                             defect: String(defect).toUpperCase(),
                             date_in: parseExcelDate(dateInRaw) || new Date().toISOString().split('T')[0],
-                            date_out: parseExcelDate(dateOutRaw) // Data Date Out dihantar ke server
+                            date_out: parseExcelDate(dateOutRaw)
                         };
                     }).filter(item => item.sn && item.sn !== "" && item.sn !== "SERIAL NO" && item.sn !== "SERIAL NO.");
 
