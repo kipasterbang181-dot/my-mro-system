@@ -57,12 +57,7 @@
 
             <div>
                 <label class="text-[9px] font-black uppercase text-slate-400 ml-4 mb-1 block tracking-widest">Authorization Status</label>
-                <select name="status_type" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all cursor-pointer">
-                    <option value="ACTIVE" {% if item.status_type == 'ACTIVE' %}selected{% endif %}>ACTIVE</option>
-                    <option value="COMPLETED" {% if item.status_type == 'COMPLETED' %}selected{% endif %}>COMPLETED</option>
-                    <option value="INSPECTED" {% if item.status_type == 'INSPECTED' %}selected{% endif %}>INSPECTED</option>
-                    <option value="SERVICEABLE" {% if item.status_type == 'SERVICEABLE' %}selected{% endif %}>SERVICEABLE</option>
-                </select>
+                <input type="text" name="status_type" value="{{ item.status_type }}" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all" placeholder="TAIP STATUS DI SINI...">
             </div>
 
             <input type="hidden" name="defect" value="{{ item.defect }}">

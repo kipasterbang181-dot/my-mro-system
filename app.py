@@ -59,7 +59,7 @@ def incoming():
     pn = request.form.get('pn', '').upper()
     sn = request.form.get('sn', '').upper()
     date_in = request.form.get('date_in') or datetime.now().strftime("%Y-%m-%d")
-    date_out = request.form.get('date_out', '') # TAMBAH INI
+    date_out = request.form.get('date_out', '') 
     defect = request.form.get('defect', 'INITIAL ENTRY').upper()
     status = request.form.get('status', request.form.get('status_type', 'ACTIVE')).upper()
     pic = request.form.get('pic', 'N/A').upper()
@@ -70,7 +70,7 @@ def incoming():
         pn=pn,
         sn=sn,
         date_in=date_in,
-        date_out=date_out, # PASTIKAN INI ADA
+        date_out=date_out,
         defect=defect,
         status_type=status,
         pic=pic
@@ -78,11 +78,9 @@ def incoming():
     db.session.add(new_log)
     db.session.commit()
     
-    # Jika request datang dari AJAX/fetch (index.html import), hantar respon OK
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'Content-Type' in request.headers and 'application/json' in request.headers['Content-Type']:
         return "OK", 200
         
-    # Jika request dari form biasa, redirect ke index
     return redirect(url_for('index'))
 
 # --- FUNGSI IMPORT EXCEL ---
@@ -200,8 +198,11 @@ def edit(id):
         l.pic = request.form.get('pic', '').upper()
         l.date_in = request.form.get('date_in')
         l.date_out = request.form.get('date_out')
-        new_status = request.form.get('status_type')
-        if new_status: l.status_type = new_status.upper()
+        
+        # Menerima teks manual daripada input field 'status_type'
+        new_status = request.form.get('status_type', '')
+        l.status_type = new_status.upper()
+        
         db.session.commit()
         return redirect(url_for('admin'))
     return render_template('edit.html', item=l)
