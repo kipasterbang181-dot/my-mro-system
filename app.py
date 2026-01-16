@@ -51,10 +51,9 @@ def admin():
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     return render_template('admin.html', logs=logs)
 
-# --- FUNGSI INCOMING (BAIK PULIH UNTUK TERIMA DATE_OUT) ---
+# --- FUNGSI INCOMING ---
 @app.route('/incoming', methods=['POST'])
 def incoming():
-    # Ambil data dari form/request
     peralatan = request.form.get('peralatan', '').upper()
     pn = request.form.get('pn', '').upper()
     sn = request.form.get('sn', '').upper()
@@ -64,7 +63,6 @@ def incoming():
     status = request.form.get('status', request.form.get('status_type', 'ACTIVE')).upper()
     pic = request.form.get('pic', 'N/A').upper()
 
-    # Simpan ke database
     new_log = RepairLog(
         peralatan=peralatan,
         pn=pn,
@@ -83,7 +81,7 @@ def incoming():
         
     return redirect(url_for('index'))
 
-# --- FUNGSI IMPORT EXCEL ---
+# --- FUNGSI IMPORT EXCEL (TELAH DIBAIKI) ---
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
     if not session.get('admin'): return redirect(url_for('login'))
@@ -125,9 +123,13 @@ def import_excel():
             d_in = clean_val(row.get('DATE IN'), True)
             d_out = clean_val(row.get('DATE OUT', row.get('DATE OUT2', '')), True) or "-"
             
-            jtp_val = clean_val(row.get('JTP', row.get('PIC', '')))
-            if jtp_val == "N/A":
-                jtp_val = clean_val(row.get('REMARKS', 'N/A'))
+            # AMBIL JTP: Hanya dari kolum JTP
+            jtp_val = clean_val(row.get('JTP', 'N/A'))
+            
+            # AMBIL DEFECT: Utamakan kolum DEFECT, jika kosong baru ambil REMARKS
+            defect_val = clean_val(row.get('DEFECT'))
+            if defect_val == "N/A":
+                defect_val = clean_val(row.get('REMARKS', 'IMPORT'))
 
             new_log = RepairLog(
                 peralatan=clean_val(row.get('DESCRIPTION', row.get('PERALATAN', ''))),
@@ -137,7 +139,7 @@ def import_excel():
                 date_out=d_out,
                 status_type=str(row.get('STATUS', 'ACTIVE')).upper(),
                 pic=jtp_val,
-                defect=clean_val(row.get('DEFECT', row.get('REMARKS', 'IMPORT')))
+                defect=defect_val
             )
             logs_to_add.append(new_log)
         
@@ -198,9 +200,8 @@ def edit(id):
         l.pic = request.form.get('pic', '').upper()
         l.date_in = request.form.get('date_in')
         l.date_out = request.form.get('date_out')
-        l.defect = request.form.get('defect', '').upper() # Tambahan penting untuk edit kerosakan
+        l.defect = request.form.get('defect', '').upper()
         
-        # Menerima teks manual daripada input field 'status_type'
         new_status = request.form.get('status_type', '')
         l.status_type = new_status.upper()
         
