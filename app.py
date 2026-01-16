@@ -51,23 +51,41 @@ def admin():
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     return render_template('admin.html', logs=logs)
 
+# --- FUNGSI INCOMING (BAIK PULIH UNTUK TERIMA DATE_OUT) ---
 @app.route('/incoming', methods=['POST'])
 def incoming():
-    # Mengambil data dari form manual (index.html)
+    # Ambil data dari form/request
+    peralatan = request.form.get('peralatan', '').upper()
+    pn = request.form.get('pn', '').upper()
+    sn = request.form.get('sn', '').upper()
+    date_in = request.form.get('date_in') or datetime.now().strftime("%Y-%m-%d")
+    date_out = request.form.get('date_out', '') # TAMBAH INI
+    defect = request.form.get('defect', 'INITIAL ENTRY').upper()
+    status = request.form.get('status', request.form.get('status_type', 'ACTIVE')).upper()
+    pic = request.form.get('pic', 'N/A').upper()
+
+    # Simpan ke database
     new_log = RepairLog(
-        date_in=request.form.get('date_in') or datetime.now().strftime("%Y-%m-%d"),
-        peralatan=request.form.get('peralatan', '').upper(),
-        pn=request.form.get('pn', '').upper(),
-        sn=request.form.get('sn', '').upper(),
-        pic=request.form.get('pic', 'N/A').upper(),
-        status_type=request.form.get('status', 'ACTIVE').upper(),
-        defect=request.form.get('defect', 'INITIAL ENTRY').upper()
+        peralatan=peralatan,
+        pn=pn,
+        sn=sn,
+        date_in=date_in,
+        date_out=date_out, # PASTIKAN INI ADA
+        defect=defect,
+        status_type=status,
+        pic=pic
     )
     db.session.add(new_log)
     db.session.commit()
+    
+    # Jika request datang dari AJAX/fetch (index.html import), hantar respon OK
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'Content-Type' in request.headers and 'application/json' in request.headers['Content-Type']:
+        return "OK", 200
+        
+    # Jika request dari form biasa, redirect ke index
     return redirect(url_for('index'))
 
-# --- FUNGSI IMPORT EXCEL (VERSI FIX MAPPING JTP & DATE) ---
+# --- FUNGSI IMPORT EXCEL ---
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
     if not session.get('admin'): return redirect(url_for('login'))
@@ -76,7 +94,6 @@ def import_excel():
     if not file: return "Tiada fail dipilih"
 
     try:
-        # 1. SCAN HEADER (Cari baris yang ada tajuk utama)
         df_scan = pd.read_excel(file, header=None)
         header_idx = 0
         for i, row in df_scan.iterrows():
@@ -85,19 +102,16 @@ def import_excel():
                 header_idx = i
                 break
         
-        # 2. BACA SEMULA guna header yang betul
         file.seek(0)
         df = pd.read_excel(file, skiprows=header_idx)
         df.columns = [str(c).strip().upper() for c in df.columns]
 
-        # 3. FUNGSI CUCI DATA (Fix Tarikh & String)
         def clean_val(val, is_date=False):
             if pd.isna(val) or str(val).strip().lower() in ['nan', '0', '0.0', '', '-']: 
                 return None if is_date else "N/A"
             
             if is_date:
                 try:
-                    # Tukar format nombor Excel (cth: 45281) ke Tarikh
                     if isinstance(val, (int, float)):
                         return pd.to_datetime(val, unit='D', origin='1899-12-30').strftime('%Y-%m-%d')
                     return pd.to_datetime(str(val)).strftime('%Y-%m-%d')
@@ -107,15 +121,12 @@ def import_excel():
 
         logs_to_add = []
         for _, row in df.iterrows():
-            # Wajib ada Serial Number
             sn = clean_val(row.get('SERIAL NO', row.get('S/N', row.get('SERIAL NUMBER', ''))))
             if sn == "N/A": continue
 
-            # Pemetaan (Mapping) Kolum Tarikh
             d_in = clean_val(row.get('DATE IN'), True)
             d_out = clean_val(row.get('DATE OUT', row.get('DATE OUT2', '')), True) or "-"
             
-            # Cari JTP (utama) atau PIC atau REMARKS
             jtp_val = clean_val(row.get('JTP', row.get('PIC', '')))
             if jtp_val == "N/A":
                 jtp_val = clean_val(row.get('REMARKS', 'N/A'))

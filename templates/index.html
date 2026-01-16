@@ -99,9 +99,9 @@
             }
         });
 
-        // FUNGSI BARU: Tukar format tarikh Excel ke YYYY-MM-DD
         function parseExcelDate(val) {
-            if (!val || val === "0" || val === "") return "";
+            if (!val || val === "0" || val === "" || val === 0) return "";
+            // Jika val adalah number (format tarikh Excel), SheetJS akan uruskan jika cellDates: true
             let d = new Date(val);
             if (isNaN(d.getTime())) return "";
             return d.toISOString().split('T')[0];
@@ -114,8 +114,10 @@
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
+                    // cellDates: true penting untuk baca tarikh Excel dengan betul
                     const workbook = XLSX.read(data, {type: 'array', cellDates: true});
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const firstSheetName = workbook.SheetNames[0];
+                    const firstSheet = workbook.Sheets[firstSheetName];
                     
                     const rawRows = XLSX.utils.sheet_to_json(firstSheet, {header: 1, defval: ""});
                     
@@ -141,16 +143,16 @@
                             return foundKey ? row[foundKey] : "";
                         };
 
-                        let peralatan = getVal(["DESCRIPTION", "COMPONENT"]);
+                        let peralatan = getVal(["DESCRIPTION", "COMPONENT", "EQUIPMENT"]);
                         let pn = getVal(["PART NO", "PART NO.", "PART NUMBER", "P/N"]);
                         let sn = getVal(["SERIAL NO", "SERIAL NO.", "SERIAL NUMBER", "S/N"]);
                         let status = getVal(["STATUS"]) || "ACTIVE";
                         let pic = getVal(["JTP", "PIC", "REMARKS"]) || "N/A";
                         let defect = getVal(["DEFECT", "REMARKS"]) || "IMPORT";
                         
-                        // Handle Date In & Date Out
-                        let dateInRaw = getVal(["DATE IN"]);
-                        let dateOutRaw = getVal(["DATE OUT", "DATE OUT2", "DATE_OUT"]);
+                        // Mapping DATE OUT yang lebih meluas
+                        let dateInRaw = getVal(["DATE IN", "DATE_IN"]);
+                        let dateOutRaw = getVal(["DATE OUT", "DATE OUT2", "DATE_OUT", "DATE OUT 1"]);
 
                         return {
                             peralatan: String(peralatan).toUpperCase(),
@@ -161,7 +163,7 @@
                             status_type: 'REPAIR',
                             defect: String(defect).toUpperCase(),
                             date_in: parseExcelDate(dateInRaw) || new Date().toISOString().split('T')[0],
-                            date_out: parseExcelDate(dateOutRaw) // Tambah Date Out di sini
+                            date_out: parseExcelDate(dateOutRaw) // Data Date Out dihantar ke server
                         };
                     }).filter(item => item.sn && item.sn !== "" && item.sn !== "SERIAL NO" && item.sn !== "SERIAL NO.");
 
@@ -195,7 +197,7 @@
                 }
             }
 
-            alert(`Selesai! ${successCount} daripada ${dataList.length} rekod berjaya dimasukkan (termasuk Tarikh Keluar).`);
+            alert(`Selesai! ${successCount} daripada ${dataList.length} rekod berjaya dimasukkan (Termasuk Tarikh Keluar).`);
             window.location.reload();
         }
     </script>
