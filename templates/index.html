@@ -40,12 +40,16 @@
             </div>
 
             <div>
+                <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Defect / Remarks</label>
+                <textarea name="defect" placeholder="DESCRIBE THE DEFECT" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" rows="2"></textarea>
+            </div>
+
+            <div>
                 <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Authorization Status</label>
                 <input type="text" name="status" placeholder="ENTER STATUS (E.G. ACTIVE, SERVICEABLE...)" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
             </div>
 
             <input type="hidden" name="status_type" value="REPAIR">
-            <input type="hidden" name="defect" value="N/A">
             <input type="hidden" name="pic" value="N/A"> 
             <input type="hidden" name="date_in" id="current_date">
 
@@ -189,7 +193,7 @@
                 }
             }
 
-            alert(`Selesai! ${successCount} daripada ${dataList.length} rekod berjaya dimasukkan (Termasuk Tarikh Keluar).`);
+            alert(`Selesai! ${successCount} daripada ${dataList.length} rekod berjaya dimasukkan.`);
             window.location.reload();
         }
     </script>

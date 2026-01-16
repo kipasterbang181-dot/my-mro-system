@@ -198,6 +198,7 @@ def edit(id):
         l.pic = request.form.get('pic', '').upper()
         l.date_in = request.form.get('date_in')
         l.date_out = request.form.get('date_out')
+        l.defect = request.form.get('defect', '').upper() # Tambahan penting untuk edit kerosakan
         
         # Menerima teks manual daripada input field 'status_type'
         new_status = request.form.get('status_type', '')

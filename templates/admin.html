@@ -86,7 +86,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
             </div>
-            <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search Equipment or Serial Number..." 
+            <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search Equipment, Serial Number or Defect..." 
                 class="w-full bg-white border-2 border-slate-200 rounded-2xl py-4 pl-12 pr-6 text-sm font-semibold text-slate-800 focus:border-blue-500 outline-none transition-all shadow-sm">
         </div>
 
@@ -100,7 +100,7 @@
                                     <input type="checkbox" id="selectAll" class="w-4 h-4 rounded cursor-pointer">
                                 </th>
                                 <th class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest">Asset Detail</th>
-                                <th class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest text-center">Timeline</th>
+                                <th class="px-8 py-5 text-[10px] font-bold uppercase text-rose-600 tracking-widest">Defect</th> <th class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest text-center">Timeline</th>
                                 <th class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest text-center">Status & JTP</th>
                                 <th class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest text-right">Actions</th>
                             </tr>
@@ -119,6 +119,10 @@
                                             <span class="text-[10px] font-bold text-slate-600 uppercase">S/N: <span class="text-blue-700 font-mono font-extrabold row-sn">{{ item.sn or 'N/A' }}</span></span>
                                         </div>
                                     </div>
+                                </td>
+                                <td class="px-8 py-6"> <p class="text-[10px] font-bold text-slate-700 uppercase italic leading-relaxed row-defect">
+                                        {{ item.defect if item.defect else '-' }}
+                                    </p>
                                 </td>
                                 <td class="px-8 py-6 text-center">
                                     <div class="flex flex-col items-center gap-1.5">
@@ -246,8 +250,12 @@
             for (let i = 1; i < tr.length; i++) {
                 let name = tr[i].getElementsByClassName("row-name")[0];
                 let sn = tr[i].getElementsByClassName("row-sn")[0];
-                if (name || sn) {
-                    let txt = (name.textContent || name.innerText) + (sn.textContent || sn.innerText);
+                let defect = tr[i].getElementsByClassName("row-defect")[0]; // Tambah carian defect
+                
+                if (name || sn || defect) {
+                    let txt = (name.textContent || name.innerText) + 
+                              (sn.textContent || sn.innerText) + 
+                              (defect.textContent || defect.innerText);
                     tr[i].style.display = txt.toUpperCase().indexOf(filter) > -1 ? "" : "none";
                 }
             }
