@@ -99,6 +99,14 @@
             }
         });
 
+        // FUNGSI BARU: Tukar format tarikh Excel ke YYYY-MM-DD
+        function parseExcelDate(val) {
+            if (!val || val === "0" || val === "") return "";
+            let d = new Date(val);
+            if (isNaN(d.getTime())) return "";
+            return d.toISOString().split('T')[0];
+        }
+
         function uploadExcel() {
             const file = excelInput.files[0];
             const reader = new FileReader();
@@ -109,13 +117,11 @@
                     const workbook = XLSX.read(data, {type: 'array', cellDates: true});
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                     
-                    // Kita convert ke raw array dulu untuk cari baris tajuk
                     const rawRows = XLSX.utils.sheet_to_json(firstSheet, {header: 1, defval: ""});
                     
                     let headerIndex = -1;
                     for (let i = 0; i < rawRows.length; i++) {
                         const row = rawRows[i].map(c => String(c).toUpperCase().trim());
-                        // Cari baris yang ada info penting
                         if (row.includes("PART NO") || row.includes("PART NO.") || row.includes("DESCRIPTION") || row.includes("SERIAL NO")) {
                             headerIndex = i;
                             break;
@@ -127,11 +133,9 @@
                         return;
                     }
 
-                    // Baca semula data bermula dari baris tajuk yang dijumpai
                     const jsonData = XLSX.utils.sheet_to_json(firstSheet, {range: headerIndex});
 
                     const formattedData = jsonData.map(row => {
-                        // Fungsi pencarian kolum yang fleksibel (sebab nama kolum berubah-ubah antara sheet)
                         const getVal = (keys) => {
                             const foundKey = Object.keys(row).find(k => keys.includes(k.trim().toUpperCase()));
                             return foundKey ? row[foundKey] : "";
@@ -144,12 +148,9 @@
                         let pic = getVal(["JTP", "PIC", "REMARKS"]) || "N/A";
                         let defect = getVal(["DEFECT", "REMARKS"]) || "IMPORT";
                         
-                        let dateIn = getVal(["DATE IN"]);
-                        if (dateIn instanceof Date) {
-                            dateIn = dateIn.toISOString().split('T')[0];
-                        } else {
-                            dateIn = new Date().toISOString().split('T')[0];
-                        }
+                        // Handle Date In & Date Out
+                        let dateInRaw = getVal(["DATE IN"]);
+                        let dateOutRaw = getVal(["DATE OUT", "DATE OUT2", "DATE_OUT"]);
 
                         return {
                             peralatan: String(peralatan).toUpperCase(),
@@ -159,7 +160,8 @@
                             status: String(status).toUpperCase(),
                             status_type: 'REPAIR',
                             defect: String(defect).toUpperCase(),
-                            date_in: dateIn
+                            date_in: parseExcelDate(dateInRaw) || new Date().toISOString().split('T')[0],
+                            date_out: parseExcelDate(dateOutRaw) // Tambah Date Out di sini
                         };
                     }).filter(item => item.sn && item.sn !== "" && item.sn !== "SERIAL NO" && item.sn !== "SERIAL NO.");
 
@@ -193,7 +195,7 @@
                 }
             }
 
-            alert(`Selesai! ${successCount} daripada ${dataList.length} rekod berjaya dimasukkan.`);
+            alert(`Selesai! ${successCount} daripada ${dataList.length} rekod berjaya dimasukkan (termasuk Tarikh Keluar).`);
             window.location.reload();
         }
     </script>
