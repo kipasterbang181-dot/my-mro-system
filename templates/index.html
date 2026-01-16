@@ -23,7 +23,6 @@
         </div>
 
         <form action="/incoming" method="POST" class="space-y-6">
-            
             <div>
                 <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Name Equipment</label>
                 <input type="text" name="peralatan" placeholder="ENTER EQUIPMENT TYPE" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
@@ -59,7 +58,6 @@
                 <button type="submit" class="w-full bg-blue-900 text-white font-black py-6 rounded-[2rem] hover:bg-black transition-all shadow-xl uppercase tracking-widest text-sm italic">
                     Confirm & Save Log
                 </button>
-                
                 <a href="/login" class="w-full bg-slate-100 text-slate-500 text-center font-black py-4 rounded-[2rem] hover:bg-slate-200 transition-all uppercase tracking-[0.3em] text-[10px] no-underline">
                     Admin Access Portal
                 </a>
@@ -71,7 +69,7 @@
             <div class="relative group">
                 <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden">
                 <label for="excelInput" class="w-full flex items-center justify-between p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-blue-900 transition-all group">
-                    <span id="fileName" class="text-xs font-bold text-slate-400 uppercase">Pilih fail Excel tuan...</span>
+                    <span id="fileName" class="text-xs font-bold text-slate-400 uppercase">Pilih fail Excel (2022-2025)...</span>
                     <span class="bg-slate-200 text-slate-600 text-[10px] font-black px-4 py-2 rounded-xl uppercase group-hover:bg-blue-900 group-hover:text-white transition-colors">Browse</span>
                 </label>
             </div>
@@ -110,63 +108,75 @@
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array', cellDates: true});
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    // Ambil raw rows untuk cari header
-                    const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
                     
-                    let headerRowIndex = -1;
-                    for(let i=0; i<rows.length; i++){
-                        if(rows[i] && rows[i].length > 0){
-                            // Scan baris yang ada perkataan kunci
-                            const rowStr = rows[i].join("|").toUpperCase();
-                            if(rowStr.includes('DESCRIPTION') || rowStr.includes('PART NO') || rowStr.includes('SERIAL NO')){
-                                headerRowIndex = i;
-                                break;
-                            }
+                    // Kita convert ke raw array dulu untuk cari baris tajuk
+                    const rawRows = XLSX.utils.sheet_to_json(firstSheet, {header: 1, defval: ""});
+                    
+                    let headerIndex = -1;
+                    for (let i = 0; i < rawRows.length; i++) {
+                        const row = rawRows[i].map(c => String(c).toUpperCase().trim());
+                        // Cari baris yang ada info penting
+                        if (row.includes("PART NO") || row.includes("PART NO.") || row.includes("DESCRIPTION") || row.includes("SERIAL NO")) {
+                            headerIndex = i;
+                            break;
                         }
                     }
 
-                    if(headerRowIndex === -1) {
-                        alert('Tajuk (DESCRIPTION/PART NO) tidak dijumpai. Sila pastikan fail Excel ada tajuk kolum tersebut.');
+                    if (headerIndex === -1) {
+                        alert("Gagal cari tajuk kolum (PART NO/DESCRIPTION). Pastikan fail Excel betul.");
                         return;
                     }
 
-                    // Baca data bermula dari baris tajuk yang dijumpai
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, {range: headerRowIndex});
+                    // Baca semula data bermula dari baris tajuk yang dijumpai
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, {range: headerIndex});
 
                     const formattedData = jsonData.map(row => {
-                        // Mapping kolum mengikut nama yang ada dalam Excel tuan
-                        let picVal = row['JTP'] || row['JTP/PIC'] || row['PIC'] || row['REMARKS'] || 'N/A';
-                        let dateInVal = row['DATE IN'] ? new Date(row['DATE IN']).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-                        let dateOutVal = row['DATE OUT'] || row['DATE OUT2'] || '-';
-                        if (dateOutVal instanceof Date) dateOutVal = dateOutVal.toISOString().split('T')[0];
+                        // Fungsi pencarian kolum yang fleksibel (sebab nama kolum berubah-ubah antara sheet)
+                        const getVal = (keys) => {
+                            const foundKey = Object.keys(row).find(k => keys.includes(k.trim().toUpperCase()));
+                            return foundKey ? row[foundKey] : "";
+                        };
+
+                        let peralatan = getVal(["DESCRIPTION", "COMPONENT"]);
+                        let pn = getVal(["PART NO", "PART NO.", "PART NUMBER", "P/N"]);
+                        let sn = getVal(["SERIAL NO", "SERIAL NO.", "SERIAL NUMBER", "S/N"]);
+                        let status = getVal(["STATUS"]) || "ACTIVE";
+                        let pic = getVal(["JTP", "PIC", "REMARKS"]) || "N/A";
+                        let defect = getVal(["DEFECT", "REMARKS"]) || "IMPORT";
+                        
+                        let dateIn = getVal(["DATE IN"]);
+                        if (dateIn instanceof Date) {
+                            dateIn = dateIn.toISOString().split('T')[0];
+                        } else {
+                            dateIn = new Date().toISOString().split('T')[0];
+                        }
 
                         return {
-                            peralatan: row['DESCRIPTION'] || row['Description'] || '', 
-                            pn: row['PART NO.'] || row['PART NO'] || row['PART NUMBER'] || row['P/N'] || '',
-                            sn: row['SERIAL NO.'] || row['SERIAL NO'] || row['Serial Number'] || row['S/N'] || '',
-                            pic: String(picVal).trim(),
-                            status: row['STATUS'] || 'ACTIVE',
+                            peralatan: String(peralatan).toUpperCase(),
+                            pn: String(pn).toUpperCase(),
+                            sn: String(sn).toUpperCase(),
+                            pic: String(pic).toUpperCase(),
+                            status: String(status).toUpperCase(),
                             status_type: 'REPAIR',
-                            defect: row['DEFECT'] || row['REMARKS'] || 'IMPORT',
-                            date_in: dateInVal,
-                            date_out: dateOutVal
+                            defect: String(defect).toUpperCase(),
+                            date_in: dateIn
                         };
-                    }).filter(item => item.sn && item.sn !== '' && item.sn !== 'N/A' && item.sn !== 'SERIAL NO.');
+                    }).filter(item => item.sn && item.sn !== "" && item.sn !== "SERIAL NO" && item.sn !== "SERIAL NO.");
 
-                    if(formattedData.length > 0) {
+                    if (formattedData.length > 0) {
                         processImport(formattedData);
                     } else {
-                        alert('Tiada data ditemui di bawah tajuk.');
+                        alert("Tiada data sah untuk diimport.");
                     }
                 } catch (err) {
-                    alert("Ralat memproses fail: " + err.message);
+                    alert("Ralat: " + err.message);
                 }
             };
             reader.readAsArrayBuffer(file);
         }
 
         async function processImport(dataList) {
-            uploadBtn.innerText = "IMPORTING " + dataList.length + " ITEMS...";
+            uploadBtn.innerText = `IMPORTING ${dataList.length} REKOD...`;
             uploadBtn.disabled = true;
             let successCount = 0;
 
@@ -177,13 +187,13 @@
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: new URLSearchParams(item)
                     });
-                    if(response.ok) successCount++;
+                    if (response.ok) successCount++;
                 } catch (err) {
-                    console.error("Gagal item:", item.sn);
+                    console.error("Gagal simpan S/N:", item.sn);
                 }
             }
 
-            alert(`Berjaya import ${successCount} rekod!`);
+            alert(`Selesai! ${successCount} daripada ${dataList.length} rekod berjaya dimasukkan.`);
             window.location.reload();
         }
     </script>
