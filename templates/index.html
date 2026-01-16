@@ -52,7 +52,8 @@
 
             <input type="hidden" name="status_type" value="REPAIR">
             <input type="hidden" name="defect" value="N/A">
-            <input type="hidden" name="pic" value="N/A"> <input type="hidden" name="date_in" id="current_date">
+            <input type="hidden" name="pic" value="N/A"> 
+            <input type="hidden" name="date_in" id="current_date">
 
             <div class="flex flex-col gap-4 pt-2">
                 <button type="submit" class="w-full bg-blue-900 text-white font-black py-6 rounded-[2rem] hover:bg-black transition-all shadow-xl uppercase tracking-widest text-sm italic">
@@ -85,7 +86,6 @@
     </div>
 
     <script>
-        // Set tarikh hari ini secara automatik YYYY-MM-DD
         document.getElementById('current_date').value = new Date().toISOString().split('T')[0];
 
         const excelInput = document.getElementById('excelInput');
@@ -107,41 +107,51 @@
 
             reader.onload = function(e) {
                 const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
+                const workbook = XLSX.read(data, {type: 'array', cellDates: true});
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                
                 const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
                 
                 let headerRowIndex = -1;
                 for(let i=0; i<rows.length; i++){
-                    if(rows[i] && (rows[i].includes('DESCRIPTION') || rows[i].includes('PART NO'))){
+                    if(rows[i] && (rows[i].includes('DESCRIPTION') || rows[i].includes('PART NO') || rows[i].includes('PART NUMBER'))){
                         headerRowIndex = i;
                         break;
                     }
                 }
 
                 if(headerRowIndex === -1) {
-                    alert('Sistem tidak menjumpai tajuk DESCRIPTION atau PART NO dalam Excel tuan.');
+                    alert('Tajuk DESCRIPTION atau PART NO tidak dijumpai.');
                     return;
                 }
 
                 const jsonData = XLSX.utils.sheet_to_json(firstSheet, {range: headerRowIndex});
 
-                const formattedData = jsonData.map(row => ({
-                    peralatan: row['DESCRIPTION'] || row['Description'] || '', 
-                    pn: row['PART NO'] || row['PART NUMBER'] || row['Part Number'] || '',
-                    sn: row['SERIAL NO'] || row['Serial Number'] || row['Serial No'] || '',
-                    pic: 'N/A', // Set N/A secara automatik
-                    status: 'ACTIVE',
-                    status_type: 'REPAIR',
-                    defect: row['DEFECT'] || row['REMARKS'] || 'N/A',
-                    date_in: new Date().toISOString().split('T')[0]
-                })).filter(item => item.peralatan !== '' && item.peralatan !== 'DESCRIPTION');
+                const formattedData = jsonData.map(row => {
+                    // Cari nilai JTP atau PIC
+                    let picVal = row['JTP'] || row['PIC'] || row['REMARKS'] || 'N/A';
+                    
+                    // Format Tarikh (Jika Excel bagi tarikh pelik)
+                    let dateInVal = row['DATE IN'] ? new Date(row['DATE IN']).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+                    let dateOutVal = row['DATE OUT'] || row['DATE OUT2'] || '-';
+                    if (dateOutVal instanceof Date) dateOutVal = dateOutVal.toISOString().split('T')[0];
+
+                    return {
+                        peralatan: row['DESCRIPTION'] || row['Description'] || '', 
+                        pn: row['PART NO'] || row['PART NUMBER'] || row['P/N'] || '',
+                        sn: row['SERIAL NO'] || row['Serial Number'] || row['S/N'] || '',
+                        pic: picVal,
+                        status: row['STATUS'] || 'ACTIVE',
+                        status_type: 'REPAIR',
+                        defect: row['DEFECT'] || row['REMARKS'] || 'IMPORT',
+                        date_in: dateInVal,
+                        date_out: dateOutVal
+                    };
+                }).filter(item => item.sn !== '' && item.sn !== 'N/A');
 
                 if(formattedData.length > 0) {
                     processImport(formattedData);
                 } else {
-                    alert('Tiada data ditemui dalam fail Excel tersebut.');
+                    alert('Tiada data ditemui.');
                 }
             };
             reader.readAsArrayBuffer(file);
@@ -161,11 +171,11 @@
                     });
                     if(response.ok) successCount++;
                 } catch (err) {
-                    console.error("Gagal import:", item.sn);
+                    console.error("Gagal:", item.sn);
                 }
             }
 
-            alert(`Berjaya import ${successCount} rekod ke dalam sistem!`);
+            alert(`Berjaya import ${successCount} rekod!`);
             window.location.reload();
         }
     </script>

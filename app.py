@@ -53,14 +53,15 @@ def admin():
 
 @app.route('/incoming', methods=['POST'])
 def incoming():
+    # Mengambil data dari form manual (index.html)
     new_log = RepairLog(
-        date_in=datetime.now().strftime("%Y-%m-%d"),
+        date_in=request.form.get('date_in') or datetime.now().strftime("%Y-%m-%d"),
         peralatan=request.form.get('peralatan', '').upper(),
         pn=request.form.get('pn', '').upper(),
         sn=request.form.get('sn', '').upper(),
-        pic=request.form.get('pic', '').upper(),
-        status_type="ACTIVE",
-        defect="INITIAL ENTRY"
+        pic=request.form.get('pic', 'N/A').upper(),
+        status_type=request.form.get('status', 'ACTIVE').upper(),
+        defect=request.form.get('defect', 'INITIAL ENTRY').upper()
     )
     db.session.add(new_log)
     db.session.commit()
@@ -110,16 +111,14 @@ def import_excel():
             sn = clean_val(row.get('SERIAL NO', row.get('S/N', row.get('SERIAL NUMBER', ''))))
             if sn == "N/A": continue
 
-            # Pemetaan (Mapping) Kolum
+            # Pemetaan (Mapping) Kolum Tarikh
             d_in = clean_val(row.get('DATE IN'), True)
-            
-            # Cari Date Out (utama) atau Date Out 2
             d_out = clean_val(row.get('DATE OUT', row.get('DATE OUT2', '')), True) or "-"
             
-            # Cari JTP (utama) atau PIC
+            # Cari JTP (utama) atau PIC atau REMARKS
             jtp_val = clean_val(row.get('JTP', row.get('PIC', '')))
             if jtp_val == "N/A":
-                jtp_val = clean_val(row.get('REMARKS', ''))
+                jtp_val = clean_val(row.get('REMARKS', 'N/A'))
 
             new_log = RepairLog(
                 peralatan=clean_val(row.get('DESCRIPTION', row.get('PERALATAN', ''))),
