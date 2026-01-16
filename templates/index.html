@@ -106,7 +106,7 @@
                 fileNameDisplay.classList.remove('text-slate-400');
                 fileNameDisplay.classList.add('text-blue-900');
                 uploadBtn.classList.remove('hidden');
-                progressContainer.classList.add('hidden'); // Reset progress bar if new file picked
+                progressContainer.classList.add('hidden');
             }
         });
 
@@ -152,16 +152,11 @@
                             return foundKey ? row[foundKey] : "";
                         };
 
-                        // PEMBETULAN: Ambil tepat mengikut nama kolum
                         let peralatan = getVal(["DESCRIPTION", "COMPONENT", "EQUIPMENT"]);
                         let pn = getVal(["PART NO", "PART NO.", "PART NUMBER", "P/N"]);
                         let sn = getVal(["SERIAL NO", "SERIAL NO.", "SERIAL NUMBER", "S/N"]);
                         let status = getVal(["STATUS"]) || "ACTIVE";
-                        
-                        // HANYA ambil dari JTP atau PIC. Abaikan REMARKS (WARRANTY G7)
                         let pic = getVal(["JTP", "PIC"]) || "N/A";
-                        
-                        // HANYA ambil dari DEFECT. Abaikan REMARKS
                         let defect = getVal(["DEFECT"]) || "N/A";
                         
                         let dateInRaw = getVal(["DATE IN", "DATE_IN"]);
@@ -196,26 +191,30 @@
             uploadBtn.classList.add('hidden');
             progressContainer.classList.remove('hidden');
             
-            let successCount = 0;
             const total = dataList.length;
+            let successCount = 0;
 
-            for (let i = 0; i < total; i++) {
-                const item = dataList[i];
-                try {
-                    const response = await fetch('/incoming', {
+            // KELAJUAN: Hantar 10 baris serentak dalam satu-satu masa (Chunking)
+            const chunkSize = 10; 
+            for (let i = 0; i < total; i += chunkSize) {
+                const chunk = dataList.slice(i, i + chunkSize);
+                
+                const requests = chunk.map(item => 
+                    fetch('/incoming', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: new URLSearchParams(item)
-                    });
-                    if (response.ok) successCount++;
-                } catch (err) {
-                    console.error("Gagal simpan S/N:", item.sn);
-                }
+                    }).then(res => { if(res.ok) successCount++; })
+                      .catch(err => console.error("Ralat S/N:", item.sn))
+                );
+
+                await Promise.all(requests); // Tunggu 10 baris selesai serentak
 
                 // Kemaskini Progress Bar
-                const percentage = Math.round(((i + 1) / total) * 100);
+                const currentProgress = Math.min(i + chunkSize, total);
+                const percentage = Math.round((currentProgress / total) * 100);
                 progressBar.style.width = percentage + "%";
-                progressText.innerText = `IMPORTING: ${percentage}% (${i + 1}/${total})`;
+                progressText.innerText = `IMPORTING: ${percentage}% (${currentProgress}/${total})`;
             }
 
             progressText.innerText = `SELESAI! ${successCount} REKOD BERJAYA.`;

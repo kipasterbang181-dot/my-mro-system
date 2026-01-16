@@ -51,7 +51,7 @@ def admin():
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     return render_template('admin.html', logs=logs)
 
-# --- FUNGSI INCOMING ---
+# --- FUNGSI INCOMING (KEKAL ASAL - HANYA TAMBAH RESPONS UNTUK IMPORT) ---
 @app.route('/incoming', methods=['POST'])
 def incoming():
     peralatan = request.form.get('peralatan', '').upper()
@@ -76,12 +76,13 @@ def incoming():
     db.session.add(new_log)
     db.session.commit()
     
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'Content-Type' in request.headers and 'application/json' in request.headers['Content-Type']:
+    # Supaya frontend import tidak sangkut/refresh semasa proses berjalan
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return "OK", 200
         
     return redirect(url_for('index'))
 
-# --- FUNGSI IMPORT EXCEL (DIBAIKI) ---
+# --- FUNGSI IMPORT EXCEL (KEKAL ASAL) ---
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
     if not session.get('admin'): return redirect(url_for('login'))
@@ -123,13 +124,8 @@ def import_excel():
             d_in = clean_val(row.get('DATE IN'), True)
             d_out = clean_val(row.get('DATE OUT', row.get('DATE OUT2', '')), True) or "-"
             
-            # --- PEMBETULAN DISINI: HANYA AMBIL DARI KOLUM YANG SEPATUTNYA ---
-            # PIC/JTP hanya ambil dari kolum JTP
             jtp_val = clean_val(row.get('JTP', 'N/A'))
-            
-            # Defect hanya ambil dari kolum DEFECT. Data REMARKS (WARRANTY) diabaikan.
             defect_val = clean_val(row.get('DEFECT', 'N/A'))
-            # ---------------------------------------------------------------
 
             new_log = RepairLog(
                 peralatan=clean_val(row.get('DESCRIPTION', row.get('PERALATAN', ''))),
