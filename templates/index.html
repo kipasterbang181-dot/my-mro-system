@@ -106,52 +106,59 @@
             const reader = new FileReader();
 
             reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                // cellDates: true supaya tarikh tak jadi nombor pelik
-                const workbook = XLSX.read(data, {type: 'array', cellDates: true});
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
-                
-                let headerRowIndex = -1;
-                for(let i=0; i<rows.length; i++){
-                    if(rows[i] && (rows[i].includes('DESCRIPTION') || rows[i].includes('PART NO') || rows[i].includes('PART NUMBER'))){
-                        headerRowIndex = i;
-                        break;
-                    }
-                }
-
-                if(headerRowIndex === -1) {
-                    alert('Tajuk DESCRIPTION atau PART NO tidak dijumpai.');
-                    return;
-                }
-
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet, {range: headerRowIndex});
-
-                const formattedData = jsonData.map(row => {
-                    // MAPPING JTP & TARIKH DI SINI
-                    let jtpVal = row['JTP'] || row['PIC'] || row['REMARKS'] || 'N/A';
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array', cellDates: true});
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
                     
-                    let dIn = row['DATE IN'] ? new Date(row['DATE IN']).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-                    let dOut = row['DATE OUT'] || row['DATE OUT2'] || '-';
-                    if (dOut instanceof Date) dOut = dOut.toISOString().split('T')[0];
+                    let headerRowIndex = -1;
+                    for(let i=0; i<rows.length; i++){
+                        if(rows[i]){
+                            // Kita sanitize tajuk untuk cari kolum utama
+                            const checkRow = rows[i].map(v => String(v).trim().toUpperCase());
+                            if(checkRow.includes('DESCRIPTION') || checkRow.includes('PART NO') || checkRow.includes('PART NUMBER') || checkRow.includes('P/N')){
+                                headerRowIndex = i;
+                                break;
+                            }
+                        }
+                    }
 
-                    return {
-                        peralatan: row['DESCRIPTION'] || row['Description'] || '', 
-                        pn: row['PART NO'] || row['PART NUMBER'] || row['P/N'] || '',
-                        sn: row['SERIAL NO'] || row['Serial Number'] || row['S/N'] || '',
-                        pic: jtpVal,
-                        status: row['STATUS'] || 'ACTIVE',
-                        status_type: 'REPAIR',
-                        defect: row['DEFECT'] || row['REMARKS'] || 'IMPORT',
-                        date_in: dIn,
-                        date_out: dOut
-                    };
-                }).filter(item => item.sn && item.sn !== '' && item.sn !== 'N/A');
+                    if(headerRowIndex === -1) {
+                        alert('Tajuk (DESCRIPTION/PART NO) tidak dijumpai. Pastikan fail Excel betul.');
+                        return;
+                    }
 
-                if(formattedData.length > 0) {
-                    processImport(formattedData);
-                } else {
-                    alert('Tiada data ditemui.');
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, {range: headerRowIndex});
+
+                    const formattedData = jsonData.map(row => {
+                        // FIX JTP DAN TARIKH
+                        let picVal = row['JTP'] || row['PIC'] || row['REMARKS'] || 'N/A';
+                        
+                        let dateInVal = row['DATE IN'] ? new Date(row['DATE IN']).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+                        let dateOutVal = row['DATE OUT'] || row['DATE OUT2'] || '-';
+                        if (dateOutVal instanceof Date) dateOutVal = dateOutVal.toISOString().split('T')[0];
+
+                        return {
+                            peralatan: row['DESCRIPTION'] || row['Description'] || '', 
+                            pn: row['PART NO'] || row['PART NUMBER'] || row['P/N'] || '',
+                            sn: row['SERIAL NO'] || row['Serial Number'] || row['S/N'] || '',
+                            pic: picVal,
+                            status: row['STATUS'] || 'ACTIVE',
+                            status_type: 'REPAIR',
+                            defect: row['DEFECT'] || row['REMARKS'] || 'IMPORT',
+                            date_in: dateInVal,
+                            date_out: dateOutVal
+                        };
+                    }).filter(item => item.sn && item.sn !== '' && item.sn !== 'N/A');
+
+                    if(formattedData.length > 0) {
+                        processImport(formattedData);
+                    } else {
+                        alert('Tiada data ditemui.');
+                    }
+                } catch (err) {
+                    alert("Ralat memproses fail: " + err.message);
                 }
             };
             reader.readAsArrayBuffer(file);
@@ -164,7 +171,6 @@
 
             for (let item of dataList) {
                 try {
-                    // Hantar ke /incoming satu-persatu ikut cara asal tuan
                     const response = await fetch('/incoming', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -172,7 +178,7 @@
                     });
                     if(response.ok) successCount++;
                 } catch (err) {
-                    console.error("Gagal:", item.sn);
+                    console.error("Gagal item:", item.sn);
                 }
             }
 
