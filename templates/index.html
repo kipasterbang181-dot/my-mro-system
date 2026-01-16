@@ -107,6 +107,7 @@
 
             reader.onload = function(e) {
                 const data = new Uint8Array(e.target.result);
+                // cellDates: true supaya tarikh tak jadi nombor pelik
                 const workbook = XLSX.read(data, {type: 'array', cellDates: true});
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                 const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
@@ -127,26 +128,25 @@
                 const jsonData = XLSX.utils.sheet_to_json(firstSheet, {range: headerRowIndex});
 
                 const formattedData = jsonData.map(row => {
-                    // Cari nilai JTP atau PIC
-                    let picVal = row['JTP'] || row['PIC'] || row['REMARKS'] || 'N/A';
+                    // MAPPING JTP & TARIKH DI SINI
+                    let jtpVal = row['JTP'] || row['PIC'] || row['REMARKS'] || 'N/A';
                     
-                    // Format Tarikh (Jika Excel bagi tarikh pelik)
-                    let dateInVal = row['DATE IN'] ? new Date(row['DATE IN']).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-                    let dateOutVal = row['DATE OUT'] || row['DATE OUT2'] || '-';
-                    if (dateOutVal instanceof Date) dateOutVal = dateOutVal.toISOString().split('T')[0];
+                    let dIn = row['DATE IN'] ? new Date(row['DATE IN']).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+                    let dOut = row['DATE OUT'] || row['DATE OUT2'] || '-';
+                    if (dOut instanceof Date) dOut = dOut.toISOString().split('T')[0];
 
                     return {
                         peralatan: row['DESCRIPTION'] || row['Description'] || '', 
                         pn: row['PART NO'] || row['PART NUMBER'] || row['P/N'] || '',
                         sn: row['SERIAL NO'] || row['Serial Number'] || row['S/N'] || '',
-                        pic: picVal,
+                        pic: jtpVal,
                         status: row['STATUS'] || 'ACTIVE',
                         status_type: 'REPAIR',
                         defect: row['DEFECT'] || row['REMARKS'] || 'IMPORT',
-                        date_in: dateInVal,
-                        date_out: dateOutVal
+                        date_in: dIn,
+                        date_out: dOut
                     };
-                }).filter(item => item.sn !== '' && item.sn !== 'N/A');
+                }).filter(item => item.sn && item.sn !== '' && item.sn !== 'N/A');
 
                 if(formattedData.length > 0) {
                     processImport(formattedData);
@@ -164,6 +164,7 @@
 
             for (let item of dataList) {
                 try {
+                    // Hantar ke /incoming satu-persatu ikut cara asal tuan
                     const response = await fetch('/incoming', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
