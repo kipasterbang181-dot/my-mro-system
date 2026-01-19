@@ -65,14 +65,14 @@
 
             <div>
                 <label class="text-[9px] font-black uppercase text-slate-400 ml-4 mb-1 block tracking-widest">Authorization Status</label>
-                <select name="status" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all appearance-none">
-                    <option value="SERVICEABLE" {% if item.status == 'SERVICEABLE' %}selected{% endif %}>SERVICEABLE</option>
-                    <option value="READY TO QUOTE" {% if item.status == 'READY TO QUOTE' %}selected{% endif %}>READY TO QUOTE</option>
-                    <option value="READY TO DELIVERED" {% if item.status == 'READY TO DELIVERED' %}selected{% endif %}>READY TO DELIVERED</option>
-                    <option value="RETURN TO AEROTREE" {% if item.status == 'RETURN TO AEROTREE' %}selected{% endif %}>RETURN TO AEROTREE</option>
-                    <option value="WARRANTY REPAIR" {% if item.status == 'WARRANTY REPAIR' %}selected{% endif %}>WARRANTY REPAIR</option>
-                    <option value="TDI ON PROGRESS" {% if item.status == 'TDI ON PROGRESS' %}selected{% endif %}>TDI ON PROGRESS</option>
-                    <option value="OV TDI" {% if item.status == 'OV TDI' %}selected{% endif %}>OV TDI</option>
+                <select name="status_type" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all appearance-none">
+                    <option value="SERVICEABLE" {% if item.status_type == 'SERVICEABLE' %}selected{% endif %}>SERVICEABLE</option>
+                    <option value="READY TO QUOTE" {% if item.status_type == 'READY TO QUOTE' %}selected{% endif %}>READY TO QUOTE</option>
+                    <option value="READY TO DELIVERED" {% if item.status_type == 'READY TO DELIVERED' %}selected{% endif %}>READY TO DELIVERED</option>
+                    <option value="RETURN TO AEROTREE" {% if item.status_type == 'RETURN TO AEROTREE' %}selected{% endif %}>RETURN TO AEROTREE</option>
+                    <option value="WARRANTY REPAIR" {% if item.status_type == 'WARRANTY REPAIR' %}selected{% endif %}>WARRANTY REPAIR</option>
+                    <option value="TDI ON PROGRESS" {% if item.status_type == 'TDI ON PROGRESS' %}selected{% endif %}>TDI ON PROGRESS</option>
+                    <option value="OV TDI" {% if item.status_type == 'OV TDI' %}selected{% endif %}>OV TDI</option>
                 </select>
             </div>
 
