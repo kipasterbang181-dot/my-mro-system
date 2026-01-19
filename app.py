@@ -7,6 +7,12 @@ from flask import Flask, render_template, request, redirect, url_for, session, s
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
+# Library Tambahan untuk PDF Report
+from reportlab.lib.pagesizes import letter, landscape
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 
@@ -51,7 +57,7 @@ def admin():
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     return render_template('admin.html', logs=logs)
 
-# --- FUNGSI INCOMING (KEKAL ASAL - HANYA TAMBAH RESPONS UNTUK IMPORT) ---
+# --- FUNGSI INCOMING ---
 @app.route('/incoming', methods=['POST'])
 def incoming():
     peralatan = request.form.get('peralatan', '').upper()
@@ -76,13 +82,110 @@ def incoming():
     db.session.add(new_log)
     db.session.commit()
     
-    # Supaya frontend import tidak sangkut/refresh semasa proses berjalan
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return "OK", 200
         
     return redirect(url_for('index'))
 
-# --- FUNGSI IMPORT EXCEL (KEKAL ASAL) ---
+# --- FUNGSI DOWNLOAD SINGLE PDF REPORT (UNTUK BUTANG HIJAU) ---
+@app.route('/download_single_report/<int:item_id>')
+def download_single_report(item_id):
+    if not session.get('admin'): return redirect(url_for('login'))
+    l = RepairLog.query.get_or_404(item_id)
+    
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=letter)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Header Report
+    elements.append(Paragraph("G7 AEROSPACE - UNIT MAINTENANCE REPORT", styles['Title']))
+    elements.append(Spacer(1, 20))
+    
+    # Data Data Item
+    report_data = [
+        ["FIELD", "DETAILS"],
+        ["EQUIPMENT", l.peralatan],
+        ["PART NUMBER (P/N)", l.pn],
+        ["SERIAL NUMBER (S/N)", l.sn],
+        ["DEFECT / REMARKS", Paragraph(l.defect or "N/A", styles['Normal'])],
+        ["DATE IN", l.date_in],
+        ["DATE OUT", l.date_out or "-"],
+        ["STATUS", l.status_type],
+        ["JTP / PIC", l.pic],
+        ["REPORT GENERATED", datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
+    ]
+    
+    # Gaya Jadual
+    t = Table(report_data, colWidths=[150, 300])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (1, 0), colors.darkblue),
+        ('TEXTCOLOR', (0, 0), (1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.lightgrey])
+    ]))
+    
+    elements.append(t)
+    doc.build(elements)
+    buf.seek(0)
+    
+    return send_file(buf, mimetype='application/pdf', as_attachment=True, download_name=f"Report_{l.sn}.pdf")
+
+# --- FUNGSI DOWNLOAD PDF REPORT KESELURUHAN ---
+@app.route('/download_report')
+def download_report():
+    if not session.get('admin'): return redirect(url_for('login'))
+    logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
+    
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=landscape(letter))
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Tajuk Dokumen
+    elements.append(Paragraph(f"G7 AEROSPACE - REPAIR LOG SUMMARY REPORT ({datetime.now().strftime('%d/%m/%Y')})", styles['Title']))
+    elements.append(Spacer(1, 12))
+    
+    # Header Jadual
+    data = [["ID", "PERALATAN", "P/N", "S/N", "DATE IN", "DATE OUT", "STATUS", "PIC"]]
+    
+    # Isi Jadual
+    for l in logs:
+        data.append([
+            l.id, 
+            l.peralatan[:30], # Hadkan panjang teks supaya muat
+            l.pn, 
+            l.sn, 
+            l.date_in, 
+            l.date_out or "-", 
+            l.status_type, 
+            l.pic
+        ])
+    
+    # Gaya Jadual
+    t = Table(data, repeatRows=1)
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.lightgrey])
+    ]))
+    
+    elements.append(t)
+    doc.build(elements)
+    buf.seek(0)
+    return send_file(buf, mimetype='application/pdf', as_attachment=True, download_name=f"Full_Repair_Report_{datetime.now().strftime('%Y%m%d')}.pdf")
+
+# --- FUNGSI IMPORT EXCEL ---
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
     if not session.get('admin'): return redirect(url_for('login'))

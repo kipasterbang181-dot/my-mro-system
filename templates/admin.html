@@ -155,13 +155,24 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                                                 </svg>
                                             </button>
+                                            
                                             <div class="w-[1px] h-4 bg-slate-300 mx-1"></div>
+                                            
                                             <a href="/view_tag/{{ item.id }}" title="View Full Tag" class="p-2 text-slate-600 hover:text-red-600 transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                                 </svg>
                                             </a>
+
+                                            <div class="w-[1px] h-4 bg-slate-300 mx-1"></div>
+
+                                            <a href="/download_single_report/{{ item.id }}" title="Download Full Report" class="p-2 text-slate-600 hover:text-emerald-600 transition-colors">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                            </a>
                                         </div>
+                                        
                                         <div class="flex gap-1">
                                             <a href="/edit/{{ item.id }}" class="p-2 text-slate-400 hover:text-blue-600 transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -250,7 +261,7 @@
             for (let i = 1; i < tr.length; i++) {
                 let name = tr[i].getElementsByClassName("row-name")[0];
                 let sn = tr[i].getElementsByClassName("row-sn")[0];
-                let defect = tr[i].getElementsByClassName("row-defect")[0]; // Tambah carian defect
+                let defect = tr[i].getElementsByClassName("row-defect")[0]; 
                 
                 if (name || sn || defect) {
                     let txt = (name.textContent || name.innerText) + 

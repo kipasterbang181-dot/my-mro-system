@@ -17,7 +17,7 @@
         <div class="mb-8 text-center">
             <img src="{{ url_for('static', filename='logo.png') }}" alt="G7 Logo" class="h-20 mx-auto mb-4" onerror="this.src='https://via.placeholder.com/200x80?text=G7+AEROSPACE'">
             <div class="inline-block px-4 py-1 bg-blue-50 rounded-full">
-                <p class="text-[10px] font-black text-blue-900 uppercase tracking-[0.4em]">Update Tag Information</p>
+                <p class="text-[10px] font-black text-blue-900 uppercase tracking-[0.4em]">Update Tag & Report Information</p>
             </div>
         </div>
 
@@ -42,11 +42,11 @@
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="text-[9px] font-black uppercase text-emerald-600 ml-4 mb-1 block tracking-widest">Date In</label>
-                    <input type="date" name="date_in" value="{{ item.date_in|string|truncate(10, True, '') if item.date_in else '' }}" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 focus:border-blue-900 focus:bg-white outline-none transition-all">
+                    <input type="date" name="date_in" value="{{ item.date_in }}" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 focus:border-blue-900 focus:bg-white outline-none transition-all">
                 </div>
                 <div>
                     <label class="text-[9px] font-black uppercase text-rose-600 ml-4 mb-1 block tracking-widest">Date Out</label>
-                    <input type="date" name="date_out" value="{{ item.date_out|string|truncate(10, True, '') if item.date_out else '' }}" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 focus:border-blue-900 focus:bg-white outline-none transition-all">
+                    <input type="date" name="date_out" value="{{ item.date_out }}" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 focus:border-blue-900 focus:bg-white outline-none transition-all">
                 </div>
             </div>
 
@@ -60,7 +60,10 @@
                 <input type="text" name="status_type" value="{{ item.status_type }}" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all" placeholder="TAIP STATUS DI SINI...">
             </div>
 
-            <input type="hidden" name="defect" value="{{ item.defect }}">
+            <div>
+                <label class="text-[9px] font-black uppercase text-slate-400 ml-4 mb-1 block tracking-widest">Defect / Remarks</label>
+                <textarea name="defect" rows="3" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all">{{ item.defect }}</textarea>
+            </div>
 
             <div class="flex gap-4 pt-4">
                 <a href="/admin" class="w-1/3 bg-slate-100 text-slate-400 text-center font-black py-5 rounded-[2rem] hover:bg-slate-200 transition-colors uppercase tracking-widest text-[10px] flex items-center justify-center no-underline">
