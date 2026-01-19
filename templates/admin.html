@@ -145,11 +145,20 @@
                                 <td class="px-8 py-6 text-center">
                                     <div class="inline-flex flex-col items-center">
                                         <span class="text-[9px] font-black text-slate-400 mb-1 uppercase tracking-tighter">PIC: {{ item.pic if (item.pic and item.pic != 'nan') else 'N/A' }}</span>
+                                        
+                                        {% set s = item.status_type|upper|trim %}
                                         <span class="px-2.5 py-1 rounded text-[9px] font-black uppercase border 
-                                            {% if item.status_type == 'SERVICEABLE' %} bg-emerald-50 text-emerald-700 border-emerald-200
-                                            {% elif item.status_type == 'ACTIVE' %} bg-blue-50 text-blue-700 border-blue-200
-                                            {% elif item.status_type == 'UNSERVICEABLE' or item.status_type == 'BER' %} bg-rose-50 text-rose-700 border-rose-200
-                                            {% else %} bg-slate-50 text-slate-600 border-slate-200 {% endif %}">
+                                            {% if s == 'SERVICEABLE' %} 
+                                                bg-emerald-50 text-emerald-700 border-emerald-200
+                                            {% elif s in ['READY TO QUOTE', 'READY TO DELIVERED', 'RETURN TO AEROTREE'] %} 
+                                                bg-slate-100 text-slate-600 border-slate-300
+                                            {% elif s in ['WARRANTY REPAIR', 'TDI ON PROGRESS'] %} 
+                                                bg-yellow-50 text-yellow-700 border-yellow-200
+                                            {% elif s == 'OV TDI' %} 
+                                                bg-orange-50 text-orange-700 border-orange-200
+                                            {% else %} 
+                                                bg-slate-50 text-slate-400 border-slate-200 
+                                            {% endif %}">
                                             {{ item.status_type }}
                                         </span>
                                     </div>

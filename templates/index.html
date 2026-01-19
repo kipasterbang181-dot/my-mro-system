@@ -9,6 +9,14 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
+        /* Style tambahan untuk dropdown supaya konsisten dengan input lain */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%231e3a8a'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.5em;
+        }
     </style>
 </head>
 <body class="bg-slate-900 min-h-screen p-4 flex flex-col items-center justify-center">
@@ -46,7 +54,16 @@
 
             <div>
                 <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Authorization Status</label>
-                <input type="text" name="status" placeholder="ENTER STATUS (E.G. ACTIVE, SERVICEABLE...)" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
+                <select name="status" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm appearance-none" required>
+                    <option value="" disabled selected>CHOOSE STATUS</option>
+                    <option value="SERVICEABLE">SERVICEABLE</option>
+                    <option value="READY TO QUOTE">READY TO QUOTE</option>
+                    <option value="READY TO DELIVERED">READY TO DELIVERED</option>
+                    <option value="RETURN TO AEROTREE">RETURN TO AEROTREE</option>
+                    <option value="WARRANTY REPAIR">WARRANTY REPAIR</option>
+                    <option value="TDI ON PROGRESS">TDI ON PROGRESS</option>
+                    <option value="OV TDI">OV TDI</option>
+                </select>
             </div>
 
             <input type="hidden" name="status_type" value="REPAIR">
@@ -194,7 +211,6 @@
             const total = dataList.length;
             let successCount = 0;
 
-            // KELAJUAN: Hantar 10 baris serentak dalam satu-satu masa (Chunking)
             const chunkSize = 10; 
             for (let i = 0; i < total; i += chunkSize) {
                 const chunk = dataList.slice(i, i + chunkSize);
@@ -208,9 +224,8 @@
                       .catch(err => console.error("Ralat S/N:", item.sn))
                 );
 
-                await Promise.all(requests); // Tunggu 10 baris selesai serentak
+                await Promise.all(requests);
 
-                // Kemaskini Progress Bar
                 const currentProgress = Math.min(i + chunkSize, total);
                 const percentage = Math.round((currentProgress / total) * 100);
                 progressBar.style.width = percentage + "%";

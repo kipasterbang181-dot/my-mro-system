@@ -8,6 +8,14 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
+        /* Style tambahan untuk dropdown arrow */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%231e3a8a'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.5em;
+        }
     </style>
 </head>
 <body class="bg-slate-900 min-h-screen p-4 flex items-center justify-center">
@@ -57,12 +65,14 @@
 
             <div>
                 <label class="text-[9px] font-black uppercase text-slate-400 ml-4 mb-1 block tracking-widest">Authorization Status</label>
-                <select name="status_type" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all appearance-none">
-                    <option value="ACTIVE" {% if item.status_type == 'ACTIVE' %}selected{% endif %}>ACTIVE</option>
-                    <option value="INACTIVE" {% if item.status_type == 'INACTIVE' %}selected{% endif %}>INACTIVE</option>
-                    <option value="REPAIRING" {% if item.status_type == 'REPAIRING' %}selected{% endif %}>REPAIRING</option>
-                    <option value="COMPLETED" {% if item.status_type == 'COMPLETED' %}selected{% endif %}>COMPLETED</option>
-                    <option value="SCRAPPED" {% if item.status_type == 'SCRAPPED' %}selected{% endif %}>SCRAPPED</option>
+                <select name="status" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all appearance-none">
+                    <option value="SERVICEABLE" {% if item.status == 'SERVICEABLE' %}selected{% endif %}>SERVICEABLE</option>
+                    <option value="READY TO QUOTE" {% if item.status == 'READY TO QUOTE' %}selected{% endif %}>READY TO QUOTE</option>
+                    <option value="READY TO DELIVERED" {% if item.status == 'READY TO DELIVERED' %}selected{% endif %}>READY TO DELIVERED</option>
+                    <option value="RETURN TO AEROTREE" {% if item.status == 'RETURN TO AEROTREE' %}selected{% endif %}>RETURN TO AEROTREE</option>
+                    <option value="WARRANTY REPAIR" {% if item.status == 'WARRANTY REPAIR' %}selected{% endif %}>WARRANTY REPAIR</option>
+                    <option value="TDI ON PROGRESS" {% if item.status == 'TDI ON PROGRESS' %}selected{% endif %}>TDI ON PROGRESS</option>
+                    <option value="OV TDI" {% if item.status == 'OV TDI' %}selected{% endif %}>OV TDI</option>
                 </select>
             </div>
 
