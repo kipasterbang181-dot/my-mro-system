@@ -11,7 +11,7 @@ from datetime import datetime
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
@@ -87,7 +87,7 @@ def incoming():
         
     return redirect(url_for('index'))
 
-# --- FUNGSI DOWNLOAD SINGLE PDF REPORT (PREVIEW AKTIF) ---
+# --- FUNGSI DOWNLOAD SINGLE PDF REPORT ---
 @app.route('/download_single_report/<int:item_id>')
 def download_single_report(item_id):
     if not session.get('admin'): return redirect(url_for('login'))
@@ -98,15 +98,18 @@ def download_single_report(item_id):
     elements = []
     styles = getSampleStyleSheet()
     
+    # Custom Style for Defect wrapping
+    cell_style = ParagraphStyle(name='CellStyle', fontSize=10, leading=12)
+
     elements.append(Paragraph("G7 AEROSPACE - UNIT MAINTENANCE REPORT", styles['Title']))
     elements.append(Spacer(1, 20))
     
     report_data = [
         ["FIELD", "DETAILS"],
-        ["EQUIPMENT", l.peralatan],
+        ["EQUIPMENT", Paragraph(l.peralatan or "N/A", cell_style)],
         ["PART NUMBER (P/N)", l.pn],
         ["SERIAL NUMBER (S/N)", l.sn],
-        ["DEFECT / REMARKS", Paragraph(l.defect or "N/A", styles['Normal'])],
+        ["DEFECT / REMARKS", Paragraph(l.defect or "N/A", cell_style)],
         ["DATE IN", l.date_in],
         ["DATE OUT", l.date_out or "-"],
         ["STATUS", l.status_type],
@@ -116,25 +119,23 @@ def download_single_report(item_id):
     
     t = Table(report_data, colWidths=[150, 300])
     t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (1, 0), colors.darkblue),
+        ('BACKGROUND', (0, 0), (1, 0), colors.HexColor('#1e293b')),
         ('TEXTCOLOR', (0, 0), (1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('FONTNAME', (0, 0), (1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.lightgrey])
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')])
     ]))
     
     elements.append(t)
     doc.build(elements)
     buf.seek(0)
-    
-    # Ditukar ke as_attachment=False supaya boleh view dulu
     return send_file(buf, mimetype='application/pdf', as_attachment=False, download_name=f"Report_{l.sn}.pdf")
 
-# --- FUNGSI DOWNLOAD PDF REPORT KESELURUHAN (PREVIEW AKTIF) ---
+# --- FUNGSI DOWNLOAD PDF REPORT KESELURUHAN ---
 @app.route('/download_report')
 def download_report():
     if not session.get('admin'): return redirect(url_for('login'))
@@ -150,10 +151,12 @@ def download_report():
     
     data = [["ID", "PERALATAN", "P/N", "S/N", "DATE IN", "DATE OUT", "STATUS", "PIC"]]
     
+    table_cell_style = ParagraphStyle(name='TableCell', fontSize=7, leading=8)
+
     for l in logs:
         data.append([
             l.id, 
-            l.peralatan[:30], 
+            Paragraph(l.peralatan[:50], table_cell_style), 
             l.pn, 
             l.sn, 
             l.date_in, 
@@ -162,24 +165,22 @@ def download_report():
             l.pic
         ])
     
-    t = Table(data, repeatRows=1)
+    t = Table(data, repeatRows=1, hAlign='CENTER')
     t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e293b')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.lightgrey])
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f1f5f9')]),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
     ]))
     
     elements.append(t)
     doc.build(elements)
     buf.seek(0)
-    
-    # Ditukar ke as_attachment=False supaya boleh view dulu
-    return send_file(buf, mimetype='application/pdf', as_attachment=False, download_name=f"Full_Repair_Report_{datetime.now().strftime('%Y%m%d')}.pdf")
+    return send_file(buf, mimetype='application/pdf', as_attachment=False, download_name=f"Full_Report_{datetime.now().strftime('%Y%m%d')}.pdf")
 
 # --- FUNGSI IMPORT EXCEL ---
 @app.route('/import_excel', methods=['POST'])
@@ -205,14 +206,12 @@ def import_excel():
         def clean_val(val, is_date=False):
             if pd.isna(val) or str(val).strip().lower() in ['nan', '0', '0.0', '', '-']: 
                 return None if is_date else "N/A"
-            
             if is_date:
                 try:
                     if isinstance(val, (int, float)):
                         return pd.to_datetime(val, unit='D', origin='1899-12-30').strftime('%Y-%m-%d')
                     return pd.to_datetime(str(val)).strftime('%Y-%m-%d')
-                except:
-                    return str(val)[:10]
+                except: return str(val)[:10]
             return str(val).strip().upper()
 
         logs_to_add = []
@@ -223,9 +222,6 @@ def import_excel():
             d_in = clean_val(row.get('DATE IN'), True)
             d_out = clean_val(row.get('DATE OUT', row.get('DATE OUT2', '')), True) or "-"
             
-            jtp_val = clean_val(row.get('JTP', 'N/A'))
-            defect_val = clean_val(row.get('DEFECT', 'N/A'))
-
             new_log = RepairLog(
                 peralatan=clean_val(row.get('DESCRIPTION', row.get('PERALATAN', ''))),
                 pn=clean_val(row.get('PART NO', row.get('P/N', ''))),
@@ -233,8 +229,8 @@ def import_excel():
                 date_in=d_in or datetime.now().strftime("%Y-%m-%d"),
                 date_out=d_out,
                 status_type=str(row.get('STATUS', 'ACTIVE')).upper(),
-                pic=jtp_val,
-                defect=defect_val
+                pic=clean_val(row.get('JTP', 'N/A')),
+                defect=clean_val(row.get('DEFECT', 'N/A'))
             )
             logs_to_add.append(new_log)
         
@@ -296,10 +292,7 @@ def edit(id):
         l.date_in = request.form.get('date_in')
         l.date_out = request.form.get('date_out')
         l.defect = request.form.get('defect', '').upper()
-        
-        new_status = request.form.get('status_type', '')
-        l.status_type = new_status.upper()
-        
+        l.status_type = request.form.get('status_type', '').upper()
         db.session.commit()
         return redirect(url_for('admin'))
     return render_template('edit.html', item=l)

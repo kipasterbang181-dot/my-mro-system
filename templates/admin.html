@@ -10,14 +10,13 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
         body { font-family: 'Inter', sans-serif; letter-spacing: -0.01em; }
-        .table-row-hover:hover { background-color: #f8fafc; }
+        .table-row-hover:hover { background-color: #f1f5f9; transition: all 0.2s; }
         @media print {
             body * { visibility: hidden; }
             #modalContent, #modalContent * { visibility: visible; }
             #modalContent { position: absolute; left: 0; top: 0; width: 100%; border: none; shadow: none; }
             .no-print { display: none; }
         }
-        /* Style untuk loading spinner */
         .loader {
             border: 2px solid #f3f3f3;
             border-top: 2px solid #ffffff;
@@ -32,7 +31,7 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-[#f1f5f9] min-h-screen">
+<body class="bg-[#f8fafc] min-h-screen">
 
     <nav class="bg-slate-900 text-white sticky top-0 z-50 border-b border-white/10 shadow-sm">
         <div class="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
@@ -100,15 +99,16 @@
                                     <input type="checkbox" id="selectAll" class="w-4 h-4 rounded cursor-pointer">
                                 </th>
                                 <th class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest">Asset Detail</th>
-                                <th class="px-8 py-5 text-[10px] font-bold uppercase text-rose-600 tracking-widest">Defect</th> <th class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest text-center">Timeline</th>
-                                <th class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest text-center">Status & JTP</th>
+                                <th class="px-8 py-5 text-[10px] font-bold uppercase text-rose-600 tracking-widest">Defect</th> 
+                                <th class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest text-center">Timeline</th>
+                                <th class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest text-center">Status & PIC</th>
                                 <th class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             {% for item in logs %}
                             <tr class="table-row-hover group transition-colors">
-                                <td class="px-6 py-6">
+                                <td class="px-6 py-6 text-center">
                                     <input type="checkbox" name="selected_ids" value="{{ item.id }}" class="item-checkbox w-4 h-4 rounded cursor-pointer">
                                 </td>
                                 <td class="px-8 py-6">
@@ -120,7 +120,8 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-8 py-6"> <p class="text-[10px] font-bold text-slate-700 uppercase italic leading-relaxed row-defect">
+                                <td class="px-8 py-6"> 
+                                    <p class="text-[10px] font-bold text-slate-700 uppercase italic leading-relaxed row-defect">
                                         {{ item.defect if item.defect else '-' }}
                                     </p>
                                 </td>
@@ -138,18 +139,19 @@
                                 </td>
                                 <td class="px-8 py-6 text-center">
                                     <div class="inline-flex flex-col items-center">
-                                        <span class="text-[9px] font-black text-slate-400 mb-1 uppercase tracking-tighter">JTP: {{ item.pic if (item.pic and item.pic != 'nan') else 'N/A' }}</span>
+                                        <span class="text-[9px] font-black text-slate-400 mb-1 uppercase tracking-tighter">PIC: {{ item.pic if (item.pic and item.pic != 'nan') else 'N/A' }}</span>
                                         <span class="px-2.5 py-1 rounded text-[9px] font-black uppercase border 
-                                            {% if item.status_type == 'SERVICEABLE' %} bg-emerald-100 text-emerald-700 border-emerald-200
-                                            {% elif item.status_type == 'ACTIVE' %} bg-blue-100 text-blue-700 border-blue-200
-                                            {% else %} bg-slate-100 text-slate-600 border-slate-200 {% endif %}">
+                                            {% if item.status_type == 'SERVICEABLE' %} bg-emerald-50 text-emerald-700 border-emerald-200
+                                            {% elif item.status_type == 'ACTIVE' %} bg-blue-50 text-blue-700 border-blue-200
+                                            {% elif item.status_type == 'UNSERVICEABLE' or item.status_type == 'BER' %} bg-rose-50 text-rose-700 border-rose-200
+                                            {% else %} bg-slate-50 text-slate-600 border-slate-200 {% endif %}">
                                             {{ item.status_type }}
                                         </span>
                                     </div>
                                 </td>
                                 <td class="px-8 py-6">
                                     <div class="flex justify-end items-center gap-3">
-                                        <div class="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
+                                        <div class="flex items-center bg-slate-50 rounded-lg p-1 border border-slate-200">
                                             <button type="button" onclick="showQR('{{ item.sn }}', '{{ request.url_root }}view_tag/{{ item.id }}', '{{ item.id }}')" title="View QR Tag" class="p-2 text-slate-600 hover:text-blue-600 transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
@@ -158,7 +160,7 @@
                                             
                                             <div class="w-[1px] h-4 bg-slate-300 mx-1"></div>
                                             
-                                            <a href="/view_tag/{{ item.id }}" title="View Full Tag" class="p-2 text-slate-600 hover:text-red-600 transition-colors">
+                                            <a href="/view_tag/{{ item.id }}" title="View Full Tag" class="p-2 text-slate-600 hover:text-blue-600 transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                                 </svg>
@@ -220,7 +222,6 @@
     </div>
 
     <script>
-        // FUNGSI LOADING SEMASA IMPORT
         function showLoading(form) {
             const btn = document.getElementById('importBtn');
             const btnText = document.getElementById('btnText');
@@ -229,13 +230,11 @@
             btnText.innerHTML = '<span class="loader"></span> Memproses...';
         }
 
-        // PILIH SEMUA CHECKBOX
         document.getElementById('selectAll').addEventListener('change', function() {
             const checkboxes = document.querySelectorAll('.item-checkbox');
             checkboxes.forEach(cb => cb.checked = this.checked);
         });
 
-        // PENGESAHAN DELETE BANYAK
         function confirmBulkDelete() {
             const selected = document.querySelectorAll('.item-checkbox:checked');
             if (selected.length === 0) {
