@@ -66,6 +66,13 @@ def admin():
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     return render_template('admin.html', logs=logs)
 
+# --- FUNGSI VIEW REPORT (YANG BARU DITAMBAH) ---
+@app.route('/view_report/<int:id>')
+def view_report(id):
+    if not session.get('admin'): return redirect(url_for('login'))
+    l = RepairLog.query.get_or_404(id)
+    return render_template('view_report.html', l=l)
+
 # --- FUNGSI INCOMING (BORANG DEPAN) ---
 @app.route('/incoming', methods=['POST'])
 def incoming():
