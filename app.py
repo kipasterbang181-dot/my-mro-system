@@ -17,7 +17,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 
 # --- DATABASE CONFIG ---
-DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
+DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -63,13 +63,10 @@ def admin():
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     return render_template('admin.html', logs=logs)
 
-# --- FUNGSI HISTORY (BARU) ---
 @app.route('/history/<sn>')
 def history(sn):
     if not session.get('admin'): return redirect(url_for('login'))
-    # Cari semua rekod yang mempunyai S/N yang sama, susun ikut tarikh masuk (lama ke baru)
     logs = RepairLog.query.filter_by(sn=sn).order_by(RepairLog.date_in.asc()).all()
-    # Ambil info peralatan dari rekod pertama untuk paparan header
     asset_info = logs[0] if logs else None
     return render_template('history.html', logs=logs, asset=asset_info, sn=sn)
 
@@ -156,7 +153,14 @@ def download_single_report(item_id):
     elements.append(t)
     doc.build(elements)
     buf.seek(0)
-    return send_file(buf, mimetype='application/pdf', as_attachment=False)
+    
+    # KEMASKINI: as_attachment=True akan terus download fail
+    return send_file(
+        buf, 
+        mimetype='application/pdf', 
+        as_attachment=True, 
+        download_name=f"Report_{l.sn}_{l.id}.pdf"
+    )
 
 @app.route('/download_report')
 def download_report():
@@ -172,7 +176,6 @@ def download_report():
     elements.append(Spacer(1, 12))
     
     data = [["ID", "PERALATAN", "P/N", "S/N", "DATE IN", "DATE OUT", "STATUS", "PIC"]]
-    
     table_cell_style = ParagraphStyle(name='TableCell', fontSize=7, leading=8)
 
     for l in logs:
@@ -202,15 +205,20 @@ def download_report():
     elements.append(t)
     doc.build(elements)
     buf.seek(0)
-    return send_file(buf, mimetype='application/pdf', as_attachment=False)
+    
+    # KEMASKINI: as_attachment=True untuk full summary report
+    return send_file(
+        buf, 
+        mimetype='application/pdf', 
+        as_attachment=True, 
+        download_name=f"Full_Summary_Report_{datetime.now().strftime('%Y%m%d')}.pdf"
+    )
 
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
     if not session.get('admin'): return redirect(url_for('login'))
-    
     file = request.files.get('file_excel')
     if not file: return "Tiada fail dipilih"
-
     try:
         df_scan = pd.read_excel(file, header=None)
         header_idx = 0
@@ -219,7 +227,6 @@ def import_excel():
             if any(k in s for s in row_str for k in ['PART NO', 'SERIAL NO', 'P/N', 'DESCRIPTION']):
                 header_idx = i
                 break
-        
         file.seek(0)
         df = pd.read_excel(file, skiprows=header_idx)
         df.columns = [str(c).strip().upper() for c in df.columns]
@@ -239,10 +246,8 @@ def import_excel():
         for _, row in df.iterrows():
             sn = clean_val(row.get('SERIAL NO', row.get('S/N', row.get('SERIAL NUMBER', ''))))
             if sn == "N/A": continue
-
             d_in = clean_val(row.get('DATE IN'), True)
             d_out = clean_val(row.get('DATE OUT', row.get('DATE OUT2', '')), True) or "-"
-            
             new_log = RepairLog(
                 peralatan=clean_val(row.get('DESCRIPTION', row.get('PERALATAN', ''))),
                 pn=clean_val(row.get('PART NO', row.get('P/N', ''))),
@@ -258,7 +263,6 @@ def import_excel():
         if logs_to_add:
             db.session.bulk_save_objects(logs_to_add)
             db.session.commit()
-            
         return redirect(url_for('admin'))
     except Exception as e:
         db.session.rollback()
