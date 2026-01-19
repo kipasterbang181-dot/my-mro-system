@@ -154,7 +154,6 @@ def download_single_report(item_id):
     doc.build(elements)
     buf.seek(0)
     
-    # KEMASKINI: as_attachment=True akan terus download fail
     return send_file(
         buf, 
         mimetype='application/pdf', 
@@ -168,29 +167,33 @@ def download_report():
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=landscape(letter))
+    # Menetapkan margin yang lebih kecil supaya jadual lebar muat dalam kertas landscape
+    doc = SimpleDocTemplate(buf, pagesize=landscape(letter), leftMargin=20, rightMargin=20, topMargin=20, bottomMargin=20)
     elements = []
     styles = getSampleStyleSheet()
     
     elements.append(Paragraph(f"G7 AEROSPACE - REPAIR LOG SUMMARY REPORT ({datetime.now().strftime('%d/%m/%Y')})", styles['Title']))
     elements.append(Spacer(1, 12))
     
-    data = [["ID", "PERALATAN", "P/N", "S/N", "DATE IN", "DATE OUT", "STATUS", "PIC"]]
+    # Menambah kolum "DEFECT" di dalam senarai tajuk
+    data = [["ID", "PERALATAN", "P/N", "S/N", "DEFECT", "DATE IN", "DATE OUT", "STATUS", "PIC"]]
     table_cell_style = ParagraphStyle(name='TableCell', fontSize=7, leading=8)
 
     for l in logs:
         data.append([
             l.id, 
-            Paragraph(l.peralatan[:50] if l.peralatan else "N/A", table_cell_style), 
+            Paragraph(l.peralatan[:40] if l.peralatan else "N/A", table_cell_style), 
             l.pn, 
             l.sn, 
+            Paragraph(l.defect or "N/A", table_cell_style), # Menambah data defect
             l.date_in, 
             l.date_out or "-", 
             l.status_type, 
             l.pic
         ])
     
-    t = Table(data, repeatRows=1, hAlign='CENTER')
+    # Melaraskan colWidths supaya kolum DEFECT mempunyai ruang yang cukup
+    t = Table(data, repeatRows=1, hAlign='CENTER', colWidths=[30, 110, 85, 60, 120, 60, 60, 80, 80])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e293b')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -206,7 +209,6 @@ def download_report():
     doc.build(elements)
     buf.seek(0)
     
-    # KEMASKINI: as_attachment=True untuk full summary report
     return send_file(
         buf, 
         mimetype='application/pdf', 
