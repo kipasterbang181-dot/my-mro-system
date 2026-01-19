@@ -167,42 +167,52 @@ def download_report():
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     
     buf = io.BytesIO()
-    # Menetapkan margin yang lebih kecil supaya jadual lebar muat dalam kertas landscape
-    doc = SimpleDocTemplate(buf, pagesize=landscape(letter), leftMargin=20, rightMargin=20, topMargin=20, bottomMargin=20)
+    doc = SimpleDocTemplate(buf, pagesize=landscape(letter), leftMargin=15, rightMargin=15, topMargin=20, bottomMargin=20)
     elements = []
     styles = getSampleStyleSheet()
     
+    # Gaya teks sel yang dibaiki supaya automatik "wrap text"
+    table_cell_style = ParagraphStyle(
+        name='TableCell', 
+        fontSize=7, 
+        leading=8, 
+        wordWrap='LTR',
+        alignment=1 # Center
+    )
+
     elements.append(Paragraph(f"G7 AEROSPACE - REPAIR LOG SUMMARY REPORT ({datetime.now().strftime('%d/%m/%Y')})", styles['Title']))
     elements.append(Spacer(1, 12))
     
-    # Menambah kolum "DEFECT" di dalam senarai tajuk
     data = [["ID", "PERALATAN", "P/N", "S/N", "DEFECT", "DATE IN", "DATE OUT", "STATUS", "PIC"]]
-    table_cell_style = ParagraphStyle(name='TableCell', fontSize=7, leading=8)
 
     for l in logs:
         data.append([
             l.id, 
-            Paragraph(l.peralatan[:40] if l.peralatan else "N/A", table_cell_style), 
-            l.pn, 
+            Paragraph(l.peralatan or "N/A", table_cell_style), 
+            Paragraph(l.pn or "N/A", table_cell_style), 
             l.sn, 
-            Paragraph(l.defect or "N/A", table_cell_style), # Menambah data defect
+            Paragraph(l.defect or "N/A", table_cell_style), 
             l.date_in, 
             l.date_out or "-", 
             l.status_type, 
-            l.pic
+            Paragraph(l.pic or "N/A", table_cell_style)
         ])
     
-    # Melaraskan colWidths supaya kolum DEFECT mempunyai ruang yang cukup
-    t = Table(data, repeatRows=1, hAlign='CENTER', colWidths=[30, 110, 85, 60, 120, 60, 60, 80, 80])
+    # Pelarasan lebar kolum supaya muat dan kemas dalam PDF
+    col_widths = [25, 110, 90, 70, 180, 55, 55, 85, 80]
+    
+    t = Table(data, repeatRows=1, hAlign='CENTER', colWidths=col_widths)
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e293b')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('FONTSIZE', (0, 0), (-1, -1), 7),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 3),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 3),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f1f5f9')]),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
     ]))
     
     elements.append(t)
