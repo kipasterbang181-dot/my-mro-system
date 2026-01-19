@@ -16,8 +16,8 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 
-# --- DATABASE CONFIG ---
-DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
+# --- DATABASE CONFIG (TELAH DIBETULKAN) ---
+DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
