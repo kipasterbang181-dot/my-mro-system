@@ -3,7 +3,7 @@ import io
 import base64
 import qrcode
 import pandas as pd
-from flask import Flask, render_template, request, redirect, url_for, session, send_file
+from flask import Flask, render_template, request, redirect, url_for, session, send_file, flash
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
@@ -17,10 +17,14 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 
 # --- DATABASE CONFIG ---
+# Menggunakan SSL Mode require untuk keselamatan sambungan AWS/Supabase
 DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {"pool_pre_ping": True}
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 300,
+}
 db = SQLAlchemy(app)
 
 class RepairLog(db.Model):
@@ -46,46 +50,55 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
+        # Penukaran kepada admin/password123
         if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
             session['admin'] = True
             return redirect(url_for('admin'))
+        else:
+            flash("Username atau Password salah!", "error")
     return render_template('login.html')
 
 @app.route('/admin')
 def admin():
-    if not session.get('admin'): return redirect(url_for('login'))
+    if not session.get('admin'): 
+        return redirect(url_for('login'))
+    # Susun ikut ID terbaru di atas
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     return render_template('admin.html', logs=logs)
 
-# --- FUNGSI INCOMING ---
+# --- FUNGSI INCOMING (BORANG DEPAN) ---
 @app.route('/incoming', methods=['POST'])
 def incoming():
-    peralatan = request.form.get('peralatan', '').upper()
-    pn = request.form.get('pn', '').upper()
-    sn = request.form.get('sn', '').upper()
-    date_in = request.form.get('date_in') or datetime.now().strftime("%Y-%m-%d")
-    date_out = request.form.get('date_out', '') 
-    defect = request.form.get('defect', 'N/A').upper()
-    status = request.form.get('status', request.form.get('status_type', 'ACTIVE')).upper()
-    pic = request.form.get('pic', 'N/A').upper()
+    try:
+        peralatan = request.form.get('peralatan', '').upper()
+        pn = request.form.get('pn', '').upper()
+        sn = request.form.get('sn', '').upper()
+        date_in = request.form.get('date_in') or datetime.now().strftime("%Y-%m-%d")
+        date_out = request.form.get('date_out', '') 
+        defect = request.form.get('defect', 'N/A').upper()
+        status = request.form.get('status', request.form.get('status_type', 'ACTIVE')).upper()
+        pic = request.form.get('pic', 'N/A').upper()
 
-    new_log = RepairLog(
-        peralatan=peralatan,
-        pn=pn,
-        sn=sn,
-        date_in=date_in,
-        date_out=date_out,
-        defect=defect,
-        status_type=status,
-        pic=pic
-    )
-    db.session.add(new_log)
-    db.session.commit()
-    
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return "OK", 200
+        new_log = RepairLog(
+            peralatan=peralatan,
+            pn=pn,
+            sn=sn,
+            date_in=date_in,
+            date_out=date_out,
+            defect=defect,
+            status_type=status,
+            pic=pic
+        )
+        db.session.add(new_log)
+        db.session.commit()
         
-    return redirect(url_for('index'))
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return "OK", 200
+            
+        return redirect(url_for('index'))
+    except Exception as e:
+        db.session.rollback()
+        return f"Database Error: {str(e)}", 500
 
 # --- FUNGSI DOWNLOAD SINGLE PDF REPORT ---
 @app.route('/download_single_report/<int:item_id>')
@@ -132,10 +145,9 @@ def download_single_report(item_id):
     elements.append(t)
     doc.build(elements)
     buf.seek(0)
-    # as_attachment=False untuk preview
     return send_file(buf, mimetype='application/pdf', as_attachment=False)
 
-# --- FUNGSI DOWNLOAD PDF REPORT KESELURUHAN (PREVIEW AKTIF) ---
+# --- FUNGSI DOWNLOAD PDF REPORT KESELURUHAN ---
 @app.route('/download_report')
 def download_report():
     if not session.get('admin'): return redirect(url_for('login'))
@@ -156,7 +168,7 @@ def download_report():
     for l in logs:
         data.append([
             l.id, 
-            Paragraph(l.peralatan[:50], table_cell_style), 
+            Paragraph(l.peralatan[:50] if l.peralatan else "N/A", table_cell_style), 
             l.pn, 
             l.sn, 
             l.date_in, 
@@ -180,8 +192,6 @@ def download_report():
     elements.append(t)
     doc.build(elements)
     buf.seek(0)
-    
-    # as_attachment=False supaya buka di tab baru (Preview)
     return send_file(buf, mimetype='application/pdf', as_attachment=False)
 
 # --- FUNGSI IMPORT EXCEL ---
@@ -193,6 +203,7 @@ def import_excel():
     if not file: return "Tiada fail dipilih"
 
     try:
+        # Scan header untuk cari kolum yang betul
         df_scan = pd.read_excel(file, header=None)
         header_idx = 0
         for i, row in df_scan.iterrows():
@@ -243,7 +254,7 @@ def import_excel():
         return redirect(url_for('admin'))
     except Exception as e:
         db.session.rollback()
-        return f"Error: {str(e)}"
+        return f"Excel Import Error: {str(e)}"
 
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
@@ -279,7 +290,7 @@ def delete_bulk():
             db.session.commit()
         except Exception as e:
             db.session.rollback()
-            return f"Ralat: {str(e)}"
+            return f"Ralat Padam Pukal: {str(e)}"
     return redirect(url_for('admin'))
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
@@ -306,4 +317,5 @@ def logout():
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    # Threaded aktif untuk mengendalikan banyak request serentak
+    app.run(host='0.0.0.0', port=port, debug=False)
