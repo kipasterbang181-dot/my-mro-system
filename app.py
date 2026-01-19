@@ -98,7 +98,6 @@ def download_single_report(item_id):
     elements = []
     styles = getSampleStyleSheet()
     
-    # Custom Style for Defect wrapping
     cell_style = ParagraphStyle(name='CellStyle', fontSize=10, leading=12)
 
     elements.append(Paragraph("G7 AEROSPACE - UNIT MAINTENANCE REPORT", styles['Title']))
@@ -133,9 +132,10 @@ def download_single_report(item_id):
     elements.append(t)
     doc.build(elements)
     buf.seek(0)
-    return send_file(buf, mimetype='application/pdf', as_attachment=False, download_name=f"Report_{l.sn}.pdf")
+    # as_attachment=False untuk preview
+    return send_file(buf, mimetype='application/pdf', as_attachment=False)
 
-# --- FUNGSI DOWNLOAD PDF REPORT KESELURUHAN ---
+# --- FUNGSI DOWNLOAD PDF REPORT KESELURUHAN (PREVIEW AKTIF) ---
 @app.route('/download_report')
 def download_report():
     if not session.get('admin'): return redirect(url_for('login'))
@@ -180,7 +180,9 @@ def download_report():
     elements.append(t)
     doc.build(elements)
     buf.seek(0)
-    return send_file(buf, mimetype='application/pdf', as_attachment=False, download_name=f"Full_Report_{datetime.now().strftime('%Y%m%d')}.pdf")
+    
+    # as_attachment=False supaya buka di tab baru (Preview)
+    return send_file(buf, mimetype='application/pdf', as_attachment=False)
 
 # --- FUNGSI IMPORT EXCEL ---
 @app.route('/import_excel', methods=['POST'])
