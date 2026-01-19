@@ -87,7 +87,7 @@ def incoming():
         
     return redirect(url_for('index'))
 
-# --- FUNGSI DOWNLOAD SINGLE PDF REPORT (UNTUK BUTANG HIJAU) ---
+# --- FUNGSI DOWNLOAD SINGLE PDF REPORT (PREVIEW AKTIF) ---
 @app.route('/download_single_report/<int:item_id>')
 def download_single_report(item_id):
     if not session.get('admin'): return redirect(url_for('login'))
@@ -98,11 +98,9 @@ def download_single_report(item_id):
     elements = []
     styles = getSampleStyleSheet()
     
-    # Header Report
     elements.append(Paragraph("G7 AEROSPACE - UNIT MAINTENANCE REPORT", styles['Title']))
     elements.append(Spacer(1, 20))
     
-    # Data Data Item
     report_data = [
         ["FIELD", "DETAILS"],
         ["EQUIPMENT", l.peralatan],
@@ -116,7 +114,6 @@ def download_single_report(item_id):
         ["REPORT GENERATED", datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
     ]
     
-    # Gaya Jadual
     t = Table(report_data, colWidths=[150, 300])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (1, 0), colors.darkblue),
@@ -134,9 +131,10 @@ def download_single_report(item_id):
     doc.build(elements)
     buf.seek(0)
     
-    return send_file(buf, mimetype='application/pdf', as_attachment=True, download_name=f"Report_{l.sn}.pdf")
+    # Ditukar ke as_attachment=False supaya boleh view dulu
+    return send_file(buf, mimetype='application/pdf', as_attachment=False, download_name=f"Report_{l.sn}.pdf")
 
-# --- FUNGSI DOWNLOAD PDF REPORT KESELURUHAN ---
+# --- FUNGSI DOWNLOAD PDF REPORT KESELURUHAN (PREVIEW AKTIF) ---
 @app.route('/download_report')
 def download_report():
     if not session.get('admin'): return redirect(url_for('login'))
@@ -147,18 +145,15 @@ def download_report():
     elements = []
     styles = getSampleStyleSheet()
     
-    # Tajuk Dokumen
     elements.append(Paragraph(f"G7 AEROSPACE - REPAIR LOG SUMMARY REPORT ({datetime.now().strftime('%d/%m/%Y')})", styles['Title']))
     elements.append(Spacer(1, 12))
     
-    # Header Jadual
     data = [["ID", "PERALATAN", "P/N", "S/N", "DATE IN", "DATE OUT", "STATUS", "PIC"]]
     
-    # Isi Jadual
     for l in logs:
         data.append([
             l.id, 
-            l.peralatan[:30], # Hadkan panjang teks supaya muat
+            l.peralatan[:30], 
             l.pn, 
             l.sn, 
             l.date_in, 
@@ -167,7 +162,6 @@ def download_report():
             l.pic
         ])
     
-    # Gaya Jadual
     t = Table(data, repeatRows=1)
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
@@ -183,7 +177,9 @@ def download_report():
     elements.append(t)
     doc.build(elements)
     buf.seek(0)
-    return send_file(buf, mimetype='application/pdf', as_attachment=True, download_name=f"Full_Repair_Report_{datetime.now().strftime('%Y%m%d')}.pdf")
+    
+    # Ditukar ke as_attachment=False supaya boleh view dulu
+    return send_file(buf, mimetype='application/pdf', as_attachment=False, download_name=f"Full_Repair_Report_{datetime.now().strftime('%Y%m%d')}.pdf")
 
 # --- FUNGSI IMPORT EXCEL ---
 @app.route('/import_excel', methods=['POST'])
