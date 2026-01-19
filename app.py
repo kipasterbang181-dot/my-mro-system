@@ -16,7 +16,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 
-# --- DATABASE CONFIG (TELAH DIBETULKAN) ---
+# --- DATABASE CONFIG ---
 DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -171,13 +171,12 @@ def download_report():
     elements = []
     styles = getSampleStyleSheet()
     
-    # Gaya teks sel yang dibaiki supaya automatik "wrap text"
     table_cell_style = ParagraphStyle(
         name='TableCell', 
         fontSize=7, 
         leading=8, 
         wordWrap='LTR',
-        alignment=1 # Center
+        alignment=1 
     )
 
     elements.append(Paragraph(f"G7 AEROSPACE - REPAIR LOG SUMMARY REPORT ({datetime.now().strftime('%d/%m/%Y')})", styles['Title']))
@@ -198,7 +197,6 @@ def download_report():
             Paragraph(l.pic or "N/A", table_cell_style)
         ])
     
-    # Pelarasan lebar kolum supaya muat dan kemas dalam PDF
     col_widths = [25, 110, 90, 70, 180, 55, 55, 85, 80]
     
     t = Table(data, repeatRows=1, hAlign='CENTER', colWidths=col_widths)
@@ -224,6 +222,50 @@ def download_report():
         mimetype='application/pdf', 
         as_attachment=True, 
         download_name=f"Full_Summary_Report_{datetime.now().strftime('%Y%m%d')}.pdf"
+    )
+
+@app.route('/export_excel')
+def export_excel_data():
+    if not session.get('admin'): return redirect(url_for('login'))
+    
+    logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
+    
+    data = []
+    for l in logs:
+        data.append({
+            "ID": l.id,
+            "PERALATAN": l.peralatan,
+            "PART NUMBER (P/N)": l.pn,
+            "SERIAL NUMBER (S/N)": l.sn,
+            "DEFECT": l.defect if l.defect else "N/A",
+            "DATE IN": l.date_in,
+            "DATE OUT": l.date_out if l.date_out else "-",
+            "STATUS": l.status_type,
+            "PIC": l.pic
+        })
+    
+    df = pd.DataFrame(data)
+    output = io.BytesIO()
+    # Menggunakan engine xlsxwriter untuk formatting
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Repair Logs')
+        workbook  = writer.book
+        worksheet = writer.sheets['Repair Logs']
+        
+        # Format lebar kolum agar kemas
+        worksheet.set_column('A:A', 5)   
+        worksheet.set_column('B:B', 30)  
+        worksheet.set_column('C:D', 20)  
+        worksheet.set_column('E:E', 45)  # Kolum Defect dibuat lebih lebar
+        worksheet.set_column('F:G', 15)  
+        worksheet.set_column('H:I', 20)  
+        
+    output.seek(0)
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f"Repair_Log_Summary_{datetime.now().strftime('%Y%m%d')}.xlsx"
     )
 
 @app.route('/import_excel', methods=['POST'])
