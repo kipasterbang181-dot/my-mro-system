@@ -116,7 +116,9 @@
                                 </td>
                                 <td class="px-8 py-6">
                                     <div class="flex flex-col">
-                                        <span class="font-bold text-slate-900 uppercase text-base row-name">{{ item.peralatan or 'N/A' }}</span>
+                                        <a href="/history/{{ item.sn }}" class="font-bold text-slate-900 uppercase text-base row-name hover:text-blue-600 transition-colors decoration-dotted underline underline-offset-4">
+                                            {{ item.peralatan or 'N/A' }}
+                                        </a>
                                         <div class="flex gap-4 mt-1.5">
                                             <span class="text-[10px] font-bold text-slate-600 uppercase">P/N: <span class="text-slate-950 font-extrabold">{{ item.pn or 'N/A' }}</span></span>
                                             <span class="text-[10px] font-bold text-slate-600 uppercase">S/N: <span class="text-blue-700 font-mono font-extrabold row-sn">{{ item.sn or 'N/A' }}</span></span>

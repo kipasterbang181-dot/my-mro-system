@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <title>Asset History - {{ sn }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 p-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="mb-8 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-black text-slate-900 uppercase italic">Maintenance History</h1>
+                <p class="text-slate-500 font-bold uppercase text-xs tracking-widest">
+                    Asset: {{ asset.peralatan }} | S/N: <span class="text-blue-600">{{ sn }}</span>
+                </p>
+            </div>
+            <a href="/admin" class="bg-slate-800 text-white px-6 py-2 rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-black transition-all">Kembali</a>
+        </div>
+
+        <div class="relative border-l-4 border-blue-500 ml-4 py-4">
+            {% for log in logs %}
+            <div class="mb-10 ml-8 relative">
+                <div class="absolute -left-[42px] mt-1.5 w-6 h-6 bg-blue-500 rounded-full border-4 border-white shadow-sm"></div>
+                
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:border-blue-300 transition-all">
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="text-xs font-black bg-slate-100 px-3 py-1 rounded-full text-slate-600 uppercase tracking-tighter">
+                            Entry ID: #{{ log.id }}
+                        </span>
+                        <span class="text-sm font-bold text-slate-900">{{ log.date_in }}</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase">Defect / Job Scope</p>
+                            <p class="text-sm font-semibold text-rose-600 italic">"{{ log.defect or 'No remarks' }}"</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase">Status / PIC</p>
+                            <p class="text-sm font-bold text-slate-800 uppercase">{{ log.status_type }}</p>
+                            <p class="text-[10px] text-slate-500 font-medium">By: {{ log.pic or 'N/A' }}</p>
+                        </div>
+                    </div>
+
+                    {% if log.date_out %}
+                    <div class="mt-4 pt-4 border-t border-dashed border-slate-100 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                        <p class="text-[10px] font-bold text-slate-500 uppercase">Released on: <span class="text-slate-900">{{ log.date_out }}</span></p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if not logs %}
+        <div class="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-200">
+            <p class="text-slate-400 font-bold uppercase tracking-widest">Tiada rekod sejarah dijumpai.</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

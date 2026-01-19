@@ -17,7 +17,6 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 
 # --- DATABASE CONFIG ---
-# Menggunakan SSL Mode require untuk keselamatan sambungan AWS/Supabase
 DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -50,7 +49,6 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # Penukaran kepada admin/password123
         if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
             session['admin'] = True
             return redirect(url_for('admin'))
@@ -62,18 +60,25 @@ def login():
 def admin():
     if not session.get('admin'): 
         return redirect(url_for('login'))
-    # Susun ikut ID terbaru di atas
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     return render_template('admin.html', logs=logs)
 
-# --- FUNGSI VIEW REPORT (YANG BARU DITAMBAH) ---
+# --- FUNGSI HISTORY (BARU) ---
+@app.route('/history/<sn>')
+def history(sn):
+    if not session.get('admin'): return redirect(url_for('login'))
+    # Cari semua rekod yang mempunyai S/N yang sama, susun ikut tarikh masuk (lama ke baru)
+    logs = RepairLog.query.filter_by(sn=sn).order_by(RepairLog.date_in.asc()).all()
+    # Ambil info peralatan dari rekod pertama untuk paparan header
+    asset_info = logs[0] if logs else None
+    return render_template('history.html', logs=logs, asset=asset_info, sn=sn)
+
 @app.route('/view_report/<int:id>')
 def view_report(id):
     if not session.get('admin'): return redirect(url_for('login'))
     l = RepairLog.query.get_or_404(id)
     return render_template('view_report.html', l=l)
 
-# --- FUNGSI INCOMING (BORANG DEPAN) ---
 @app.route('/incoming', methods=['POST'])
 def incoming():
     try:
@@ -107,7 +112,6 @@ def incoming():
         db.session.rollback()
         return f"Database Error: {str(e)}", 500
 
-# --- FUNGSI DOWNLOAD SINGLE PDF REPORT ---
 @app.route('/download_single_report/<int:item_id>')
 def download_single_report(item_id):
     if not session.get('admin'): return redirect(url_for('login'))
@@ -154,7 +158,6 @@ def download_single_report(item_id):
     buf.seek(0)
     return send_file(buf, mimetype='application/pdf', as_attachment=False)
 
-# --- FUNGSI DOWNLOAD PDF REPORT KESELURUHAN ---
 @app.route('/download_report')
 def download_report():
     if not session.get('admin'): return redirect(url_for('login'))
@@ -201,7 +204,6 @@ def download_report():
     buf.seek(0)
     return send_file(buf, mimetype='application/pdf', as_attachment=False)
 
-# --- FUNGSI IMPORT EXCEL ---
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
     if not session.get('admin'): return redirect(url_for('login'))
@@ -210,7 +212,6 @@ def import_excel():
     if not file: return "Tiada fail dipilih"
 
     try:
-        # Scan header untuk cari kolum yang betul
         df_scan = pd.read_excel(file, header=None)
         header_idx = 0
         for i, row in df_scan.iterrows():
@@ -324,5 +325,4 @@ def logout():
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    # Threaded aktif untuk mengendalikan banyak request serentak
     app.run(host='0.0.0.0', port=port, debug=False)
