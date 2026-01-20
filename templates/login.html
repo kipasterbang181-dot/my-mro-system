@@ -5,75 +5,129 @@
     <title>Admin Login | G7 Aerospace</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        
         body { 
-            font-family: 'Inter', sans-serif; 
-            /* Dibenarkan skrol semula */
+            font-family: 'Plus Jakarta Sans', sans-serif; 
             overflow-y: auto; 
-            background-color: #0f172a;
+            background-color: #0f172a; 
+            background-image: radial-gradient(circle at top right, #1e293b, #0f172a);
+            color: #f8fafc;
         }
-        .game-card { border: 1px solid rgba(255,255,255,0.1); }
-        /* Hanya kawasan canvas yang sekat skrol untuk kawalan game */
-        #gameCanvas { touch-action: none; cursor: crosshair; }
+
+        /* Glassmorphism Effect */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 2rem;
+        }
+
+        .game-card { 
+            border: 1px solid rgba(59, 130, 246, 0.2); 
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        #gameCanvas { 
+            touch-action: none; 
+            cursor: crosshair;
+            background: radial-gradient(circle at center, #1e293b 0%, #000 100%);
+        }
+
+        .input-glow:focus {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+            border-color: #3b82f6 !important;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+
+        /* Cheat Styling */
+        .cheat-active {
+            color: #fbbf24 !important;
+            border-color: rgba(251, 191, 36, 0.5) !important;
+            background: rgba(251, 191, 36, 0.1) !important;
+        }
     </style>
 </head>
 <body class="flex flex-col items-center min-h-screen p-4 py-10">
     
-    <div class="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm mb-10 border-t-8 border-blue-900">
-        <div class="text-center mb-6">
-            <h2 class="text-3xl font-black text-blue-900 uppercase italic leading-none tracking-tighter">
-                G7 <span class="text-slate-400">Aerospace</span>
+    <div class="glass-card p-8 w-full max-w-sm mb-10 border-t-4 border-blue-500 shadow-2xl">
+        <div class="text-center mb-8">
+            <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center font-extrabold text-2xl italic mx-auto mb-4 shadow-lg shadow-blue-500/20">G</div>
+            <h2 class="text-2xl font-black text-white uppercase italic leading-none tracking-tighter">
+                G7 <span class="text-blue-500">Aerospace</span>
             </h2>
-            <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mt-2">Admin Portal Access</p>
+            <p class="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em] mt-2">Admin Portal Access</p>
         </div>
 
-        <form action="/login" method="POST" class="space-y-4">
+        <form action="/login" method="POST" class="space-y-5">
             <div>
                 <label class="text-[10px] font-black uppercase text-slate-400 ml-2 mb-1 block">Username</label>
-                <input type="text" name="u" placeholder="Admin ID" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none focus:border-blue-900 transition-all text-sm" required>
+                <input type="text" name="u" placeholder="Admin ID" 
+                    class="w-full p-4 bg-white/5 border border-white/10 rounded-2xl font-bold outline-none text-white text-sm input-glow transition-all placeholder:text-slate-600" required>
             </div>
             <div>
                 <label class="text-[10px] font-black uppercase text-slate-400 ml-2 mb-1 block">Password</label>
-                <input type="password" name="p" placeholder="••••••••" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none focus:border-blue-900 transition-all text-sm" required>
+                <input type="password" name="p" placeholder="••••••••" 
+                    class="w-full p-4 bg-white/5 border border-white/10 rounded-2xl font-bold outline-none text-white text-sm input-glow transition-all placeholder:text-slate-600" required>
             </div>
-            <button type="submit" class="w-full bg-blue-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition shadow-lg active:scale-95 text-xs">
+            <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-500 transition shadow-lg shadow-blue-600/20 active:scale-95 text-[10px]">
                 Authorize Login
             </button>
         </form>
 
-        <div class="mt-6 pt-6 border-t border-slate-100 text-center">
-            <a href="/" class="text-blue-500 text-[10px] font-black uppercase tracking-widest hover:text-blue-700 transition-all no-underline">
+        <div class="mt-8 pt-6 border-t border-white/5 text-center">
+            <a href="/" class="text-slate-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all no-underline">
                 ← Back to Submission Form
             </a>
         </div>
     </div>
 
-    <div class="w-full max-w-sm bg-slate-800/50 p-4 rounded-3xl border border-white/10 text-center relative backdrop-blur-sm game-card mb-10">
-        <div class="flex justify-between items-center mb-2">
-            <h3 class="text-[9px] font-black text-blue-400 uppercase italic tracking-widest">G7 Starfighter ✈️</h3>
-            <span id="game-score" class="text-white font-black text-[10px]">Score: 0</span>
+    <div class="w-full max-w-sm glass-card p-4 text-center relative game-card mb-10">
+        <div class="flex justify-between items-center mb-3 px-2">
+            <div class="flex items-center gap-2">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                </span>
+                <h3 class="text-[9px] font-black text-blue-400 uppercase italic tracking-widest">G7 Starfighter</h3>
+            </div>
+            <span id="game-score" class="text-white font-black text-[10px] bg-white/5 px-3 py-1 rounded-full border border-white/5">Score: 0</span>
         </div>
         
-        <div class="relative overflow-hidden rounded-2xl bg-black shadow-inner border border-white/5 h-[220px]">
+        <div class="relative overflow-hidden rounded-2xl bg-black shadow-2xl h-[220px]">
             <canvas id="gameCanvas" width="300" height="220" class="mx-auto"></canvas>
             
-            <div id="revive-screen" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm z-50">
+            <div id="revive-screen" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-md z-50">
+                <div class="w-10 h-10 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mb-2">⚠️</div>
                 <p class="text-red-500 font-black text-xs mb-1 uppercase tracking-widest">Aircraft Destroyed</p>
                 <p id="final-score" class="text-white/40 text-[9px] mb-4 uppercase">Meteors: 0</p>
-                <button onclick="reviveGame()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-black uppercase text-[10px] hover:bg-blue-500 shadow-lg shadow-blue-500/20">Repair & Restart</button>
+                <button onclick="reviveGame()" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-blue-500 shadow-xl shadow-blue-500/40 transition-all active:scale-90">Repair & Restart</button>
             </div>
 
             <div id="start-msg" class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div class="text-center">
+                <div class="text-center bg-black/40 backdrop-blur-sm p-4 rounded-2xl border border-white/5">
                     <p class="text-blue-400 font-black text-[9px] uppercase tracking-[0.2em] animate-pulse">Touch or WASD to Move</p>
                     <p class="text-white/20 text-[8px] mt-1 uppercase">Auto-firing active</p>
                 </div>
             </div>
         </div>
+
+        <div class="mt-4 pt-4 border-t border-white/5">
+            <button onclick="document.getElementById('cheat-panel').classList.toggle('hidden')" class="text-[8px] text-slate-600 font-bold uppercase tracking-[0.3em] hover:text-blue-400 transition-colors">Admin Debug Menu ⚙️</button>
+            <div id="cheat-panel" class="hidden grid grid-cols-3 gap-2 mt-3">
+                <button onclick="toggleGodMode()" id="cheat-god" class="bg-white/5 border border-white/10 py-2 rounded-lg text-[8px] font-black uppercase text-slate-500 hover:bg-white/10 transition-all">God Mode</button>
+                <button onclick="toggleRapidFire()" id="cheat-rapid" class="bg-white/5 border border-white/10 py-2 rounded-lg text-[8px] font-black uppercase text-slate-500 hover:bg-white/10 transition-all">Rapid Fire</button>
+                <button onclick="addCheatScore()" class="bg-white/5 border border-white/10 py-2 rounded-lg text-[8px] font-black uppercase text-slate-500 hover:bg-white/10 transition-all">+1000 Pts</button>
+            </div>
+        </div>
         
-        <div class="mt-2 flex justify-between px-1">
-            <span id="high-score" class="text-white/20 font-black text-[8px] uppercase tracking-widest">High Score: 0</span>
-            <span class="text-white/20 font-black text-[8px] uppercase tracking-widest italic">G7 Aerospace Tech</span>
+        <div class="mt-3 flex justify-between px-2">
+            <span id="high-score" class="text-slate-500 font-black text-[8px] uppercase tracking-widest">High Score: 0</span>
+            <span class="text-slate-600 font-black text-[8px] uppercase tracking-widest italic">V.Cheat Enabled</span>
         </div>
     </div>
 
@@ -88,24 +142,40 @@
         let best = localStorage.getItem('g7_meteor_best') || 0;
         document.getElementById('high-score').innerText = "High Score: " + best;
 
+        // Cheat Variables
+        let godMode = false;
+        let rapidFire = false;
+
         const player = { x: 140, y: 180, w: 22, h: 20, speed: 5 };
         let meteors = [];
         let bullets = [];
         let keys = {};
 
-        // Keyboard Controls
+        // Cheat Logic Functions
+        function toggleGodMode() {
+            godMode = !godMode;
+            document.getElementById('cheat-god').classList.toggle('cheat-active', godMode);
+        }
+        function toggleRapidFire() {
+            rapidFire = !rapidFire;
+            document.getElementById('cheat-rapid').classList.toggle('cheat-active', rapidFire);
+        }
+        function addCheatScore() {
+            score += 1000;
+            document.getElementById('game-score').innerText = "Score: " + score;
+        }
+
         window.addEventListener('keydown', e => { 
             keys[e.code] = true; 
             if(!gameActive && reviveScreen.classList.contains('hidden')) startGame();
         });
         window.addEventListener('keyup', e => keys[e.code] = false);
 
-        // Touch Controls (Hanya aktif dalam canvas)
         canvas.addEventListener('touchstart', handleTouch, {passive: false});
         canvas.addEventListener('touchmove', handleTouch, {passive: false});
 
         function handleTouch(e) {
-            e.preventDefault(); // Sekat skrol skrin hanya bila sentuh kotak game
+            e.preventDefault();
             if(!gameActive && reviveScreen.classList.contains('hidden')) startGame();
             
             let rect = canvas.getBoundingClientRect();
@@ -113,7 +183,6 @@
             let touchX = (touch.clientX - rect.left) * (canvas.width / rect.width);
             let touchY = (touch.clientY - rect.top) * (canvas.height / rect.height);
             
-            // Gerakkan kapal ke posisi jari
             player.x = Math.max(0, Math.min(canvas.width - player.w, touchX - player.w/2));
             player.y = Math.max(0, Math.min(canvas.height - player.h, touchY - player.h/2));
         }
@@ -140,26 +209,28 @@
             if(!gameActive) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // PC Movement
             if ((keys['ArrowLeft'] || keys['KeyA']) && player.x > 0) player.x -= player.speed;
             if ((keys['ArrowRight'] || keys['KeyD']) && player.x < canvas.width - player.w) player.x += player.speed;
             if ((keys['ArrowUp'] || keys['KeyW']) && player.y > 0) player.y -= player.speed;
             if ((keys['ArrowDown'] || keys['KeyS']) && player.y < canvas.height - player.h) player.y += player.speed;
 
-            // Draw Ship (Aerospace Style)
-            ctx.fillStyle = "#3b82f6";
+            // Draw Ship
+            ctx.fillStyle = godMode ? "#fbbf24" : "#3b82f6";
+            ctx.shadowBlur = godMode ? 20 : 10;
+            ctx.shadowColor = godMode ? "#fbbf24" : "#3b82f6";
             ctx.beginPath();
             ctx.moveTo(player.x + player.w/2, player.y);
             ctx.lineTo(player.x, player.y + player.h);
             ctx.lineTo(player.x + player.w, player.y + player.h);
             ctx.fill();
+            ctx.shadowBlur = 0;
             
-            // Engine Glow
             ctx.fillStyle = (Date.now() % 200 < 100) ? "#ef4444" : "#f97316";
             ctx.fillRect(player.x + player.w/2 - 3, player.y + player.h, 6, 4);
 
-            // Auto-Firing
-            if(Date.now() % 160 < 20) {
+            // Auto-firing (Influenced by Rapid Fire Cheat)
+            let fireInterval = rapidFire ? 40 : 160;
+            if(Date.now() % fireInterval < 20) {
                 bullets.push({x: player.x + player.w/2 - 1.5, y: player.y, w: 3, h: 10});
             }
 
@@ -173,7 +244,6 @@
                 if(b.y < 0) bullets.splice(i, 1);
             });
 
-            // Meteor Logic
             if(Math.random() < 0.04) {
                 meteors.push({
                     x: Math.random() * (canvas.width - 20), 
@@ -185,12 +255,11 @@
 
             meteors.forEach((m, mi) => {
                 m.y += m.speed;
-                ctx.fillStyle = "#475569";
+                ctx.fillStyle = "#64748b";
                 ctx.beginPath();
                 ctx.arc(m.x, m.y, m.size/2, 0, Math.PI*2);
                 ctx.fill();
 
-                // Check Hit
                 bullets.forEach((b, bi) => {
                     let dx = b.x - m.x;
                     let dy = b.y - m.y;
@@ -202,17 +271,22 @@
                     }
                 });
 
-                // Check Collision
                 let pdx = (player.x + player.w/2) - m.x;
                 let pdy = (player.y + player.h/2) - m.y;
                 if(Math.sqrt(pdx*pdx + pdy*pdy) < m.size/2 + 8) {
-                    gameActive = false;
-                    reviveScreen.classList.remove('hidden');
-                    document.getElementById('final-score').innerText = "Meteors: " + score;
-                    if(score > best) {
-                        best = score;
-                        localStorage.setItem('g7_meteor_best', best);
-                        document.getElementById('high-score').innerText = "High Score: " + best;
+                    if(!godMode) {
+                        gameActive = false;
+                        reviveScreen.classList.remove('hidden');
+                        document.getElementById('final-score').innerText = "Meteors: " + score;
+                        if(score > best) {
+                            best = score;
+                            localStorage.setItem('g7_meteor_best', best);
+                            document.getElementById('high-score').innerText = "High Score: " + best;
+                        }
+                    } else {
+                        // In God Mode, meteors explode on contact
+                        meteors.splice(mi, 1);
+                        score += 5;
                     }
                 }
 
