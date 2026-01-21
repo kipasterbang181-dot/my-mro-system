@@ -101,7 +101,8 @@
                     <table class="w-full text-left border-collapse" id="maintenanceTable">
                         <thead>
                             <tr class="bg-slate-50 border-b border-slate-100">
-                                <th class="px-6 py-5 w-10">
+                                <th class="px-6 py-5 w-8 text-[10px] font-bold uppercase text-slate-400 tracking-widest text-center">No</th>
+                                <th class="px-4 py-5 w-10">
                                     <input type="checkbox" id="selectAll" class="w-4 h-4 rounded cursor-pointer">
                                 </th>
                                 <th class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest">Asset Detail</th>
@@ -114,7 +115,10 @@
                         <tbody class="divide-y divide-slate-100">
                             {% for item in logs %}
                             <tr class="table-row-hover group transition-colors">
-                                <td class="px-6 py-6 text-center">
+                                <td class="px-6 py-6 text-center text-[11px] font-bold text-slate-400">
+                                    {{ loop.index }}
+                                </td>
+                                <td class="px-4 py-6 text-center">
                                     <input type="checkbox" name="selected_ids" value="{{ item.id }}" class="item-checkbox w-4 h-4 rounded cursor-pointer">
                                 </td>
                                 <td class="px-8 py-6">
@@ -223,7 +227,7 @@
     </main>
 
     <div id="qrModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-95 opacity-0" id="modalContent">
+        <div class="bg-white rounded-[2rem] shadow-2xl w-full max-sm overflow-hidden transform transition-all scale-95 opacity-0" id="modalContent">
             <div class="p-8 text-center">
                 <h3 class="text-blue-900 font-black italic uppercase tracking-tighter text-xl mb-1">QR Digital Tag</h3>
                 <p class="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-6">S/N: <span id="modalSN" class="text-slate-900">---</span></p>
@@ -241,7 +245,6 @@
     </div>
 
     <script>
-        // FUNGSI UNTUK PADAM SATU REKOD
         function confirmSingleDelete(id) {
             if (confirm('Adakah anda pasti mahu memadam rekod ini?')) {
                 const input = document.getElementById('singleDeleteId');
@@ -250,7 +253,6 @@
             }
         }
 
-        // FUNGSI LOADING BUTTON IMPORT
         function showLoading(form) {
             const btn = document.getElementById('importBtn');
             const btnText = document.getElementById('btnText');
@@ -259,13 +261,11 @@
             btnText.innerHTML = '<span class="loader"></span> Memproses...';
         }
 
-        // SELECT ALL CHECKBOX
         document.getElementById('selectAll').addEventListener('change', function() {
             const checkboxes = document.querySelectorAll('.item-checkbox');
             checkboxes.forEach(cb => cb.checked = this.checked);
         });
 
-        // BULK DELETE
         function confirmBulkDelete() {
             const selected = document.querySelectorAll('.item-checkbox:checked');
             if (selected.length === 0) {
@@ -277,7 +277,6 @@
             }
         }
 
-        // SEARCH FUNCTION
         function searchTable() {
             let input = document.getElementById("searchInput");
             let filter = input.value.toUpperCase();
@@ -297,7 +296,6 @@
             }
         }
 
-        // QR CODE MODAL
         function showQR(sn, link, id) {
             const modal = document.getElementById('qrModal');
             const content = document.getElementById('modalContent');
