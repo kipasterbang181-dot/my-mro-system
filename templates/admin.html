@@ -69,7 +69,7 @@
                 <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight italic uppercase">Management Console</h2>
                 <div class="flex items-center gap-2 mt-2">
                     <span class="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <p class="text-slate-600 text-[10px] font-bold uppercase tracking-[0.2em]">Supabase Database Live 🚀</p>
+                    <p class="text-slate-600 text-[10px] font-bold uppercase tracking-[0.2em]">Supabase Database Live 🚀 ({{ logs|length }} Rekod)</p>
                 </div>
             </div>
             <div class="flex gap-3">
@@ -83,13 +83,6 @@
                     Export Excel 📗
                 </a>
             </div>
-        </div>
-
-        <div class="mb-6 bg-white p-6 rounded-[1.5rem] border border-slate-200 shadow-sm">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Maintenance Frequency</p>
-            <h3 class="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">
-                {{ logs|length }} Times Logged
-            </h3>
         </div>
 
         <div class="mb-6 relative group">
@@ -156,7 +149,7 @@
                                     <div class="inline-flex flex-col items-center">
                                         <span class="text-[9px] font-black text-slate-400 mb-1 uppercase tracking-tighter">PIC: {{ item.pic if (item.pic and item.pic != 'nan') else 'N/A' }}</span>
                                         
-                                        {% set s = item.status_type|upper|trim %}
+                                        {% set s = item.status_type|upper|trim if item.status_type else '' %}
                                         <span class="px-2.5 py-1 rounded text-[9px] font-black uppercase border 
                                             {% if s == 'SERVICEABLE' %} 
                                                 bg-emerald-50 text-emerald-700 border-emerald-200
@@ -169,7 +162,7 @@
                                             {% else %} 
                                                 bg-slate-50 text-slate-400 border-slate-200 
                                             {% endif %}">
-                                            {{ item.status_type }}
+                                            {{ item.status_type or 'N/A' }}
                                         </span>
                                     </div>
                                 </td>
@@ -181,18 +174,14 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                                                 </svg>
                                             </button>
-                                            
                                             <div class="w-[1px] h-4 bg-slate-300 mx-1"></div>
-                                            
                                             <a href="/view_report/{{ item.id }}" title="View Digital Report" class="p-2 text-slate-600 hover:text-blue-600 transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                 </svg>
                                             </a>
-
                                             <div class="w-[1px] h-4 bg-slate-300 mx-1"></div>
-
                                             <a href="/view_tag/{{ item.id }}" title="View Digital Tag" class="p-2 text-slate-600 hover:text-amber-600 transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
@@ -220,6 +209,7 @@
                     </table>
                 </form>
             </div>
+            
             <form id="singleDeleteForm" action="/delete_bulk" method="POST" style="display: none;">
                 <input type="hidden" name="selected_ids" id="singleDeleteId">
             </form>
@@ -251,6 +241,7 @@
     </div>
 
     <script>
+        // FUNGSI UNTUK PADAM SATU REKOD
         function confirmSingleDelete(id) {
             if (confirm('Adakah anda pasti mahu memadam rekod ini?')) {
                 const input = document.getElementById('singleDeleteId');
@@ -259,6 +250,7 @@
             }
         }
 
+        // FUNGSI LOADING BUTTON IMPORT
         function showLoading(form) {
             const btn = document.getElementById('importBtn');
             const btnText = document.getElementById('btnText');
@@ -267,11 +259,13 @@
             btnText.innerHTML = '<span class="loader"></span> Memproses...';
         }
 
+        // SELECT ALL CHECKBOX
         document.getElementById('selectAll').addEventListener('change', function() {
             const checkboxes = document.querySelectorAll('.item-checkbox');
             checkboxes.forEach(cb => cb.checked = this.checked);
         });
 
+        // BULK DELETE
         function confirmBulkDelete() {
             const selected = document.querySelectorAll('.item-checkbox:checked');
             if (selected.length === 0) {
@@ -283,6 +277,7 @@
             }
         }
 
+        // SEARCH FUNCTION
         function searchTable() {
             let input = document.getElementById("searchInput");
             let filter = input.value.toUpperCase();
@@ -302,6 +297,7 @@
             }
         }
 
+        // QR CODE MODAL
         function showQR(sn, link, id) {
             const modal = document.getElementById('qrModal');
             const content = document.getElementById('modalContent');
