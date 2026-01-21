@@ -11,16 +11,20 @@
         
         body { font-family: 'Inter', sans-serif; }
         .tech-font { font-family: 'Space Grotesk', sans-serif; }
+        
+        @media print {
+            .no-print { display: none !important; }
+        }
     </style>
 </head>
 <body class="bg-slate-900 min-h-screen flex flex-col items-center py-12 px-4">
 
-    <div class="mb-10 flex gap-4 w-full max-w-[550px]">
-        <a href="/admin" class="flex-1 bg-white/10 hover:bg-white/20 text-white text-center py-4 rounded-2xl font-bold uppercase tracking-widest text-[10px] border border-white/10 transition-all">
+    <div class="mb-10 flex gap-4 w-full max-w-[550px] no-print">
+        <a href="/admin" class="flex-1 bg-white/10 hover:bg-white/20 text-white text-center py-4 rounded-2xl font-bold uppercase tracking-widest text-[10px] border border-white/10 transition-all no-underline">
             ← Dashboard
         </a>
 
-        <a href="/download_qr/{{ l.id }}" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-center py-4 rounded-2xl font-bold uppercase tracking-widest text-[10px] shadow-xl transition-all italic">
+        <a href="/download_qr/{{ l.id }}" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-center py-4 rounded-2xl font-bold uppercase tracking-widest text-[10px] shadow-xl transition-all italic no-underline">
             Download QR 🔳
         </a>
 
@@ -37,8 +41,10 @@
                 <p class="text-[9px] font-bold uppercase tracking-[0.5em] text-blue-600 mt-4 font-sans">Official Maintenance Record</p>
             </div>
             <div class="text-right">
-                <p class="text-[8px] font-black text-slate-300 uppercase tracking-widest">Record ID</p>
-                <p class="text-xl font-black text-slate-900 tech-font">#{{ l.id }}</p>
+                <p class="text-[8px] font-black text-slate-300 uppercase tracking-widest">Maintenance Frequency</p>
+                <p class="text-xl font-black text-slate-900 tech-font uppercase">
+                    {{ logs_count if logs_count else '1' }} Times Logged
+                </p>
             </div>
         </div>
 
@@ -58,8 +64,7 @@
                     <p class="text-lg font-black text-blue-600 uppercase tech-font">{{ l.sn }}</p>
                 </div>
             </div>
-
-            </div>
+        </div>
 
         <div class="mt-20 pt-8 border-t border-slate-100">
             <p class="text-[7px] text-slate-300 uppercase leading-relaxed tracking-wider italic text-center">
@@ -72,6 +77,15 @@
             <div class="h-[2px] bg-slate-100 w-full mb-4"></div>
             <p class="text-[8px] font-black text-slate-900 uppercase tracking-[0.8em]">*** OFFICIAL RECORD ***</p>
         </div>
+    </div>
+
+    <div class="mt-8 w-full max-w-[550px] no-print px-4">
+        <a href="/edit/{{ l.id }}" class="w-full bg-slate-100 hover:bg-white text-slate-900 border border-slate-700 font-black py-5 rounded-2xl shadow-lg transition-all uppercase tracking-[0.2em] text-[11px] flex items-center justify-center gap-3 no-underline shadow-white/5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Edit Record Details
+        </a>
     </div>
 
     <script>

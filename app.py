@@ -246,17 +246,14 @@ def export_excel_data():
     
     df = pd.DataFrame(data)
     output = io.BytesIO()
-    # Menggunakan engine xlsxwriter untuk formatting
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name='Repair Logs')
         workbook  = writer.book
         worksheet = writer.sheets['Repair Logs']
-        
-        # Format lebar kolum agar kemas
         worksheet.set_column('A:A', 5)   
         worksheet.set_column('B:B', 30)  
         worksheet.set_column('C:D', 20)  
-        worksheet.set_column('E:E', 45)  # Kolum Defect dibuat lebih lebar
+        worksheet.set_column('E:E', 45)  
         worksheet.set_column('F:G', 15)  
         worksheet.set_column('H:I', 20)  
         
@@ -322,10 +319,13 @@ def import_excel():
         db.session.rollback()
         return f"Excel Import Error: {str(e)}"
 
+# --- KEMASKINI VIEW TAG UNTUK KIRA BILANGAN LOG ---
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
     l = RepairLog.query.get_or_404(id)
-    return render_template('view_tag.html', l=l)
+    # Kira berapa kali S/N ini muncul dalam database
+    count = RepairLog.query.filter_by(sn=l.sn).count()
+    return render_template('view_tag.html', l=l, logs_count=count)
 
 @app.route('/download_qr/<int:id>')
 def download_qr(id):
