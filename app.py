@@ -46,33 +46,43 @@ with app.app_context():
 def index():
     return render_template('index.html')
 
+# --- LOGIN DENGAN LOGIK NEXT REDIRECT ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # Ambil nilai 'next' dari URL (cth: /login?next=/edit/5)
+    next_page = request.args.get('next')
+    
     if request.method == 'POST':
         if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
             session['admin'] = True
+            
+            # Jika ada pautan asal, hantar ke situ. Jika tiada, ke admin.
+            target = request.form.get('next_target')
+            if target and target != 'None' and target != '':
+                return redirect(target)
             return redirect(url_for('admin'))
         else:
             flash("Username atau Password salah!", "error")
-    return render_template('login.html')
+            
+    return render_template('login.html', next_page=next_page)
 
 @app.route('/admin')
 def admin():
     if not session.get('admin'): 
-        return redirect(url_for('login'))
+        return redirect(url_for('login', next=request.path))
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     return render_template('admin.html', logs=logs)
 
 @app.route('/history/<sn>')
 def history(sn):
-    if not session.get('admin'): return redirect(url_for('login'))
+    if not session.get('admin'): return redirect(url_for('login', next=request.path))
     logs = RepairLog.query.filter_by(sn=sn).order_by(RepairLog.date_in.asc()).all()
     asset_info = logs[0] if logs else None
     return render_template('history.html', logs=logs, asset=asset_info, sn=sn)
 
 @app.route('/view_report/<int:id>')
 def view_report(id):
-    if not session.get('admin'): return redirect(url_for('login'))
+    if not session.get('admin'): return redirect(url_for('login', next=request.path))
     l = RepairLog.query.get_or_404(id)
     return render_template('view_report.html', l=l)
 
@@ -111,7 +121,7 @@ def incoming():
 
 @app.route('/download_single_report/<int:item_id>')
 def download_single_report(item_id):
-    if not session.get('admin'): return redirect(url_for('login'))
+    if not session.get('admin'): return redirect(url_for('login', next=request.path))
     l = RepairLog.query.get_or_404(item_id)
     
     buf = io.BytesIO()
@@ -163,7 +173,7 @@ def download_single_report(item_id):
 
 @app.route('/download_report')
 def download_report():
-    if not session.get('admin'): return redirect(url_for('login'))
+    if not session.get('admin'): return redirect(url_for('login', next=request.path))
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     
     buf = io.BytesIO()
@@ -226,7 +236,7 @@ def download_report():
 
 @app.route('/export_excel')
 def export_excel_data():
-    if not session.get('admin'): return redirect(url_for('login'))
+    if not session.get('admin'): return redirect(url_for('login', next=request.path))
     
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     
@@ -267,7 +277,7 @@ def export_excel_data():
 
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
-    if not session.get('admin'): return redirect(url_for('login'))
+    if not session.get('admin'): return redirect(url_for('login', next=request.path))
     file = request.files.get('file_excel')
     if not file: return "Tiada fail dipilih"
     try:
@@ -337,7 +347,7 @@ def download_qr(id):
 
 @app.route('/delete/<int:id>')
 def delete(id):
-    if not session.get('admin'): return redirect(url_for('login'))
+    if not session.get('admin'): return redirect(url_for('login', next=request.path))
     l = RepairLog.query.get_or_404(id)
     db.session.delete(l)
     db.session.commit()
@@ -345,7 +355,7 @@ def delete(id):
 
 @app.route('/delete_bulk', methods=['POST'])
 def delete_bulk():
-    if not session.get('admin'): return redirect(url_for('login'))
+    if not session.get('admin'): return redirect(url_for('login', next=request.path))
     selected_ids = request.form.getlist('selected_ids')
     if selected_ids:
         try:
@@ -357,13 +367,13 @@ def delete_bulk():
             return f"Ralat Padam Pukal: {str(e)}"
     return redirect(url_for('admin'))
 
-# --- FUNGSI EDIT DENGAN LOGIK REDIRECT BACK KE QR ---
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
-    if not session.get('admin'): return redirect(url_for('login'))
-    l = RepairLog.query.get_or_404(id)
+    # Jika belum login, hantar ke login dengan parameter 'next'
+    if not session.get('admin'): 
+        return redirect(url_for('login', next=request.full_path))
     
-    # Kesan punca asal (View Tag atau Dashboard)
+    l = RepairLog.query.get_or_404(id)
     source = request.args.get('from', 'admin')
 
     if request.method == 'POST':
@@ -377,7 +387,6 @@ def edit(id):
         l.status_type = request.form.get('status_type', '').upper()
         db.session.commit()
         
-        # Jika datang dari QR (view_tag), hantar balik ke QR
         origin = request.form.get('origin_source')
         if origin == 'view_tag':
             return redirect(url_for('view_tag', id=l.id))

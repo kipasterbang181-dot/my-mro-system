@@ -64,6 +64,8 @@
         </div>
 
         <form action="/login" method="POST" class="space-y-5">
+            <input type="hidden" name="next_target" value="{{ next_page }}">
+
             <div>
                 <label class="text-[10px] font-black uppercase text-slate-400 ml-2 mb-1 block">Username</label>
                 <input type="text" name="u" placeholder="Admin ID" 
