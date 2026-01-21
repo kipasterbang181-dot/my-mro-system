@@ -123,7 +123,7 @@
                                 </td>
                                 <td class="px-8 py-6">
                                     <div class="flex flex-col">
-                                        <a href="/history/{{ item.sn }}" class="font-bold text-slate-900 uppercase text-base row-name hover:text-blue-600 transition-colors decoration-dotted underline underline-offset-4">
+                                        <a href="/history/{{ item.sn }}" class="save-scroll font-bold text-slate-900 uppercase text-base row-name hover:text-blue-600 transition-colors decoration-dotted underline underline-offset-4">
                                             {{ item.peralatan or 'N/A' }}
                                         </a>
                                         <div class="flex gap-4 mt-1.5">
@@ -179,14 +179,14 @@
                                                 </svg>
                                             </button>
                                             <div class="w-[1px] h-4 bg-slate-300 mx-1"></div>
-                                            <a href="/view_report/{{ item.id }}" title="View Digital Report" class="p-2 text-slate-600 hover:text-blue-600 transition-colors">
+                                            <a href="/view_report/{{ item.id }}" title="View Digital Report" class="save-scroll p-2 text-slate-600 hover:text-blue-600 transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                 </svg>
                                             </a>
                                             <div class="w-[1px] h-4 bg-slate-300 mx-1"></div>
-                                            <a href="/view_tag/{{ item.id }}" title="View Digital Tag" class="p-2 text-slate-600 hover:text-amber-600 transition-colors">
+                                            <a href="/view_tag/{{ item.id }}" title="View Digital Tag" class="save-scroll p-2 text-slate-600 hover:text-amber-600 transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                                                 </svg>
@@ -194,7 +194,7 @@
                                         </div>
                                         
                                         <div class="flex gap-1">
-                                            <a href="/edit/{{ item.id }}" class="p-2 text-slate-400 hover:text-blue-600 transition-colors">
+                                            <a href="/edit/{{ item.id }}" class="save-scroll p-2 text-slate-400 hover:text-blue-600 transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                 </svg>
@@ -245,6 +245,22 @@
     </div>
 
     <script>
+        // --- SCRIPT UNTUK INGAT POSISI SCROLL ---
+        document.querySelectorAll('.save-scroll').forEach(element => {
+            element.addEventListener('click', function() {
+                localStorage.setItem('scrollPos', window.scrollY);
+            });
+        });
+
+        window.addEventListener('load', function() {
+            const scrollPos = localStorage.getItem('scrollPos');
+            if (scrollPos) {
+                window.scrollTo(0, parseInt(scrollPos));
+                localStorage.removeItem('scrollPos');
+            }
+        });
+        // ---------------------------------------
+
         function confirmSingleDelete(id) {
             if (confirm('Adakah anda pasti mahu memadam rekod ini?')) {
                 const input = document.getElementById('singleDeleteId');
