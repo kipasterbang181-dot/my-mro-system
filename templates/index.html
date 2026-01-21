@@ -9,6 +9,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
+        
         /* Style tambahan untuk dropdown supaya konsisten dengan input lain */
         select {
             appearance: none;
@@ -108,6 +109,7 @@
     </div>
 
     <script>
+        // Set tarikh hari ini secara automatik
         document.getElementById('current_date').value = new Date().toISOString().split('T')[0];
 
         const excelInput = document.getElementById('excelInput');
@@ -117,6 +119,7 @@
         const progressBar = document.getElementById('progressBar');
         const progressText = document.getElementById('progressText');
 
+        // Event listener apabila fail dipilih
         excelInput.addEventListener('change', function(e) {
             if(e.target.files.length > 0) {
                 fileNameDisplay.innerText = e.target.files[0].name;
