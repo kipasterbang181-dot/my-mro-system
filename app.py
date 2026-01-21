@@ -319,11 +319,9 @@ def import_excel():
         db.session.rollback()
         return f"Excel Import Error: {str(e)}"
 
-# --- KEMASKINI VIEW TAG UNTUK KIRA BILANGAN LOG ---
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
     l = RepairLog.query.get_or_404(id)
-    # Kira berapa kali S/N ini muncul dalam database
     count = RepairLog.query.filter_by(sn=l.sn).count()
     return render_template('view_tag.html', l=l, logs_count=count)
 
@@ -359,10 +357,15 @@ def delete_bulk():
             return f"Ralat Padam Pukal: {str(e)}"
     return redirect(url_for('admin'))
 
+# --- FUNGSI EDIT DENGAN LOGIK REDIRECT BACK KE QR ---
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
     if not session.get('admin'): return redirect(url_for('login'))
     l = RepairLog.query.get_or_404(id)
+    
+    # Kesan punca asal (View Tag atau Dashboard)
+    source = request.args.get('from', 'admin')
+
     if request.method == 'POST':
         l.peralatan = request.form.get('peralatan', '').upper()
         l.pn = request.form.get('pn', '').upper()
@@ -373,8 +376,15 @@ def edit(id):
         l.defect = request.form.get('defect', '').upper()
         l.status_type = request.form.get('status_type', '').upper()
         db.session.commit()
+        
+        # Jika datang dari QR (view_tag), hantar balik ke QR
+        origin = request.form.get('origin_source')
+        if origin == 'view_tag':
+            return redirect(url_for('view_tag', id=l.id))
+            
         return redirect(url_for('admin'))
-    return render_template('edit.html', item=l)
+        
+    return render_template('edit.html', item=l, source=source)
 
 @app.route('/logout')
 def logout():
