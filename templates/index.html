@@ -10,7 +10,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
         
-        /* Style tambahan untuk dropdown supaya konsisten dengan input lain */
+        /* Style dropdown supaya konsisten dengan input lain */
         select {
             appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%231e3a8a'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
@@ -32,6 +32,11 @@
         </div>
 
         <form action="/incoming" method="POST" class="space-y-6">
+            <div>
+                <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Defect Report Number (DRN)</label>
+                <input type="text" name="drn" placeholder="ENTER DRN (E.G. DRN-2026-001)" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-blue-900 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
+            </div>
+
             <div>
                 <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Name Equipment</label>
                 <input type="text" name="peralatan" placeholder="ENTER EQUIPMENT TYPE" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
@@ -55,7 +60,7 @@
 
             <div>
                 <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Authorization Status</label>
-                <select name="status" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm appearance-none" required>
+                <select name="status" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
                     <option value="" disabled selected>CHOOSE STATUS</option>
                     <option value="SERVICEABLE">SERVICEABLE</option>
                     <option value="READY TO QUOTE">READY TO QUOTE</option>
@@ -86,7 +91,7 @@
             <div class="relative group">
                 <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden">
                 <label for="excelInput" class="w-full flex items-center justify-between p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-blue-900 transition-all group">
-                    <span id="fileName" class="text-xs font-bold text-slate-400 uppercase">Pilih fail Excel (2022-2025)...</span>
+                    <span id="fileName" class="text-xs font-bold text-slate-400 uppercase">Pilih fail Excel (Pastikan ada kolum DRN)...</span>
                     <span class="bg-slate-200 text-slate-600 text-[10px] font-black px-4 py-2 rounded-xl uppercase group-hover:bg-blue-900 group-hover:text-white transition-colors">Browse</span>
                 </label>
             </div>
@@ -109,7 +114,7 @@
     </div>
 
     <script>
-        // Set tarikh hari ini secara automatik
+        // Set tarikh hari ini secara automatik untuk hidden input
         document.getElementById('current_date').value = new Date().toISOString().split('T')[0];
 
         const excelInput = document.getElementById('excelInput');
@@ -130,6 +135,7 @@
             }
         });
 
+        // Fungsi untuk handle tarikh dari Excel
         function parseExcelDate(val) {
             if (!val || val === "0" || val === "" || val === 0) return "";
             let d = new Date(val);
@@ -137,6 +143,7 @@
             return d.toISOString().split('T')[0];
         }
 
+        // Fungsi membaca fail Excel
         function uploadExcel() {
             const file = excelInput.files[0];
             const reader = new FileReader();
@@ -153,14 +160,14 @@
                     let headerIndex = -1;
                     for (let i = 0; i < rawRows.length; i++) {
                         const row = rawRows[i].map(c => String(c).toUpperCase().trim());
-                        if (row.includes("PART NO") || row.includes("PART NO.") || row.includes("DESCRIPTION") || row.includes("SERIAL NO")) {
+                        if (row.includes("PART NO") || row.includes("DESCRIPTION") || row.includes("SERIAL NO") || row.includes("DRN")) {
                             headerIndex = i;
                             break;
                         }
                     }
 
                     if (headerIndex === -1) {
-                        alert("Gagal cari tajuk kolum (PART NO/DESCRIPTION). Pastikan fail Excel betul.");
+                        alert("Gagal cari tajuk kolum (DRN/PART NO/DESCRIPTION). Pastikan fail Excel betul.");
                         return;
                     }
 
@@ -172,28 +179,18 @@
                             return foundKey ? row[foundKey] : "";
                         };
 
-                        let peralatan = getVal(["DESCRIPTION", "COMPONENT", "EQUIPMENT"]);
-                        let pn = getVal(["PART NO", "PART NO.", "PART NUMBER", "P/N"]);
-                        let sn = getVal(["SERIAL NO", "SERIAL NO.", "SERIAL NUMBER", "S/N"]);
-                        let status = getVal(["STATUS"]) || "ACTIVE";
-                        let pic = getVal(["JTP", "PIC"]) || "N/A";
-                        let defect = getVal(["DEFECT"]) || "N/A";
-                        
-                        let dateInRaw = getVal(["DATE IN", "DATE_IN"]);
-                        let dateOutRaw = getVal(["DATE OUT", "DATE OUT2", "DATE_OUT", "DATE OUT 1"]);
-
                         return {
-                            peralatan: String(peralatan).toUpperCase(),
-                            pn: String(pn).toUpperCase(),
-                            sn: String(sn).toUpperCase(),
-                            pic: String(pic).toUpperCase(),
-                            status: String(status).toUpperCase(),
+                            drn: String(getVal(["DRN", "DEFECT REPORT NO", "DEFECT REPORT NUMBER"])).toUpperCase(),
+                            peralatan: String(getVal(["DESCRIPTION", "COMPONENT", "EQUIPMENT"])).toUpperCase(),
+                            pn: String(getVal(["PART NO", "PART NO.", "PART NUMBER", "P/N"])).toUpperCase(),
+                            sn: String(getVal(["SERIAL NO", "SERIAL NO.", "SERIAL NUMBER", "S/N"])).toUpperCase(),
+                            pic: String(getVal(["JTP", "PIC"]) || "N/A").toUpperCase(),
+                            status: String(getVal(["STATUS"]) || "SERVICEABLE").toUpperCase(),
                             status_type: 'REPAIR',
-                            defect: String(defect).toUpperCase(),
-                            date_in: parseExcelDate(dateInRaw) || new Date().toISOString().split('T')[0],
-                            date_out: parseExcelDate(dateOutRaw)
+                            defect: String(getVal(["DEFECT", "REMARKS"]) || "N/A").toUpperCase(),
+                            date_in: parseExcelDate(getVal(["DATE IN", "DATE_IN"])) || new Date().toISOString().split('T')[0]
                         };
-                    }).filter(item => item.sn && item.sn !== "" && item.sn !== "SERIAL NO" && item.sn !== "SERIAL NO.");
+                    }).filter(item => item.sn && item.sn !== "" && item.sn !== "SERIAL NO");
 
                     if (formattedData.length > 0) {
                         processImport(formattedData);
@@ -201,7 +198,7 @@
                         alert("Tiada data sah untuk diimport.");
                     }
                 } catch (err) {
-                    alert("Ralat: " + err.message);
+                    alert("Ralat membaca fail: " + err.message);
                 }
             };
             reader.readAsArrayBuffer(file);
@@ -224,7 +221,7 @@
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: new URLSearchParams(item)
                     }).then(res => { if(res.ok) successCount++; })
-                      .catch(err => console.error("Ralat S/N:", item.sn))
+                      .catch(err => console.error("Ralat hantar DRN:", item.drn))
                 );
 
                 await Promise.all(requests);
@@ -241,7 +238,7 @@
             setTimeout(() => {
                 alert(`Selesai! ${successCount} rekod berjaya dimasukkan.`);
                 window.location.reload();
-            }, 500);
+            }, 800);
         }
     </script>
 </body>

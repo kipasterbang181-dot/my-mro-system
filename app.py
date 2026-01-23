@@ -29,6 +29,7 @@ db = SQLAlchemy(app)
 class RepairLog(db.Model):
     __tablename__ = 'repair_log'
     id = db.Column(db.Integer, primary_key=True)
+    drn = db.Column(db.String(100)) # TAMBAHAN: Defect Report Number
     peralatan = db.Column(db.String(100))
     pn = db.Column(db.String(100))
     sn = db.Column(db.String(100))
@@ -89,6 +90,7 @@ def view_report(id):
 @app.route('/incoming', methods=['POST'])
 def incoming():
     try:
+        drn = request.form.get('drn', '').upper() # AMBIL DRN
         peralatan = request.form.get('peralatan', '').upper()
         pn = request.form.get('pn', '').upper()
         sn = request.form.get('sn', '').upper()
@@ -99,6 +101,7 @@ def incoming():
         pic = request.form.get('pic', 'N/A').upper()
 
         new_log = RepairLog(
+            drn=drn,
             peralatan=peralatan,
             pn=pn,
             sn=sn,
@@ -136,6 +139,7 @@ def download_single_report(item_id):
     
     report_data = [
         ["FIELD", "DETAILS"],
+        ["DRN NUMBER", l.drn or "N/A"], # TAMBAH KE PDF
         ["EQUIPMENT", Paragraph(l.peralatan or "N/A", cell_style)],
         ["PART NUMBER (P/N)", l.pn],
         ["SERIAL NUMBER (S/N)", l.sn],
@@ -192,11 +196,12 @@ def download_report():
     elements.append(Paragraph(f"G7 AEROSPACE - REPAIR LOG SUMMARY REPORT ({datetime.now().strftime('%d/%m/%Y')})", styles['Title']))
     elements.append(Spacer(1, 12))
     
-    data = [["ID", "PERALATAN", "P/N", "S/N", "DEFECT", "DATE IN", "DATE OUT", "STATUS", "PIC"]]
+    data = [["ID", "DRN", "PERALATAN", "P/N", "S/N", "DEFECT", "DATE IN", "DATE OUT", "STATUS", "PIC"]] # TAMBAH DRN KE HEADER
 
     for l in logs:
         data.append([
             l.id, 
+            l.drn or "-", # DATA DRN
             Paragraph(l.peralatan or "N/A", table_cell_style), 
             Paragraph(l.pn or "N/A", table_cell_style), 
             l.sn, 
@@ -207,7 +212,7 @@ def download_report():
             Paragraph(l.pic or "N/A", table_cell_style)
         ])
     
-    col_widths = [25, 110, 90, 70, 180, 55, 55, 85, 80]
+    col_widths = [25, 60, 100, 80, 60, 150, 50, 50, 75, 75] # SESUAIKAN LEBAR KOLUM
     
     t = Table(data, repeatRows=1, hAlign='CENTER', colWidths=col_widths)
     t.setStyle(TableStyle([
@@ -244,6 +249,7 @@ def export_excel_data():
     for l in logs:
         data.append({
             "ID": l.id,
+            "DRN": l.drn or "N/A", # TAMBAH DRN KE EXCEL
             "PERALATAN": l.peralatan,
             "PART NUMBER (P/N)": l.pn,
             "SERIAL NUMBER (S/N)": l.sn,
@@ -261,11 +267,12 @@ def export_excel_data():
         workbook  = writer.book
         worksheet = writer.sheets['Repair Logs']
         worksheet.set_column('A:A', 5)   
-        worksheet.set_column('B:B', 30)  
-        worksheet.set_column('C:D', 20)  
-        worksheet.set_column('E:E', 45)  
-        worksheet.set_column('F:G', 15)  
-        worksheet.set_column('H:I', 20)  
+        worksheet.set_column('B:B', 15) # DRN  
+        worksheet.set_column('C:C', 30)  
+        worksheet.set_column('D:E', 20)  
+        worksheet.set_column('F:F', 45)  
+        worksheet.set_column('G:H', 15)  
+        worksheet.set_column('I:J', 20)  
         
     output.seek(0)
     return send_file(
@@ -309,7 +316,9 @@ def import_excel():
             if sn == "N/A": continue
             d_in = clean_val(row.get('DATE IN'), True)
             d_out = clean_val(row.get('DATE OUT', row.get('DATE OUT2', '')), True) or "-"
+            
             new_log = RepairLog(
+                drn=clean_val(row.get('DRN', row.get('DEFECT REPORT NO', ''))), # IMPORT DRN
                 peralatan=clean_val(row.get('DESCRIPTION', row.get('PERALATAN', ''))),
                 pn=clean_val(row.get('PART NO', row.get('P/N', ''))),
                 sn=sn,
@@ -377,6 +386,7 @@ def edit(id):
     source = request.args.get('from', 'admin')
 
     if request.method == 'POST':
+        l.drn = request.form.get('drn', '').upper() # SIMPAN DRN BARU
         l.peralatan = request.form.get('peralatan', '').upper()
         l.pn = request.form.get('pn', '').upper()
         l.sn = request.form.get('sn', '').upper()

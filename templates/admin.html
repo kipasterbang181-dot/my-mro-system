@@ -91,7 +91,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
             </div>
-            <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search Equipment, Serial Number or Defect..." 
+            <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search Equipment, SN, Defect, or Report No..." 
                 class="w-full bg-white border-2 border-slate-200 rounded-2xl py-4 pl-12 pr-6 text-sm font-semibold text-slate-800 focus:border-blue-500 outline-none transition-all shadow-sm">
         </div>
 
@@ -106,7 +106,7 @@
                                     <input type="checkbox" id="selectAll" class="w-4 h-4 rounded cursor-pointer">
                                 </th>
                                 <th class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest">Asset Detail</th>
-                                <th class="px-8 py-5 text-[10px] font-bold uppercase text-rose-600 tracking-widest">Defect</th> 
+                                <th class="px-8 py-5 text-[10px] font-bold uppercase text-rose-600 tracking-widest">Defect & Report No</th> 
                                 <th class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest text-center">Timeline</th>
                                 <th class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest text-center">Status & PIC</th>
                                 <th class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest text-right">Actions</th>
@@ -136,6 +136,9 @@
                                     <p class="text-[10px] font-bold text-slate-700 uppercase italic leading-relaxed row-defect">
                                         {{ item.defect if item.defect else '-' }}
                                     </p>
+                                    <span class="mt-1 block text-[9px] font-black text-blue-600 uppercase tracking-wider row-report-no">
+                                        REF: {{ item.defect_report_no if item.defect_report_no else 'NO REF' }}
+                                    </span>
                                 </td>
                                 <td class="px-8 py-6 text-center">
                                     <div class="flex flex-col items-center gap-1.5">
@@ -175,7 +178,7 @@
                                         <div class="flex items-center bg-slate-50 rounded-lg p-1 border border-slate-200">
                                             <button type="button" onclick="showQR('{{ item.sn }}', '{{ request.url_root }}view_tag/{{ item.id }}', '{{ item.id }}')" title="View QR Tag" class="p-2 text-slate-600 hover:text-blue-600 transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                                                 </svg>
                                             </button>
                                             <div class="w-[1px] h-4 bg-slate-300 mx-1"></div>
@@ -245,6 +248,12 @@
     </div>
 
     <script>
+        // --- KEEP-ALIVE SCRIPT (Bangun Setiap 3 Minit) ---
+        // Menghantar ping ke server supaya Render tidak tidur
+        setInterval(function() {
+            fetch('/').then(response => console.log('Keep-alive ping sent')).catch(err => console.log('Ping failed'));
+        }, 180000); // 180,000ms = 3 minit
+
         // --- SCRIPT UNTUK INGAT POSISI SCROLL ---
         document.querySelectorAll('.save-scroll').forEach(element => {
             element.addEventListener('click', function() {
@@ -259,7 +268,6 @@
                 localStorage.removeItem('scrollPos');
             }
         });
-        // ---------------------------------------
 
         function confirmSingleDelete(id) {
             if (confirm('Adakah anda pasti mahu memadam rekod ini?')) {
@@ -302,11 +310,13 @@
                 let name = tr[i].getElementsByClassName("row-name")[0];
                 let sn = tr[i].getElementsByClassName("row-sn")[0];
                 let defect = tr[i].getElementsByClassName("row-defect")[0]; 
+                let reportNo = tr[i].getElementsByClassName("row-report-no")[0]; 
                 
-                if (name || sn || defect) {
+                if (name || sn || defect || reportNo) {
                     let txt = (name.textContent || name.innerText) + 
                               (sn.textContent || sn.innerText) + 
-                              (defect.textContent || defect.innerText);
+                              (defect.textContent || defect.innerText) +
+                              (reportNo.textContent || reportNo.innerText);
                     tr[i].style.display = txt.toUpperCase().indexOf(filter) > -1 ? "" : "none";
                 }
             }
