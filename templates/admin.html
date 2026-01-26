@@ -122,7 +122,7 @@
                                 <th id="th-asset" class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest">Asset Detail</th>
                                 <th id="th-defect" class="px-8 py-5 text-[10px] font-bold uppercase text-rose-600 tracking-widest">Defect & Remarks</th> 
                                 <th id="th-timeline" class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest text-center">Timeline</th>
-                                <th id="th-status" class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest text-center">Status & PIC</th>
+                                <th id="th-status" class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest text-center">Status & Remark</th>
                                 <th id="th-actions" class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest text-right">Actions</th>
                             </tr>
                         </thead>
@@ -165,7 +165,7 @@
                                 </td>
                                 <td class="px-8 py-6 text-center">
                                     <div class="inline-flex flex-col items-center">
-                                        <span class="text-[9px] font-black text-slate-400 mb-1 uppercase tracking-tighter">PIC: {{ item.pic if (item.pic and item.pic != 'nan') else 'N/A' }}</span>
+                                        <span class="text-[9px] font-black text-slate-400 mb-1 uppercase tracking-tighter">Remark: {{ item.pic if (item.pic and item.pic != 'nan') else 'N/A' }}</span>
                                         
                                         {% set s = item.status_type|upper|trim if item.status_type else '' %}
                                         <span class="px-2.5 py-1 rounded text-[9px] font-black uppercase border 
@@ -277,7 +277,7 @@
                 thAsset: "Butiran Aset",
                 thDefect: "Kerosakan & Catatan",
                 thTimeline: "Garis Masa",
-                thStatus: "Status & PIC",
+                thStatus: "Status & Remark",
                 thActions: "Tindakan",
                 modalTitle: "Tag Digital QR",
                 modalPrint: "Cetakan QR Tag",
@@ -302,7 +302,7 @@
                 thAsset: "Asset Detail",
                 thDefect: "Defect & Remarks",
                 thTimeline: "Timeline",
-                thStatus: "Status & PIC",
+                thStatus: "Status & Remark",
                 thActions: "Actions",
                 modalTitle: "QR Digital Tag",
                 modalPrint: "Print QR Tag",
