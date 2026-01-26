@@ -9,8 +9,9 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Space+Grotesk:wght@500;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
+        
         /* Style tambahan untuk dropdown arrow */
         select {
             appearance: none;
@@ -35,11 +36,6 @@
         <form action="/edit/{{ item.id }}" method="POST" class="space-y-5">
             <input type="hidden" name="origin_source" value="{{ source }}">
             
-            <div>
-                <label class="text-[9px] font-black uppercase text-blue-900/60 ml-4 mb-1 block tracking-widest">Defect Report Number (DRN)</label>
-                <input type="text" name="drn" value="{{ item.drn }}" placeholder="ENTER DRN" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-blue-900 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all" required>
-            </div>
-
             <div>
                 <label class="text-[9px] font-black uppercase text-slate-400 ml-4 mb-1 block tracking-widest">Equipment Name</label>
                 <input type="text" name="peralatan" value="{{ item.peralatan }}" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all" required>

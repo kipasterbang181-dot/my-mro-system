@@ -29,7 +29,6 @@ db = SQLAlchemy(app)
 class RepairLog(db.Model):
     __tablename__ = 'repair_log'
     id = db.Column(db.Integer, primary_key=True)
-    drn = db.Column(db.String(100)) # TAMBAHAN: Defect Report Number
     peralatan = db.Column(db.String(100))
     pn = db.Column(db.String(100))
     sn = db.Column(db.String(100))
@@ -88,7 +87,6 @@ def view_report(id):
 @app.route('/incoming', methods=['POST'])
 def incoming():
     try:
-        drn = request.form.get('drn', '').upper()
         peralatan = request.form.get('peralatan', '').upper()
         pn = request.form.get('pn', '').upper()
         sn = request.form.get('sn', '').upper()
@@ -99,7 +97,6 @@ def incoming():
         pic = request.form.get('pic', 'N/A').upper()
 
         new_log = RepairLog(
-            drn=drn,
             peralatan=peralatan,
             pn=pn,
             sn=sn,
@@ -137,7 +134,6 @@ def download_single_report(item_id):
     
     report_data = [
         ["FIELD", "DETAILS"],
-        ["DRN NUMBER", l.drn or "N/A"],
         ["EQUIPMENT", Paragraph(l.peralatan or "N/A", cell_style)],
         ["PART NUMBER (P/N)", l.pn],
         ["SERIAL NUMBER (S/N)", l.sn],
@@ -194,12 +190,11 @@ def download_report():
     elements.append(Paragraph(f"G7 AEROSPACE - REPAIR LOG SUMMARY REPORT ({datetime.now().strftime('%d/%m/%Y')})", styles['Title']))
     elements.append(Spacer(1, 12))
     
-    data = [["ID", "DRN", "PERALATAN", "P/N", "S/N", "DEFECT", "DATE IN", "DATE OUT", "STATUS", "PIC"]]
+    data = [["ID", "PERALATAN", "P/N", "S/N", "DEFECT", "DATE IN", "DATE OUT", "STATUS", "PIC"]]
 
     for l in logs:
         data.append([
             l.id, 
-            l.drn or "-",
             Paragraph(l.peralatan or "N/A", table_cell_style), 
             Paragraph(l.pn or "N/A", table_cell_style), 
             l.sn, 
@@ -210,7 +205,7 @@ def download_report():
             Paragraph(l.pic or "N/A", table_cell_style)
         ])
     
-    col_widths = [25, 60, 100, 80, 60, 150, 50, 50, 75, 75]
+    col_widths = [30, 120, 90, 70, 180, 60, 60, 80, 80]
     
     t = Table(data, repeatRows=1, hAlign='CENTER', colWidths=col_widths)
     t.setStyle(TableStyle([
@@ -247,7 +242,6 @@ def export_excel_data():
     for l in logs:
         data.append({
             "ID": l.id,
-            "DRN": l.drn or "N/A",
             "PERALATAN": l.peralatan,
             "PART NUMBER (P/N)": l.pn,
             "SERIAL NUMBER (S/N)": l.sn,
@@ -264,12 +258,11 @@ def export_excel_data():
         df.to_excel(writer, index=False, sheet_name='Repair Logs')
         worksheet = writer.sheets['Repair Logs']
         worksheet.set_column('A:A', 5)   
-        worksheet.set_column('B:B', 15)
-        worksheet.set_column('C:C', 30)  
-        worksheet.set_column('D:E', 20)  
-        worksheet.set_column('F:F', 45)  
-        worksheet.set_column('G:H', 15)  
-        worksheet.set_column('I:J', 20)  
+        worksheet.set_column('B:B', 30)  
+        worksheet.set_column('C:D', 20)  
+        worksheet.set_column('E:E', 45)  
+        worksheet.set_column('F:G', 15)  
+        worksheet.set_column('H:I', 20)  
         
     output.seek(0)
     return send_file(
@@ -285,7 +278,6 @@ def import_excel():
     file = request.files.get('file_excel')
     if not file: return "Tiada fail dipilih"
     try:
-        # 1. Cari baris di mana header bermula (flexible row)
         df_scan = pd.read_excel(file, header=None)
         header_idx = 0
         for i, row in df_scan.iterrows():
@@ -298,18 +290,15 @@ def import_excel():
         df = pd.read_excel(file, skiprows=header_idx)
         df.columns = [str(c).strip().upper() for c in df.columns]
 
-        # 2. Logik Pencarian Kolum Flexible (Flexible Column Mapping)
         def find_col(keywords):
             for col in df.columns:
                 if any(k in col for k in keywords):
                     return col
             return None
 
-        # Pemetaan Kolum Menggunakan Keywords
         c_sn = find_col(['SERIAL NO', 'S/N', 'SERIAL NUMBER'])
         c_pn = find_col(['PART NO', 'P/N', 'PART NUMBER'])
         c_desc = find_col(['DESCRIPTION', 'PERALATAN', 'EQUIPMENT'])
-        c_drn = find_col(['DRN', 'DEFECT REPORT', 'LO NO', 'NO OF LO'])
         c_in = find_col(['DATE IN'])
         c_out = find_col(['DATE OUT'])
         c_status = find_col(['STATUS'])
@@ -333,15 +322,11 @@ def import_excel():
             sn = clean_val(row.get(c_sn)) if c_sn else "N/A"
             if sn == "N/A": continue
             
-            # Smart PIC Filter: Prioriti JTP, then Remarks (untuk fail lama)
             raw_pic = row.get(c_jtp) if c_jtp else (row.get(c_rem) if c_rem else "N/A")
             str_pic = str(raw_pic).strip().upper()
-            
-            # Tapis supaya perkataan 'WARRANTY' tak masuk dalam PIC
             final_pic = "N/A" if 'WARRANTY' in str_pic or str_pic in ['NAN', 'N/A', '', '0', '0.0'] else str_pic
 
             new_log = RepairLog(
-                drn=clean_val(row.get(c_drn)) if c_drn else "N/A",
                 peralatan=clean_val(row.get(c_desc)) if c_desc else "N/A",
                 pn=clean_val(row.get(c_pn)) if c_pn else "N/A",
                 sn=sn,
@@ -408,7 +393,6 @@ def edit(id):
     source = request.args.get('from', 'admin')
 
     if request.method == 'POST':
-        l.drn = request.form.get('drn', '').upper()
         l.peralatan = request.form.get('peralatan', '').upper()
         l.pn = request.form.get('pn', '').upper()
         l.sn = request.form.get('sn', '').upper()

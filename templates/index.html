@@ -33,11 +33,6 @@
 
         <form action="/incoming" method="POST" class="space-y-6">
             <div>
-                <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Defect Report Number (DRN)</label>
-                <input type="text" name="drn" placeholder="ENTER DRN (E.G. DRN-2026-001)" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-blue-900 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
-            </div>
-
-            <div>
                 <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Name Equipment</label>
                 <input type="text" name="peralatan" placeholder="ENTER EQUIPMENT TYPE" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
             </div>
@@ -72,6 +67,7 @@
                 </select>
             </div>
 
+            <input type="hidden" name="drn" value="-">
             <input type="hidden" name="status_type" value="REPAIR">
             <input type="hidden" name="pic" value="N/A"> 
             <input type="hidden" name="date_in" id="current_date">
@@ -91,7 +87,7 @@
             <div class="relative group">
                 <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden">
                 <label for="excelInput" class="w-full flex items-center justify-between p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-blue-900 transition-all group">
-                    <span id="fileName" class="text-xs font-bold text-slate-400 uppercase">Pilih fail Excel (Pastikan ada kolum DRN)...</span>
+                    <span id="fileName" class="text-xs font-bold text-slate-400 uppercase">Pilih fail Excel (P/N, S/N, DESCRIPTION)...</span>
                     <span class="bg-slate-200 text-slate-600 text-[10px] font-black px-4 py-2 rounded-xl uppercase group-hover:bg-blue-900 group-hover:text-white transition-colors">Browse</span>
                 </label>
             </div>
@@ -114,7 +110,6 @@
     </div>
 
     <script>
-        // Set tarikh hari ini secara automatik untuk hidden input
         document.getElementById('current_date').value = new Date().toISOString().split('T')[0];
 
         const excelInput = document.getElementById('excelInput');
@@ -124,7 +119,6 @@
         const progressBar = document.getElementById('progressBar');
         const progressText = document.getElementById('progressText');
 
-        // Event listener apabila fail dipilih
         excelInput.addEventListener('change', function(e) {
             if(e.target.files.length > 0) {
                 fileNameDisplay.innerText = e.target.files[0].name;
@@ -135,7 +129,6 @@
             }
         });
 
-        // Fungsi untuk handle tarikh dari Excel
         function parseExcelDate(val) {
             if (!val || val === "0" || val === "" || val === 0) return "";
             let d = new Date(val);
@@ -143,7 +136,6 @@
             return d.toISOString().split('T')[0];
         }
 
-        // Fungsi membaca fail Excel
         function uploadExcel() {
             const file = excelInput.files[0];
             const reader = new FileReader();
@@ -160,14 +152,14 @@
                     let headerIndex = -1;
                     for (let i = 0; i < rawRows.length; i++) {
                         const row = rawRows[i].map(c => String(c).toUpperCase().trim());
-                        if (row.includes("PART NO") || row.includes("DESCRIPTION") || row.includes("SERIAL NO") || row.includes("DRN")) {
+                        if (row.includes("PART NO") || row.includes("DESCRIPTION") || row.includes("SERIAL NO")) {
                             headerIndex = i;
                             break;
                         }
                     }
 
                     if (headerIndex === -1) {
-                        alert("Gagal cari tajuk kolum (DRN/PART NO/DESCRIPTION). Pastikan fail Excel betul.");
+                        alert("Gagal cari tajuk kolum (PART NO/DESCRIPTION/SERIAL NO). Pastikan fail Excel betul.");
                         return;
                     }
 
@@ -180,7 +172,7 @@
                         };
 
                         return {
-                            drn: String(getVal(["DRN", "DEFECT REPORT NO", "DEFECT REPORT NUMBER"])).toUpperCase(),
+                            drn: "-", // Set default dash kerana DRN dibuang
                             peralatan: String(getVal(["DESCRIPTION", "COMPONENT", "EQUIPMENT"])).toUpperCase(),
                             pn: String(getVal(["PART NO", "PART NO.", "PART NUMBER", "P/N"])).toUpperCase(),
                             sn: String(getVal(["SERIAL NO", "SERIAL NO.", "SERIAL NUMBER", "S/N"])).toUpperCase(),
@@ -221,7 +213,7 @@
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: new URLSearchParams(item)
                     }).then(res => { if(res.ok) successCount++; })
-                      .catch(err => console.error("Ralat hantar DRN:", item.drn))
+                      .catch(err => console.error("Ralat hantar S/N:", item.sn))
                 );
 
                 await Promise.all(requests);
