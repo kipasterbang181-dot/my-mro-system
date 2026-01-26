@@ -8,6 +8,10 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
+        /* Memastikan butang kembali tidak muncul semasa print */
+        @media print {
+            .no-print { display: none; }
+        }
     </style>
 </head>
 <body class="bg-slate-50 p-8">
@@ -19,7 +23,9 @@
                     Asset: {{ asset.peralatan }} | S/N: <span class="text-blue-600">{{ sn }}</span>
                 </p>
             </div>
-            <a href="/admin" class="bg-slate-800 text-white px-6 py-2 rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-black transition-all">Kembali</a>
+            <button onclick="window.history.back()" class="no-print bg-slate-800 text-white px-6 py-2 rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-black transition-all">
+                Kembali
+            </button>
         </div>
 
         <div class="relative border-l-4 border-blue-500 ml-4 py-4">
