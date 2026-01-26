@@ -285,16 +285,37 @@ def import_excel():
     file = request.files.get('file_excel')
     if not file: return "Tiada fail dipilih"
     try:
+        # 1. Cari baris di mana header bermula (flexible row)
         df_scan = pd.read_excel(file, header=None)
         header_idx = 0
         for i, row in df_scan.iterrows():
             row_str = [str(x).upper() for x in row.values if pd.notna(x)]
-            if any(k in s for s in row_str for k in ['PART NO', 'SERIAL NO', 'P/N', 'DESCRIPTION']):
+            if any(k in row_str for k in ['PART NO', 'SERIAL NO', 'P/N', 'S/N', 'DESCRIPTION']):
                 header_idx = i
                 break
+        
         file.seek(0)
         df = pd.read_excel(file, skiprows=header_idx)
         df.columns = [str(c).strip().upper() for c in df.columns]
+
+        # 2. Logik Pencarian Kolum Flexible (Flexible Column Mapping)
+        def find_col(keywords):
+            for col in df.columns:
+                if any(k in col for k in keywords):
+                    return col
+            return None
+
+        # Pemetaan Kolum Menggunakan Keywords
+        c_sn = find_col(['SERIAL NO', 'S/N', 'SERIAL NUMBER'])
+        c_pn = find_col(['PART NO', 'P/N', 'PART NUMBER'])
+        c_desc = find_col(['DESCRIPTION', 'PERALATAN', 'EQUIPMENT'])
+        c_drn = find_col(['DRN', 'DEFECT REPORT', 'LO NO', 'NO OF LO'])
+        c_in = find_col(['DATE IN'])
+        c_out = find_col(['DATE OUT'])
+        c_status = find_col(['STATUS'])
+        c_defect = find_col(['DEFECT'])
+        c_jtp = find_col(['JTP', 'PIC'])
+        c_rem = find_col(['REMARKS'])
 
         def clean_val(val, is_date=False):
             if pd.isna(val) or str(val).strip().lower() in ['nan', '0', '0.0', '', '-']: 
@@ -309,26 +330,26 @@ def import_excel():
 
         logs_to_add = []
         for _, row in df.iterrows():
-            sn = clean_val(row.get('SERIAL NO', row.get('S/N', row.get('SERIAL NUMBER', ''))))
+            sn = clean_val(row.get(c_sn)) if c_sn else "N/A"
             if sn == "N/A": continue
             
-            d_in = clean_val(row.get('DATE IN'), True)
-            d_out = clean_val(row.get('DATE OUT', row.get('DATE OUT2', '')), True) or "-"
+            # Smart PIC Filter: Prioriti JTP, then Remarks (untuk fail lama)
+            raw_pic = row.get(c_jtp) if c_jtp else (row.get(c_rem) if c_rem else "N/A")
+            str_pic = str(raw_pic).strip().upper()
             
-            # --- LOGIK PIC/JTP DIKEMASKINI ---
-            # Mengambil data dari kolum 'REMARKS' jika JTP berada di sana (mengikut format fail tuan)
-            pic_val = row.get('REMARKS', row.get('JTP', row.get('PIC', 'N/A')))
+            # Tapis supaya perkataan 'WARRANTY' tak masuk dalam PIC
+            final_pic = "N/A" if 'WARRANTY' in str_pic or str_pic in ['NAN', 'N/A', '', '0', '0.0'] else str_pic
 
             new_log = RepairLog(
-                drn=clean_val(row.get('DRN', row.get('DEFECT REPORT NO', ''))),
-                peralatan=clean_val(row.get('DESCRIPTION', row.get('PERALATAN', ''))),
-                pn=clean_val(row.get('PART NO', row.get('P/N', ''))),
+                drn=clean_val(row.get(c_drn)) if c_drn else "N/A",
+                peralatan=clean_val(row.get(c_desc)) if c_desc else "N/A",
+                pn=clean_val(row.get(c_pn)) if c_pn else "N/A",
                 sn=sn,
-                date_in=d_in or datetime.now().strftime("%Y-%m-%d"),
-                date_out=d_out,
-                status_type=str(row.get('STATUS', 'ACTIVE')).upper(),
-                pic=clean_val(pic_val),
-                defect=clean_val(row.get('DEFECT', 'N/A'))
+                date_in=clean_val(row.get(c_in), True) or datetime.now().strftime("%Y-%m-%d"),
+                date_out=clean_val(row.get(c_out), True) or "-",
+                status_type=clean_val(row.get(c_status)) or "ACTIVE",
+                pic=final_pic,
+                defect=clean_val(row.get(c_defect)) if c_defect else "N/A"
             )
             logs_to_add.append(new_log)
         
