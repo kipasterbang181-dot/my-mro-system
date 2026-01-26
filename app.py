@@ -50,14 +50,12 @@ def index():
 # --- LOGIN DENGAN LOGIK NEXT REDIRECT ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # Ambil nilai 'next' dari URL (cth: /login?next=/edit/5)
     next_page = request.args.get('next')
     
     if request.method == 'POST':
         if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
             session['admin'] = True
             
-            # Jika ada pautan asal, hantar ke situ. Jika tiada, ke admin.
             target = request.form.get('next_target')
             if target and target != 'None' and target != '':
                 return redirect(target)
@@ -74,10 +72,9 @@ def admin():
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     return render_template('admin.html', logs=logs)
 
-# --- BAHAGIAN HISTORY (DIUBAH UNTUK AKSES TANPA PASSWORD) ---
+# --- BAHAGIAN HISTORY ---
 @app.route('/history/<sn>')
 def history(sn):
-    # Baris semakan login dibuang supaya sesiapa sahaja boleh tekan nama barang dan lihat history
     logs = RepairLog.query.filter_by(sn=sn).order_by(RepairLog.date_in.asc()).all()
     asset_info = logs[0] if logs else None
     return render_template('history.html', logs=logs, asset=asset_info, sn=sn)
@@ -91,7 +88,7 @@ def view_report(id):
 @app.route('/incoming', methods=['POST'])
 def incoming():
     try:
-        drn = request.form.get('drn', '').upper() # AMBIL DRN
+        drn = request.form.get('drn', '').upper()
         peralatan = request.form.get('peralatan', '').upper()
         pn = request.form.get('pn', '').upper()
         sn = request.form.get('sn', '').upper()
@@ -140,7 +137,7 @@ def download_single_report(item_id):
     
     report_data = [
         ["FIELD", "DETAILS"],
-        ["DRN NUMBER", l.drn or "N/A"], # TAMBAH KE PDF
+        ["DRN NUMBER", l.drn or "N/A"],
         ["EQUIPMENT", Paragraph(l.peralatan or "N/A", cell_style)],
         ["PART NUMBER (P/N)", l.pn],
         ["SERIAL NUMBER (S/N)", l.sn],
@@ -197,12 +194,12 @@ def download_report():
     elements.append(Paragraph(f"G7 AEROSPACE - REPAIR LOG SUMMARY REPORT ({datetime.now().strftime('%d/%m/%Y')})", styles['Title']))
     elements.append(Spacer(1, 12))
     
-    data = [["ID", "DRN", "PERALATAN", "P/N", "S/N", "DEFECT", "DATE IN", "DATE OUT", "STATUS", "PIC"]] # TAMBAH DRN KE HEADER
+    data = [["ID", "DRN", "PERALATAN", "P/N", "S/N", "DEFECT", "DATE IN", "DATE OUT", "STATUS", "PIC"]]
 
     for l in logs:
         data.append([
             l.id, 
-            l.drn or "-", # DATA DRN
+            l.drn or "-",
             Paragraph(l.peralatan or "N/A", table_cell_style), 
             Paragraph(l.pn or "N/A", table_cell_style), 
             l.sn, 
@@ -213,7 +210,7 @@ def download_report():
             Paragraph(l.pic or "N/A", table_cell_style)
         ])
     
-    col_widths = [25, 60, 100, 80, 60, 150, 50, 50, 75, 75] # SESUAIKAN LEBAR KOLUM
+    col_widths = [25, 60, 100, 80, 60, 150, 50, 50, 75, 75]
     
     t = Table(data, repeatRows=1, hAlign='CENTER', colWidths=col_widths)
     t.setStyle(TableStyle([
@@ -250,7 +247,7 @@ def export_excel_data():
     for l in logs:
         data.append({
             "ID": l.id,
-            "DRN": l.drn or "N/A", # TAMBAH DRN KE EXCEL
+            "DRN": l.drn or "N/A",
             "PERALATAN": l.peralatan,
             "PART NUMBER (P/N)": l.pn,
             "SERIAL NUMBER (S/N)": l.sn,
@@ -265,10 +262,9 @@ def export_excel_data():
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name='Repair Logs')
-        workbook  = writer.book
         worksheet = writer.sheets['Repair Logs']
         worksheet.set_column('A:A', 5)   
-        worksheet.set_column('B:B', 15) # DRN  
+        worksheet.set_column('B:B', 15)
         worksheet.set_column('C:C', 30)  
         worksheet.set_column('D:E', 20)  
         worksheet.set_column('F:F', 45)  
@@ -315,18 +311,23 @@ def import_excel():
         for _, row in df.iterrows():
             sn = clean_val(row.get('SERIAL NO', row.get('S/N', row.get('SERIAL NUMBER', ''))))
             if sn == "N/A": continue
+            
             d_in = clean_val(row.get('DATE IN'), True)
             d_out = clean_val(row.get('DATE OUT', row.get('DATE OUT2', '')), True) or "-"
             
+            # --- LOGIK PIC/JTP DIKEMASKINI ---
+            # Mengambil data dari kolum 'REMARKS' jika JTP berada di sana (mengikut format fail tuan)
+            pic_val = row.get('REMARKS', row.get('JTP', row.get('PIC', 'N/A')))
+
             new_log = RepairLog(
-                drn=clean_val(row.get('DRN', row.get('DEFECT REPORT NO', ''))), # IMPORT DRN
+                drn=clean_val(row.get('DRN', row.get('DEFECT REPORT NO', ''))),
                 peralatan=clean_val(row.get('DESCRIPTION', row.get('PERALATAN', ''))),
                 pn=clean_val(row.get('PART NO', row.get('P/N', ''))),
                 sn=sn,
                 date_in=d_in or datetime.now().strftime("%Y-%m-%d"),
                 date_out=d_out,
                 status_type=str(row.get('STATUS', 'ACTIVE')).upper(),
-                pic=clean_val(row.get('JTP', 'N/A')),
+                pic=clean_val(pic_val),
                 defect=clean_val(row.get('DEFECT', 'N/A'))
             )
             logs_to_add.append(new_log)
@@ -379,7 +380,6 @@ def delete_bulk():
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
-    # Jika belum login, hantar ke login dengan parameter 'next'
     if not session.get('admin'): 
         return redirect(url_for('login', next=request.full_path))
     
@@ -387,7 +387,7 @@ def edit(id):
     source = request.args.get('from', 'admin')
 
     if request.method == 'POST':
-        l.drn = request.form.get('drn', '').upper() # SIMPAN DRN BARU
+        l.drn = request.form.get('drn', '').upper()
         l.peralatan = request.form.get('peralatan', '').upper()
         l.pn = request.form.get('pn', '').upper()
         l.sn = request.form.get('sn', '').upper()
