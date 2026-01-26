@@ -137,7 +137,7 @@
                                         {{ item.defect if item.defect else '-' }}
                                     </p>
                                     <span class="mt-1 block text-[9px] font-black text-blue-600 uppercase tracking-wider row-report-no">
-                                        REF: {{ item.defect_report_no if item.defect_report_no else 'NO REF' }}
+                                        REF: {{ item.drn if item.drn else 'NO REF' }}
                                     </span>
                                 </td>
                                 <td class="px-8 py-6 text-center">
@@ -248,13 +248,12 @@
     </div>
 
     <script>
-        // --- KEEP-ALIVE SCRIPT (Bangun Setiap 3 Minit) ---
-        // Menghantar ping ke server supaya Render tidak tidur
+        // --- KEEP-ALIVE SCRIPT ---
         setInterval(function() {
             fetch('/').then(response => console.log('Keep-alive ping sent')).catch(err => console.log('Ping failed'));
-        }, 180000); // 180,000ms = 3 minit
+        }, 180000); 
 
-        // --- SCRIPT UNTUK INGAT POSISI SCROLL ---
+        // --- SCROLL POSITION ---
         document.querySelectorAll('.save-scroll').forEach(element => {
             element.addEventListener('click', function() {
                 localStorage.setItem('scrollPos', window.scrollY);
