@@ -65,7 +65,7 @@
                         <div>
                             <p class="t-status-label text-[10px] text-slate-400 font-bold uppercase">Status / PIC</p>
                             <p class="text-sm font-bold text-slate-800 uppercase">{{ log.status_type }}</p>
-                            <p class="text-[10px] text-slate-500 font-medium"><span class="t-by-label">By</span>: {{ log.pic or 'N/A' }}</p>
+                            <p class="text-[10px] text-slate-500 font-medium italic">{{ log.pic or 'N/A' }}</p>
                         </div>
                     </div>
 
@@ -104,7 +104,6 @@
                 btnBack: "Kembali",
                 defectLabel: "Kerosakan / Skop Kerja",
                 statusLabel: "Status / PIC",
-                byLabel: "Oleh",
                 releasedLabel: "Dikeluarkan pada",
                 noRecord: "Tiada rekod sejarah dijumpai."
             },
@@ -114,7 +113,6 @@
                 btnBack: "Back",
                 defectLabel: "Defect / Job Scope",
                 statusLabel: "Status / PIC",
-                byLabel: "By",
                 releasedLabel: "Released on",
                 noRecord: "No maintenance history found."
             }
@@ -131,18 +129,14 @@
                 document.getElementById('t-no-record').innerText = t.noRecord;
             }
 
-            // Update multiple class labels
             document.querySelectorAll('.t-defect-label').forEach(el => el.innerText = t.defectLabel);
             document.querySelectorAll('.t-status-label').forEach(el => el.innerText = t.statusLabel);
-            document.querySelectorAll('.t-by-label').forEach(el => el.innerText = t.byLabel);
             document.querySelectorAll('.t-released-label').forEach(el => el.innerText = t.releasedLabel);
 
-            // Update button styles
             document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('btn-' + lang).classList.add('active');
         }
 
-        // Initialize based on saved preference
         const savedLang = localStorage.getItem('g7_lang') || 'ms';
         changeLanguage(savedLang);
     </script>
