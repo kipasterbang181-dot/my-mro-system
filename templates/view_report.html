@@ -15,69 +15,136 @@
     <div class="max-w-4xl mx-auto bg-white p-12 shadow-lg border border-slate-200" id="reportArea">
         <div class="text-center border-b-4 border-slate-900 pb-6 mb-8">
             <h1 class="text-3xl font-black italic uppercase tracking-tighter text-slate-900">G7 Aerospace</h1>
-            <p class="text-xs font-bold uppercase tracking-widest text-slate-500 mt-1">Unit Maintenance Report</p>
+            <p id="t-report-subtitle" class="text-xs font-bold uppercase tracking-widest text-slate-500 mt-1">Unit Maintenance Report</p>
         </div>
 
         <table class="w-full border-collapse border border-slate-300">
             <tr class="bg-slate-900 text-white uppercase text-[10px] tracking-widest">
-                <th class="border border-slate-300 p-4 text-left w-1/3">Field</th>
-                <th class="border border-slate-300 p-4 text-left">Details</th>
+                <th id="t-th-field" class="border border-slate-300 p-4 text-left w-1/3">Field</th>
+                <th id="t-th-details" class="border border-slate-300 p-4 text-left">Details</th>
             </tr>
             <tr class="text-sm font-bold uppercase">
-                <td class="border border-slate-300 p-4 bg-slate-50 text-slate-600">Equipment</td>
+                <td id="t-row-equip" class="border border-slate-300 p-4 bg-slate-50 text-slate-600">Equipment</td>
                 <td class="border border-slate-300 p-4">{{ l.peralatan }}</td>
             </tr>
             <tr class="text-sm font-bold uppercase text-blue-700">
-                <td class="border border-slate-300 p-4 bg-slate-50 text-slate-600 uppercase">Part Number</td>
+                <td id="t-row-pn" class="border border-slate-300 p-4 bg-slate-50 text-slate-600 uppercase">Part Number</td>
                 <td class="border border-slate-300 p-4 font-mono">{{ l.pn }}</td>
             </tr>
             <tr class="text-sm font-bold uppercase text-blue-700">
-                <td class="border border-slate-300 p-4 bg-slate-50 text-slate-600">Serial Number</td>
+                <td id="t-row-sn" class="border border-slate-300 p-4 bg-slate-50 text-slate-600">Serial Number</td>
                 <td class="border border-slate-300 p-4 font-mono">{{ l.sn }}</td>
             </tr>
             <tr class="text-sm font-bold italic">
-                <td class="border border-slate-300 p-4 bg-slate-50 text-slate-600 uppercase not-italic">Defect / Remarks</td>
+                <td id="t-row-defect" class="border border-slate-300 p-4 bg-slate-50 text-slate-600 uppercase not-italic">Defect / Remarks</td>
                 <td class="border border-slate-300 p-4 text-rose-600">{{ l.defect or 'N/A' }}</td>
             </tr>
             <tr class="text-sm">
-                <td class="border border-slate-300 p-4 bg-slate-50 text-slate-600 font-bold uppercase">Date In</td>
+                <td id="t-row-datein" class="border border-slate-300 p-4 bg-slate-50 text-slate-600 font-bold uppercase">Date In</td>
                 <td class="border border-slate-300 p-4">{{ l.date_in }}</td>
             </tr>
             <tr class="text-sm">
-                <td class="border border-slate-300 p-4 bg-slate-50 text-slate-600 font-bold uppercase">Date Out</td>
+                <td id="t-row-dateout" class="border border-slate-300 p-4 bg-slate-50 text-slate-600 font-bold uppercase">Date Out</td>
                 <td class="border border-slate-300 p-4">{{ l.date_out or '-' }}</td>
             </tr>
             <tr class="text-sm font-bold">
-                <td class="border border-slate-300 p-4 bg-slate-50 text-slate-600 uppercase">Status</td>
+                <td id="t-row-status" class="border border-slate-300 p-4 bg-slate-50 text-slate-600 uppercase">Status</td>
                 <td class="border border-slate-300 p-4">
                     <span class="px-3 py-1 bg-slate-100 rounded">{{ l.status_type }}</span>
                 </td>
             </tr>
             <tr class="text-sm">
-                <td class="border border-slate-300 p-4 bg-slate-50 text-slate-600 font-bold uppercase">PIC / JTP</td>
+                <td id="t-row-pic" class="border border-slate-300 p-4 bg-slate-50 text-slate-600 font-bold uppercase">PIC / JTP</td>
                 <td class="border border-slate-300 p-4">{{ l.pic }}</td>
             </tr>
         </table>
 
         <div class="mt-12 flex justify-between items-end border-t pt-8 border-dashed border-slate-200">
-            <div class="text-[10px] text-slate-400 font-bold uppercase">
+            <div id="t-generated" class="text-[10px] text-slate-400 font-bold uppercase">
                 Generated: {{ l.created_at.strftime('%Y-%m-%d %H:%M:%S') if l.created_at else '-' }}
             </div>
             <div class="text-center w-48">
                 <div class="h-20 border-b border-slate-300"></div>
-                <p class="text-[9px] font-bold uppercase mt-2">Authorized Signature</p>
+                <p id="t-signature" class="text-[9px] font-bold uppercase mt-2">Authorized Signature</p>
             </div>
         </div>
     </div>
 
     <div class="fixed bottom-10 right-10 flex gap-4 no-print">
-        <a href="/download_single_report/{{ l.id }}" class="bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-xl hover:bg-blue-700 transition-all uppercase text-xs tracking-widest no-underline flex items-center justify-center">
+        <a href="/download_single_report/{{ l.id }}" id="t-btn-print" class="bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-xl hover:bg-blue-700 transition-all uppercase text-xs tracking-widest no-underline flex items-center justify-center">
             Print / Save PDF 📄
         </a>
         
-        <a href="/admin" class="bg-slate-800 text-white px-8 py-3 rounded-full font-bold shadow-xl hover:bg-slate-900 transition-all uppercase text-xs tracking-widest no-underline flex items-center justify-center">
+        <a href="/admin" id="t-btn-back" class="bg-slate-800 text-white px-8 py-3 rounded-full font-bold shadow-xl hover:bg-slate-900 transition-all uppercase text-xs tracking-widest no-underline flex items-center justify-center">
             Kembali
         </a>
     </div>
+
+    <script>
+        const reportTranslations = {
+            ms: {
+                subtitle: "LAPORAN PENYELENGGARAAN UNIT",
+                field: "RUANGAN",
+                details: "BUTIRAN",
+                equip: "PERALATAN",
+                pn: "NOMBOR BAHAGIAN",
+                sn: "NOMBOR SIRI",
+                defect: "KEROSAKAN / CATATAN",
+                dateIn: "TARIKH MASUK",
+                dateOut: "TARIKH KELUAR",
+                status: "STATUS",
+                pic: "PIC / JTP",
+                generated: "Dijana pada: ",
+                signature: "Tandatangan Sah",
+                btnPrint: "CETAK / SIMPAN PDF 📄",
+                btnBack: "KEMBALI"
+            },
+            en: {
+                subtitle: "UNIT MAINTENANCE REPORT",
+                field: "FIELD",
+                details: "DETAILS",
+                equip: "EQUIPMENT",
+                pn: "PART NUMBER",
+                sn: "SERIAL NUMBER",
+                defect: "DEFECT / REMARKS",
+                dateIn: "DATE IN",
+                dateOut: "DATE OUT",
+                status: "STATUS",
+                pic: "PIC / JTP",
+                generated: "Generated: ",
+                signature: "Authorized Signature",
+                btnPrint: "PRINT / SAVE PDF 📄",
+                btnBack: "BACK"
+            }
+        };
+
+        function applyLanguage() {
+            // Ambil bahasa dari localStorage yang dipilih di Dashboard
+            const lang = localStorage.getItem('g7_lang') || 'ms';
+            const t = reportTranslations[lang];
+
+            document.getElementById('t-report-subtitle').innerText = t.subtitle;
+            document.getElementById('t-th-field').innerText = t.field;
+            document.getElementById('t-th-details').innerText = t.details;
+            document.getElementById('t-row-equip').innerText = t.equip;
+            document.getElementById('t-row-pn').innerText = t.pn;
+            document.getElementById('t-row-sn').innerText = t.sn;
+            document.getElementById('t-row-defect').innerText = t.defect;
+            document.getElementById('t-row-datein').innerText = t.dateIn;
+            document.getElementById('t-row-dateout').innerText = t.dateOut;
+            document.getElementById('t-row-status').innerText = t.status;
+            document.getElementById('t-row-pic').innerText = t.pic;
+            document.getElementById('t-signature').innerText = t.signature;
+            document.getElementById('t-btn-print').innerText = t.btnPrint;
+            document.getElementById('t-btn-back').innerText = t.btnBack;
+
+            // Khas untuk label "Generated" (kekalkan tarikh)
+            const dateStr = "{{ l.created_at.strftime('%Y-%m-%d %H:%M:%S') if l.created_at else '-' }}";
+            document.getElementById('t-generated').innerText = t.generated + dateStr;
+        }
+
+        // Jalankan fungsi sebaik sahaja halaman dimuatkan
+        document.addEventListener('DOMContentLoaded', applyLanguage);
+    </script>
 </body>
 </html>
