@@ -74,9 +74,10 @@ def admin():
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     return render_template('admin.html', logs=logs)
 
+# --- BAHAGIAN HISTORY (DIUBAH UNTUK AKSES TANPA PASSWORD) ---
 @app.route('/history/<sn>')
 def history(sn):
-    if not session.get('admin'): return redirect(url_for('login', next=request.path))
+    # Baris semakan login dibuang supaya sesiapa sahaja boleh tekan nama barang dan lihat history
     logs = RepairLog.query.filter_by(sn=sn).order_by(RepairLog.date_in.asc()).all()
     asset_info = logs[0] if logs else None
     return render_template('history.html', logs=logs, asset=asset_info, sn=sn)
