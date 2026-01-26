@@ -10,7 +10,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
         
-        /* Style dropdown supaya konsisten dengan input lain */
         select {
             appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%231e3a8a'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
@@ -18,9 +17,24 @@
             background-position: right 1rem center;
             background-size: 1.5em;
         }
+
+        .lang-btn.active {
+            background-color: #1e3a8a;
+            color: white;
+            border-color: #1e3a8a;
+        }
     </style>
 </head>
 <body class="bg-slate-900 min-h-screen p-4 flex flex-col items-center justify-center">
+
+    <div class="fixed top-6 right-6 flex gap-2 bg-white/10 p-1 rounded-full backdrop-blur-md border border-white/20 z-50">
+        <button onclick="changeLanguage('ms')" id="btn-ms" class="lang-btn px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all text-slate-400 hover:text-white">
+            Melayu
+        </button>
+        <button onclick="changeLanguage('en')" id="btn-en" class="lang-btn px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all text-slate-400 hover:text-white">
+            English
+        </button>
+    </div>
 
     <div class="max-w-2xl w-full bg-white p-10 rounded-[3rem] shadow-2xl border-t-8 border-blue-900 relative my-10">
         
@@ -28,35 +42,35 @@
             <h1 class="text-4xl font-black text-blue-900 uppercase italic leading-none tracking-tighter">
                 G7 <span class="text-slate-400">Aerospace</span>
             </h1>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mt-3">Authorized Maintenance Log</p>
+            <p id="t-subtitle" class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mt-3">Authorized Maintenance Log</p>
         </div>
 
         <form action="/incoming" method="POST" class="space-y-6">
             <div>
-                <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Name Equipment</label>
-                <input type="text" name="peralatan" placeholder="ENTER EQUIPMENT TYPE" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
+                <label id="t-label-equip" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Name Equipment</label>
+                <input type="text" name="peralatan" id="p-equip" placeholder="ENTER EQUIPMENT TYPE" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Part Number (P/N)</label>
-                    <input type="text" name="pn" placeholder="ENTER P/N" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
+                    <label id="t-label-pn" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Part Number (P/N)</label>
+                    <input type="text" name="pn" id="p-pn" placeholder="ENTER P/N" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
                 </div>
                 <div>
-                    <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Serial Number (S/N)</label>
-                    <input type="text" name="sn" placeholder="ENTER S/N" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-mono font-black text-blue-600 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
+                    <label id="t-label-sn" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Serial Number (S/N)</label>
+                    <input type="text" name="sn" id="p-sn" placeholder="ENTER S/N" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-mono font-black text-blue-600 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
                 </div>
             </div>
 
             <div>
-                <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Defect / Remarks</label>
-                <textarea name="defect" placeholder="DESCRIBE THE DEFECT" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" rows="2"></textarea>
+                <label id="t-label-defect" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Defect / Remarks</label>
+                <textarea name="defect" id="p-defect" placeholder="DESCRIBE THE DEFECT" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" rows="2"></textarea>
             </div>
 
             <div>
-                <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Authorization Status</label>
-                <select name="status" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
-                    <option value="" disabled selected>CHOOSE STATUS</option>
+                <label id="t-label-status" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Authorization Status</label>
+                <select name="status" id="s-status" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
+                    <option value="" id="t-opt-status" disabled selected>CHOOSE STATUS</option>
                     <option value="SERVICEABLE">SERVICEABLE</option>
                     <option value="READY TO QUOTE">READY TO QUOTE</option>
                     <option value="READY TO DELIVERED">READY TO DELIVERED</option>
@@ -73,22 +87,22 @@
             <input type="hidden" name="date_in" id="current_date">
 
             <div class="flex flex-col gap-4 pt-2">
-                <button type="submit" class="w-full bg-blue-900 text-white font-black py-6 rounded-[2rem] hover:bg-black transition-all shadow-xl uppercase tracking-widest text-sm italic">
+                <button type="submit" id="t-btn-save" class="w-full bg-blue-900 text-white font-black py-6 rounded-[2rem] hover:bg-black transition-all shadow-xl uppercase tracking-widest text-sm italic">
                     Confirm & Save Log
                 </button>
-                <a href="/login" class="w-full bg-slate-100 text-slate-500 text-center font-black py-4 rounded-[2rem] hover:bg-slate-200 transition-all uppercase tracking-[0.3em] text-[10px] no-underline">
+                <a href="/login" id="t-btn-admin" class="w-full bg-slate-100 text-slate-500 text-center font-black py-4 rounded-[2rem] hover:bg-slate-200 transition-all uppercase tracking-[0.3em] text-[10px] no-underline">
                     Admin Access Portal
                 </a>
             </div>
         </form>
 
         <div class="mt-10 pt-8 border-t-2 border-slate-50">
-            <label class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-3 block tracking-widest">Bulk Import (Excel)</label>
+            <label id="t-label-bulk" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-3 block tracking-widest">Bulk Import (Excel)</label>
             <div class="relative group">
                 <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden">
                 <label for="excelInput" class="w-full flex items-center justify-between p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-blue-900 transition-all group">
                     <span id="fileName" class="text-xs font-bold text-slate-400 uppercase">Pilih fail Excel (P/N, S/N, DESCRIPTION)...</span>
-                    <span class="bg-slate-200 text-slate-600 text-[10px] font-black px-4 py-2 rounded-xl uppercase group-hover:bg-blue-900 group-hover:text-white transition-colors">Browse</span>
+                    <span id="t-btn-browse" class="bg-slate-200 text-slate-600 text-[10px] font-black px-4 py-2 rounded-xl uppercase group-hover:bg-blue-900 group-hover:text-white transition-colors">Browse</span>
                 </label>
             </div>
 
@@ -100,7 +114,7 @@
             </div>
 
             <button onclick="uploadExcel()" id="uploadBtn" class="w-full mt-4 bg-emerald-600 text-white font-black py-4 rounded-[2rem] hover:bg-black transition-all shadow-lg uppercase tracking-widest text-[10px] hidden">
-                🚀 Start Import Data
+                🚀 <span id="t-btn-import">Start Import Data</span>
             </button>
         </div>
 
@@ -110,6 +124,86 @@
     </div>
 
     <script>
+        // --- SISTEM BAHASA ---
+        const dictionary = {
+            ms: {
+                subtitle: "Log Penyelenggaraan Sah",
+                labelEquip: "Nama Peralatan",
+                phEquip: "MASUKKAN JENIS PERALATAN",
+                labelPn: "Nombor Bahagian (P/N)",
+                phPn: "MASUKKAN P/N",
+                labelSn: "Nombor Siri (S/N)",
+                phSn: "MASUKKAN S/N",
+                labelDefect: "Kerosakan / Catatan",
+                phDefect: "JELASKAN KEROSAKAN",
+                labelStatus: "Status Kebenaran",
+                optStatus: "PILIH STATUS",
+                btnSave: "Sahkan & Simpan Log",
+                btnAdmin: "Portal Akses Admin",
+                labelBulk: "Import Pukal (Excel)",
+                phFile: "Pilih fail Excel (P/N, S/N, DESCRIPTION)...",
+                btnBrowse: "Cari",
+                btnImport: "Mulakan Import Data",
+                textReady: "Sedia untuk import...",
+                textImporting: "IMPORTING"
+            },
+            en: {
+                subtitle: "Authorized Maintenance Log",
+                labelEquip: "Name Equipment",
+                phEquip: "ENTER EQUIPMENT TYPE",
+                labelPn: "Part Number (P/N)",
+                phPn: "ENTER P/N",
+                labelSn: "Serial Number (S/N)",
+                phSn: "ENTER S/N",
+                labelDefect: "Defect / Remarks",
+                phDefect: "DESCRIBE THE DEFECT",
+                labelStatus: "Authorization Status",
+                optStatus: "CHOOSE STATUS",
+                btnSave: "Confirm & Save Log",
+                btnAdmin: "Admin Access Portal",
+                labelBulk: "Bulk Import (Excel)",
+                phFile: "Choose Excel file (P/N, S/N, DESCRIPTION)...",
+                btnBrowse: "Browse",
+                btnImport: "Start Import Data",
+                textReady: "Ready to import...",
+                textImporting: "IMPORTING"
+            }
+        };
+
+        function changeLanguage(lang) {
+            localStorage.setItem('g7_lang', lang);
+            const t = dictionary[lang];
+
+            // Tukar Text
+            document.getElementById('t-subtitle').innerText = t.subtitle;
+            document.getElementById('t-label-equip').innerText = t.labelEquip;
+            document.getElementById('p-equip').placeholder = t.phEquip;
+            document.getElementById('t-label-pn').innerText = t.labelPn;
+            document.getElementById('p-pn').placeholder = t.phPn;
+            document.getElementById('t-label-sn').innerText = t.labelSn;
+            document.getElementById('p-sn').placeholder = t.phSn;
+            document.getElementById('t-label-defect').innerText = t.labelDefect;
+            document.getElementById('p-defect').placeholder = t.phDefect;
+            document.getElementById('t-label-status').innerText = t.labelStatus;
+            document.getElementById('t-opt-status').innerText = t.optStatus;
+            document.getElementById('t-btn-save').innerText = t.btnSave;
+            document.getElementById('t-btn-admin').innerText = t.btnAdmin;
+            document.getElementById('t-label-bulk').innerText = t.labelBulk;
+            document.getElementById('fileName').innerText = t.phFile;
+            document.getElementById('t-btn-browse').innerText = t.btnBrowse;
+            document.getElementById('t-btn-import').innerText = t.btnImport;
+            document.getElementById('progressText').innerText = t.textReady;
+
+            // Style butang
+            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-' + lang).classList.add('active');
+        }
+
+        // Initialize Language
+        const savedLang = localStorage.getItem('g7_lang') || 'ms';
+        changeLanguage(savedLang);
+
+        // --- LOGIK ASAL (DIKEKALKAN) ---
         document.getElementById('current_date').value = new Date().toISOString().split('T')[0];
 
         const excelInput = document.getElementById('excelInput');
@@ -146,7 +240,6 @@
                     const workbook = XLSX.read(data, {type: 'array', cellDates: true});
                     const firstSheetName = workbook.SheetNames[0];
                     const firstSheet = workbook.Sheets[firstSheetName];
-                    
                     const rawRows = XLSX.utils.sheet_to_json(firstSheet, {header: 1, defval: ""});
                     
                     let headerIndex = -1;
@@ -159,12 +252,11 @@
                     }
 
                     if (headerIndex === -1) {
-                        alert("Gagal cari tajuk kolum (PART NO/DESCRIPTION/SERIAL NO). Pastikan fail Excel betul.");
+                        alert("Gagal cari tajuk kolum (PART NO/DESCRIPTION/SERIAL NO).");
                         return;
                     }
 
                     const jsonData = XLSX.utils.sheet_to_json(firstSheet, {range: headerIndex});
-
                     const formattedData = jsonData.map(row => {
                         const getVal = (keys) => {
                             const foundKey = Object.keys(row).find(k => keys.includes(k.trim().toUpperCase()));
@@ -172,7 +264,7 @@
                         };
 
                         return {
-                            drn: "-", // Set default dash kerana DRN dibuang
+                            drn: "-",
                             peralatan: String(getVal(["DESCRIPTION", "COMPONENT", "EQUIPMENT"])).toUpperCase(),
                             pn: String(getVal(["PART NO", "PART NO.", "PART NUMBER", "P/N"])).toUpperCase(),
                             sn: String(getVal(["SERIAL NO", "SERIAL NO.", "SERIAL NUMBER", "S/N"])).toUpperCase(),
@@ -187,10 +279,10 @@
                     if (formattedData.length > 0) {
                         processImport(formattedData);
                     } else {
-                        alert("Tiada data sah untuk diimport.");
+                        alert("Tiada data sah.");
                     }
                 } catch (err) {
-                    alert("Ralat membaca fail: " + err.message);
+                    alert("Ralat: " + err.message);
                 }
             };
             reader.readAsArrayBuffer(file);
@@ -199,36 +291,28 @@
         async function processImport(dataList) {
             uploadBtn.classList.add('hidden');
             progressContainer.classList.remove('hidden');
-            
             const total = dataList.length;
             let successCount = 0;
-
             const chunkSize = 10; 
+            const lang = localStorage.getItem('g7_lang') || 'ms';
+
             for (let i = 0; i < total; i += chunkSize) {
                 const chunk = dataList.slice(i, i + chunkSize);
-                
                 const requests = chunk.map(item => 
                     fetch('/incoming', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: new URLSearchParams(item)
                     }).then(res => { if(res.ok) successCount++; })
-                      .catch(err => console.error("Ralat hantar S/N:", item.sn))
                 );
-
                 await Promise.all(requests);
-
                 const currentProgress = Math.min(i + chunkSize, total);
                 const percentage = Math.round((currentProgress / total) * 100);
                 progressBar.style.width = percentage + "%";
-                progressText.innerText = `IMPORTING: ${percentage}% (${currentProgress}/${total})`;
+                progressText.innerText = `${dictionary[lang].textImporting}: ${percentage}% (${currentProgress}/${total})`;
             }
-
-            progressText.innerText = `SELESAI! ${successCount} REKOD BERJAYA.`;
-            progressText.classList.replace('text-emerald-600', 'text-blue-900');
-            
             setTimeout(() => {
-                alert(`Selesai! ${successCount} rekod berjaya dimasukkan.`);
+                alert(`Selesai! ${successCount} rekod berjaya.`);
                 window.location.reload();
             }, 800);
         }

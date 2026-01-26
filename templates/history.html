@@ -8,22 +8,38 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
+        
         /* Memastikan butang kembali tidak muncul semasa print */
         @media print {
             .no-print { display: none; }
         }
+
+        .lang-btn.active {
+            background-color: #1e293b;
+            color: white;
+        }
     </style>
 </head>
 <body class="bg-slate-50 p-8">
+
+    <div class="fixed top-6 right-6 flex gap-2 bg-white/50 p-1 rounded-full backdrop-blur-md border border-slate-200 z-50 no-print">
+        <button onclick="changeLanguage('ms')" id="btn-ms" class="lang-btn px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all text-slate-400 hover:text-slate-900">
+            Melayu
+        </button>
+        <button onclick="changeLanguage('en')" id="btn-en" class="lang-btn px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all text-slate-400 hover:text-slate-900">
+            English
+        </button>
+    </div>
+
     <div class="max-w-4xl mx-auto">
         <div class="mb-8 flex justify-between items-center">
             <div>
-                <h1 class="text-2xl font-black text-slate-900 uppercase italic">Maintenance History</h1>
+                <h1 id="t-history-title" class="text-2xl font-black text-slate-900 uppercase italic">Maintenance History</h1>
                 <p class="text-slate-500 font-bold uppercase text-xs tracking-widest">
-                    Asset: {{ asset.peralatan }} | S/N: <span class="text-blue-600">{{ sn }}</span>
+                    <span id="t-asset-label">Asset</span>: {{ asset.peralatan }} | S/N: <span class="text-blue-600">{{ sn }}</span>
                 </p>
             </div>
-            <button onclick="window.history.back()" class="no-print bg-slate-800 text-white px-6 py-2 rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-black transition-all">
+            <button onclick="window.history.back()" id="t-btn-back" class="no-print bg-slate-800 text-white px-6 py-2 rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-black transition-all">
                 Kembali
             </button>
         </div>
@@ -36,27 +52,27 @@
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:border-blue-300 transition-all">
                     <div class="flex justify-between items-start mb-4">
                         <span class="text-xs font-black bg-slate-100 px-3 py-1 rounded-full text-slate-600 uppercase tracking-tighter">
-                            Entry ID: #{{ log.id }}
+                            LOG #{{ loop.index }}
                         </span>
                         <span class="text-sm font-bold text-slate-900">{{ log.date_in }}</span>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase">Defect / Job Scope</p>
+                            <p class="t-defect-label text-[10px] text-slate-400 font-bold uppercase">Defect / Job Scope</p>
                             <p class="text-sm font-semibold text-rose-600 italic">"{{ log.defect or 'No remarks' }}"</p>
                         </div>
                         <div>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase">Status / PIC</p>
+                            <p class="t-status-label text-[10px] text-slate-400 font-bold uppercase">Status / PIC</p>
                             <p class="text-sm font-bold text-slate-800 uppercase">{{ log.status_type }}</p>
-                            <p class="text-[10px] text-slate-500 font-medium">By: {{ log.pic or 'N/A' }}</p>
+                            <p class="text-[10px] text-slate-500 font-medium"><span class="t-by-label">By</span>: {{ log.pic or 'N/A' }}</p>
                         </div>
                     </div>
 
                     {% if log.date_out %}
                     <div class="mt-4 pt-4 border-t border-dashed border-slate-100 flex items-center gap-2">
                         <span class="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                        <p class="text-[10px] font-bold text-slate-500 uppercase">Released on: <span class="text-slate-900">{{ log.date_out }}</span></p>
+                        <p class="text-[10px] font-bold text-slate-500 uppercase"><span class="t-released-label">Released on</span>: <span class="text-slate-900">{{ log.date_out }}</span></p>
                     </div>
                     {% endif %}
                 </div>
@@ -69,7 +85,7 @@
             <svg class="mx-auto h-12 w-12 text-slate-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <p class="text-slate-400 font-bold uppercase tracking-widest">Tiada rekod sejarah dijumpai.</p>
+            <p id="t-no-record" class="text-slate-400 font-bold uppercase tracking-widest">Tiada rekod sejarah dijumpai.</p>
         </div>
         {% endif %}
     </div>
@@ -79,5 +95,56 @@
             © 2026 G7 Aerospace Digital Maintenance System
         </p>
     </div>
+
+    <script>
+        const translations = {
+            ms: {
+                historyTitle: "Sejarah Penyelenggaraan",
+                assetLabel: "Aset",
+                btnBack: "Kembali",
+                defectLabel: "Kerosakan / Skop Kerja",
+                statusLabel: "Status / PIC",
+                byLabel: "Oleh",
+                releasedLabel: "Dikeluarkan pada",
+                noRecord: "Tiada rekod sejarah dijumpai."
+            },
+            en: {
+                historyTitle: "Maintenance History",
+                assetLabel: "Asset",
+                btnBack: "Back",
+                defectLabel: "Defect / Job Scope",
+                statusLabel: "Status / PIC",
+                byLabel: "By",
+                releasedLabel: "Released on",
+                noRecord: "No maintenance history found."
+            }
+        };
+
+        function changeLanguage(lang) {
+            localStorage.setItem('g7_lang', lang);
+            const t = translations[lang];
+
+            document.getElementById('t-history-title').innerText = t.historyTitle;
+            document.getElementById('t-asset-label').innerText = t.assetLabel;
+            document.getElementById('t-btn-back').innerText = t.btnBack;
+            if(document.getElementById('t-no-record')) {
+                document.getElementById('t-no-record').innerText = t.noRecord;
+            }
+
+            // Update multiple class labels
+            document.querySelectorAll('.t-defect-label').forEach(el => el.innerText = t.defectLabel);
+            document.querySelectorAll('.t-status-label').forEach(el => el.innerText = t.statusLabel);
+            document.querySelectorAll('.t-by-label').forEach(el => el.innerText = t.byLabel);
+            document.querySelectorAll('.t-released-label').forEach(el => el.innerText = t.releasedLabel);
+
+            // Update button styles
+            document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-' + lang).classList.add('active');
+        }
+
+        // Initialize based on saved preference
+        const savedLang = localStorage.getItem('g7_lang') || 'ms';
+        changeLanguage(savedLang);
+    </script>
 </body>
 </html>
