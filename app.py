@@ -19,7 +19,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 
 # --- DATABASE CONFIG (SUPABASE) ---
-# PEMBETULAN: URL telah dibetulkan (membuang pengulangan hostname)
+# KEMASKINI: Menggunakan ID Projek dan Password yang anda berikan dengan format Pooler (Port 6543)
 DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -50,7 +50,6 @@ class RepairLog(db.Model):
 with app.app_context():
     db.create_all()
     try:
-        # SQL Trigger untuk update last_updated secara automatik
         db.session.execute(text("""
             CREATE OR REPLACE FUNCTION update_modified_column()
             RETURNS TRIGGER AS $$
@@ -102,7 +101,6 @@ def admin():
     
     logs_raw = RepairLog.query.order_by(RepairLog.id.desc()).all()
     
-    # PROSES PEMBERSIHAN DATA (Logik Asal Anda)
     cleaned_logs = []
     for log in logs_raw:
         cleaned_logs.append({
