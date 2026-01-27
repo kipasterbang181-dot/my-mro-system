@@ -3,6 +3,7 @@ import io
 import base64
 import qrcode
 import pandas as pd
+import traceback
 from flask import Flask, render_template, request, redirect, url_for, session, send_file, flash
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
@@ -23,6 +24,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 # ==========================================
 # KONFIGURASI DATABASE (SUPABASE POSTGRES)
 # ==========================================
+# Menggunakan URL Supabase dengan mod SSL diaktifkan
 DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -38,19 +40,23 @@ db = SQLAlchemy(app)
 class RepairLog(db.Model):
     __tablename__ = 'repair_log'
     id = db.Column(db.Integer, primary_key=True)
-    peralatan = db.Column(db.String(100))
-    pn = db.Column(db.String(100))
-    sn = db.Column(db.String(100))
-    date_in = db.Column(db.String(50))
-    date_out = db.Column(db.String(50))
+    peralatan = db.Column(db.String(255))
+    pn = db.Column(db.String(255))
+    sn = db.Column(db.String(255))
+    date_in = db.Column(db.String(100))
+    date_out = db.Column(db.String(100))
     defect = db.Column(db.Text)
-    status_type = db.Column(db.String(50)) # REPAIR / WARRANTY / ACTIVE
-    pic = db.Column(db.String(100))
+    status_type = db.Column(db.String(100)) # REPAIR / WARRANTY / ACTIVE
+    pic = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 # Memastikan table wujud dalam Supabase setiap kali app dijalankan
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+        print("Database connected and tables checked.")
+    except Exception as e:
+        print(f"Initial Connection Error: {e}")
 
 # ==========================================
 # LALUAN (ROUTES) SISTEM
@@ -82,31 +88,36 @@ def login():
 
 @app.route('/admin')
 def admin():
-    """ Dashboard Pengurusan Data """
+    """ Dashboard Pengurusan Data dengan Debugging Luas """
     if not session.get('admin'): 
         return redirect(url_for('login', next=request.path))
     
-    logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
+    try:
+        logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
 
-    # Pengiraan Ringkasan Unit mengikut Tahun (Jadual di Dashboard)
-    summary_dict = {}
-    for l in logs:
-        if l.date_in:
-            try:
-                year = str(l.date_in)[:4]
-                if year.isdigit():
-                    summary_dict[year] = summary_dict.get(year, 0) + 1
-            except:
-                continue
+        # Pengiraan Ringkasan Unit mengikut Tahun (Jadual di Dashboard)
+        summary_dict = {}
+        for l in logs:
+            if l.date_in:
+                try:
+                    year = str(l.date_in)[:4]
+                    if year.isdigit():
+                        summary_dict[year] = summary_dict.get(year, 0) + 1
+                except:
+                    continue
 
-    sorted_years = sorted(summary_dict.keys())
-    total_units = sum(summary_dict.values())
+        sorted_years = sorted(summary_dict.keys())
+        total_units = sum(summary_dict.values())
 
-    return render_template('admin.html', 
-                           logs=logs, 
-                           summary_dict=summary_dict, 
-                           sorted_years=sorted_years, 
-                           total_units=total_units)
+        return render_template('admin.html', 
+                               logs=logs, 
+                               summary_dict=summary_dict, 
+                               sorted_years=sorted_years, 
+                               total_units=total_units)
+    except Exception as e:
+        # Jika ralat berlaku, paparkan punca ralat secara terperinci (Traceback)
+        error_details = traceback.format_exc()
+        return f"<h3>Admin Dashboard Error (500)</h3><p>{str(e)}</p><pre>{error_details}</pre>", 500
 
 @app.route('/history/<sn>')
 def history(sn):
