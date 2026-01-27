@@ -6,7 +6,6 @@ import pandas as pd
 from flask import Flask, render_template, request, redirect, url_for, session, send_file, flash
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-from sqlalchemy import text
 
 # Library Tambahan untuk PDF Report
 from reportlab.lib.pagesizes import letter, landscape
@@ -15,12 +14,10 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 app = Flask(__name__)
-# Secret key dikekalkan
 app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 
-# --- DATABASE CONFIG (SUPABASE) ---
-# KEMASKINI: Menggunakan ID Projek dan Password yang anda berikan dengan format Pooler (Port 6543)
-DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
+# --- DATABASE CONFIG ---
+DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -29,98 +26,55 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 }
 db = SQLAlchemy(app)
 
-# --- MODEL DATABASE ---
 class RepairLog(db.Model):
     __tablename__ = 'repair_log'
     id = db.Column(db.Integer, primary_key=True)
-    drn = db.Column(db.String(100))
-    peralatan = db.Column(db.String(255))
+    peralatan = db.Column(db.String(100))
     pn = db.Column(db.String(100))
     sn = db.Column(db.String(100))
-    date_in = db.Column(db.Text) 
-    date_out = db.Column(db.Text)
+    date_in = db.Column(db.String(50))
+    date_out = db.Column(db.String(50))
     defect = db.Column(db.Text)
-    status_type = db.Column(db.String(100))
-    pic = db.Column(db.String(255))
-    is_warranty = db.Column(db.Boolean, default=False)
+    status_type = db.Column(db.String(50))
+    pic = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.now)
-    last_updated = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
-# Inisialisasi Database & Trigger
 with app.app_context():
     db.create_all()
-    try:
-        db.session.execute(text("""
-            CREATE OR REPLACE FUNCTION update_modified_column()
-            RETURNS TRIGGER AS $$
-            BEGIN
-                NEW.last_updated = now();
-                RETURN NEW;
-            END;
-            $$ language 'plpgsql';
-        """))
-        db.session.execute(text("""
-            DO $$
-            BEGIN
-                IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_repair_log_modtime') THEN
-                    CREATE TRIGGER update_repair_log_modtime
-                    BEFORE UPDATE ON repair_log
-                    FOR EACH ROW
-                    EXECUTE PROCEDURE update_modified_column();
-                END IF;
-            END $$;
-        """))
-        db.session.commit()
-    except Exception as e:
-        print(f"Trigger Setup Info: {e}")
-
-# --- ROUTES ---
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
+# --- LOGIN DENGAN LOGIK NEXT REDIRECT ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     next_page = request.args.get('next')
+    
     if request.method == 'POST':
         if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
             session['admin'] = True
+            
             target = request.form.get('next_target')
             if target and target != 'None' and target != '':
                 return redirect(target)
             return redirect(url_for('admin'))
         else:
             flash("Username atau Password salah!", "error")
+            
     return render_template('login.html', next_page=next_page)
 
 @app.route('/admin')
 def admin():
     if not session.get('admin'): 
         return redirect(url_for('login', next=request.path))
-    
-    logs_raw = RepairLog.query.order_by(RepairLog.id.desc()).all()
-    
-    cleaned_logs = []
-    for log in logs_raw:
-        cleaned_logs.append({
-            'id': log.id,
-            'drn': log.drn or "N/A",
-            'peralatan': log.peralatan or "N/A",
-            'pn': log.pn or "N/A",
-            'sn': log.sn or "N/A",
-            'date_in': str(log.date_in) if log.date_in else "",
-            'date_out': str(log.date_out) if log.date_out else "-",
-            'defect': log.defect or "N/A",
-            'status_type': str(log.status_type or "ACTIVE").strip().upper(),
-            'pic': log.pic or "N/A",
-            'is_warranty': log.is_warranty
-        })
-    return render_template('admin.html', logs=cleaned_logs)
+    logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
+    return render_template('admin.html', logs=logs)
 
+# --- BAHAGIAN HISTORY ---
 @app.route('/history/<sn>')
 def history(sn):
-    logs = RepairLog.query.filter_by(sn=sn).order_by(RepairLog.id.asc()).all()
+    logs = RepairLog.query.filter_by(sn=sn).order_by(RepairLog.date_in.asc()).all()
     asset_info = logs[0] if logs else None
     return render_template('history.html', logs=logs, asset=asset_info, sn=sn)
 
@@ -133,7 +87,6 @@ def view_report(id):
 @app.route('/incoming', methods=['POST'])
 def incoming():
     try:
-        drn = request.form.get('drn', '').upper()
         peralatan = request.form.get('peralatan', '').upper()
         pn = request.form.get('pn', '').upper()
         sn = request.form.get('sn', '').upper()
@@ -142,18 +95,23 @@ def incoming():
         defect = request.form.get('defect', 'N/A').upper()
         status = request.form.get('status', request.form.get('status_type', 'ACTIVE')).upper()
         pic = request.form.get('pic', 'N/A').upper()
-        warranty = True if request.form.get('is_warranty') == 'on' else False
 
         new_log = RepairLog(
-            drn=drn, peralatan=peralatan, pn=pn, sn=sn,
-            date_in=date_in, date_out=date_out, defect=defect,
-            status_type=status, pic=pic, is_warranty=warranty
+            peralatan=peralatan,
+            pn=pn,
+            sn=sn,
+            date_in=date_in,
+            date_out=date_out,
+            defect=defect,
+            status_type=status,
+            pic=pic
         )
         db.session.add(new_log)
         db.session.commit()
         
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return "OK", 200
+            
         return redirect(url_for('index'))
     except Exception as e:
         db.session.rollback()
@@ -168,6 +126,7 @@ def download_single_report(item_id):
     doc = SimpleDocTemplate(buf, pagesize=letter)
     elements = []
     styles = getSampleStyleSheet()
+    
     cell_style = ParagraphStyle(name='CellStyle', fontSize=10, leading=12)
 
     elements.append(Paragraph("G7 AEROSPACE - UNIT MAINTENANCE REPORT", styles['Title']))
@@ -175,16 +134,14 @@ def download_single_report(item_id):
     
     report_data = [
         ["FIELD", "DETAILS"],
-        ["DRN", l.drn or "N/A"],
         ["EQUIPMENT", Paragraph(l.peralatan or "N/A", cell_style)],
-        ["PART NUMBER (P/N)", l.pn or "N/A"],
-        ["SERIAL NUMBER (S/N)", l.sn or "N/A"],
+        ["PART NUMBER (P/N)", l.pn],
+        ["SERIAL NUMBER (S/N)", l.sn],
         ["DEFECT / REMARKS", Paragraph(l.defect or "N/A", cell_style)],
-        ["DATE IN", l.date_in or "N/A"],
+        ["DATE IN", l.date_in],
         ["DATE OUT", l.date_out or "-"],
-        ["STATUS", l.status_type or "N/A"],
-        ["JTP / PIC", l.pic or "N/A"],
-        ["WARRANTY", "YES" if l.is_warranty else "NO"],
+        ["STATUS", l.status_type],
+        ["JTP / PIC", l.pic],
         ["REPORT GENERATED", datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
     ]
     
@@ -193,6 +150,9 @@ def download_single_report(item_id):
         ('BACKGROUND', (0, 0), (1, 0), colors.HexColor('#1e293b')),
         ('TEXTCOLOR', (0, 0), (1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')])
@@ -201,66 +161,116 @@ def download_single_report(item_id):
     elements.append(t)
     doc.build(elements)
     buf.seek(0)
-    return send_file(buf, mimetype='application/pdf', as_attachment=True, download_name=f"Report_{l.sn}.pdf")
+    
+    return send_file(
+        buf, 
+        mimetype='application/pdf', 
+        as_attachment=True, 
+        download_name=f"Report_{l.sn}_{l.id}.pdf"
+    )
 
 @app.route('/download_report')
 def download_report():
     if not session.get('admin'): return redirect(url_for('login', next=request.path))
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
+    
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=landscape(letter), leftMargin=15, rightMargin=15)
+    doc = SimpleDocTemplate(buf, pagesize=landscape(letter), leftMargin=15, rightMargin=15, topMargin=20, bottomMargin=20)
     elements = []
     styles = getSampleStyleSheet()
-    table_cell_style = ParagraphStyle(name='TableCell', fontSize=7, leading=8, alignment=1)
+    
+    table_cell_style = ParagraphStyle(
+        name='TableCell', 
+        fontSize=7, 
+        leading=8, 
+        wordWrap='LTR',
+        alignment=1 
+    )
 
-    elements.append(Paragraph(f"G7 AEROSPACE - REPAIR LOG SUMMARY ({datetime.now().strftime('%d/%m/%Y')})", styles['Title']))
+    elements.append(Paragraph(f"G7 AEROSPACE - REPAIR LOG SUMMARY REPORT ({datetime.now().strftime('%d/%m/%Y')})", styles['Title']))
     elements.append(Spacer(1, 12))
     
-    data = [["ID", "DRN", "PERALATAN", "P/N", "S/N", "DEFECT", "DATE IN", "DATE OUT", "STATUS", "PIC"]]
+    data = [["ID", "PERALATAN", "P/N", "S/N", "DEFECT", "DATE IN", "DATE OUT", "STATUS", "PIC"]]
+
     for l in logs:
         data.append([
-            l.id, l.drn or "N/A",
+            l.id, 
             Paragraph(l.peralatan or "N/A", table_cell_style), 
             Paragraph(l.pn or "N/A", table_cell_style), 
-            l.sn or "N/A", 
+            l.sn, 
             Paragraph(l.defect or "N/A", table_cell_style), 
-            l.date_in or "N/A", l.date_out or "-", 
-            l.status_type or "N/A", 
+            l.date_in, 
+            l.date_out or "-", 
+            l.status_type, 
             Paragraph(l.pic or "N/A", table_cell_style)
         ])
     
-    t = Table(data, repeatRows=1, colWidths=[30, 60, 100, 80, 70, 150, 60, 60, 80, 80])
+    col_widths = [30, 120, 90, 70, 180, 60, 60, 80, 80]
+    
+    t = Table(data, repeatRows=1, hAlign='CENTER', colWidths=col_widths)
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e293b')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 7),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 3),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 3),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f1f5f9')]),
     ]))
+    
     elements.append(t)
     doc.build(elements)
     buf.seek(0)
-    return send_file(buf, mimetype='application/pdf', as_attachment=True, download_name="Full_Report.pdf")
+    
+    return send_file(
+        buf, 
+        mimetype='application/pdf', 
+        as_attachment=True, 
+        download_name=f"Full_Summary_Report_{datetime.now().strftime('%Y%m%d')}.pdf"
+    )
 
 @app.route('/export_excel')
 def export_excel_data():
     if not session.get('admin'): return redirect(url_for('login', next=request.path))
+    
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
+    
     data = []
     for l in logs:
         data.append({
-            "ID": l.id, "DRN": l.drn or "N/A", "PERALATAN": l.peralatan or "N/A",
-            "P/N": l.pn or "N/A", "S/N": l.sn or "N/A", "DEFECT": l.defect or "N/A",
-            "DATE IN": l.date_in or "N/A", "DATE OUT": l.date_out or "-",
-            "STATUS": l.status_type or "N/A", "PIC": l.pic or "N/A",
-            "WARRANTY": "YES" if l.is_warranty else "NO"
+            "ID": l.id,
+            "PERALATAN": l.peralatan,
+            "PART NUMBER (P/N)": l.pn,
+            "SERIAL NUMBER (S/N)": l.sn,
+            "DEFECT": l.defect if l.defect else "N/A",
+            "DATE IN": l.date_in,
+            "DATE OUT": l.date_out if l.date_out else "-",
+            "STATUS": l.status_type,
+            "PIC": l.pic
         })
+    
     df = pd.DataFrame(data)
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name='Repair Logs')
+        worksheet = writer.sheets['Repair Logs']
+        worksheet.set_column('A:A', 5)   
+        worksheet.set_column('B:B', 30)  
+        worksheet.set_column('C:D', 20)  
+        worksheet.set_column('E:E', 45)  
+        worksheet.set_column('F:G', 15)  
+        worksheet.set_column('H:I', 20)  
+        
     output.seek(0)
-    return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name="Repair_Log.xlsx")
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f"Repair_Log_Summary_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    )
 
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
@@ -272,7 +282,7 @@ def import_excel():
         header_idx = 0
         for i, row in df_scan.iterrows():
             row_str = [str(x).upper() for x in row.values if pd.notna(x)]
-            if any(k in row_str for k in ['PART NO', 'SERIAL NO', 'P/N', 'S/N']):
+            if any(k in row_str for k in ['PART NO', 'SERIAL NO', 'P/N', 'S/N', 'DESCRIPTION']):
                 header_idx = i
                 break
         
@@ -282,10 +292,10 @@ def import_excel():
 
         def find_col(keywords):
             for col in df.columns:
-                if any(k in col for k in keywords): return col
+                if any(k in col for k in keywords):
+                    return col
             return None
 
-        c_drn = find_col(['DRN', 'DEFECT REPORT']) 
         c_sn = find_col(['SERIAL NO', 'S/N', 'SERIAL NUMBER'])
         c_pn = find_col(['PART NO', 'P/N', 'PART NUMBER'])
         c_desc = find_col(['DESCRIPTION', 'PERALATAN', 'EQUIPMENT'])
@@ -294,12 +304,16 @@ def import_excel():
         c_status = find_col(['STATUS'])
         c_defect = find_col(['DEFECT'])
         c_jtp = find_col(['JTP', 'PIC'])
+        c_rem = find_col(['REMARKS'])
 
         def clean_val(val, is_date=False):
             if pd.isna(val) or str(val).strip().lower() in ['nan', '0', '0.0', '', '-']: 
                 return None if is_date else "N/A"
             if is_date:
-                try: return pd.to_datetime(str(val)).strftime('%Y-%m-%d')
+                try:
+                    if isinstance(val, (int, float)):
+                        return pd.to_datetime(val, unit='D', origin='1899-12-30').strftime('%Y-%m-%d')
+                    return pd.to_datetime(str(val)).strftime('%Y-%m-%d')
                 except: return str(val)[:10]
             return str(val).strip().upper()
 
@@ -308,15 +322,18 @@ def import_excel():
             sn = clean_val(row.get(c_sn)) if c_sn else "N/A"
             if sn == "N/A": continue
             
+            raw_pic = row.get(c_jtp) if c_jtp else (row.get(c_rem) if c_rem else "N/A")
+            str_pic = str(raw_pic).strip().upper()
+            final_pic = "N/A" if 'WARRANTY' in str_pic or str_pic in ['NAN', 'N/A', '', '0', '0.0'] else str_pic
+
             new_log = RepairLog(
-                drn=clean_val(row.get(c_drn)) if c_drn else "N/A",
                 peralatan=clean_val(row.get(c_desc)) if c_desc else "N/A",
                 pn=clean_val(row.get(c_pn)) if c_pn else "N/A",
                 sn=sn,
                 date_in=clean_val(row.get(c_in), True) or datetime.now().strftime("%Y-%m-%d"),
                 date_out=clean_val(row.get(c_out), True) or "-",
                 status_type=clean_val(row.get(c_status)) or "ACTIVE",
-                pic=clean_val(row.get(c_jtp)) if c_jtp else "N/A",
+                pic=final_pic,
                 defect=clean_val(row.get(c_defect)) if c_defect else "N/A"
             )
             logs_to_add.append(new_log)
@@ -364,17 +381,18 @@ def delete_bulk():
             db.session.commit()
         except Exception as e:
             db.session.rollback()
-            return f"Error: {str(e)}"
+            return f"Ralat Padam Pukal: {str(e)}"
     return redirect(url_for('admin'))
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
-    if not session.get('admin'): return redirect(url_for('login', next=request.full_path))
+    if not session.get('admin'): 
+        return redirect(url_for('login', next=request.full_path))
+    
     l = RepairLog.query.get_or_404(id)
     source = request.args.get('from', 'admin')
 
     if request.method == 'POST':
-        l.drn = request.form.get('drn', '').upper()
         l.peralatan = request.form.get('peralatan', '').upper()
         l.pn = request.form.get('pn', '').upper()
         l.sn = request.form.get('sn', '').upper()
@@ -383,11 +401,12 @@ def edit(id):
         l.date_out = request.form.get('date_out')
         l.defect = request.form.get('defect', '').upper()
         l.status_type = request.form.get('status_type', '').upper()
-        l.is_warranty = True if request.form.get('is_warranty') == 'on' else False
         db.session.commit()
         
-        if request.form.get('origin_source') == 'view_tag':
+        origin = request.form.get('origin_source')
+        if origin == 'view_tag':
             return redirect(url_for('view_tag', id=l.id))
+            
         return redirect(url_for('admin'))
         
     return render_template('edit.html', item=l, source=source)
