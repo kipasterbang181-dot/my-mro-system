@@ -80,9 +80,13 @@ def admin():
     summary_dict = {}
     for l in logs:
         if l.date_in:
-            year = str(l.date_in)[:4]
-            if year.isdigit():
-                summary_dict[year] = summary_dict.get(year, 0) + 1
+            # Memastikan format tarikh sesuai untuk diambil tahunnya
+            try:
+                year = str(l.date_in)[:4]
+                if year.isdigit():
+                    summary_dict[year] = summary_dict.get(year, 0) + 1
+            except:
+                continue
 
     sorted_years = sorted(summary_dict.keys())
     total_units = sum(summary_dict.values())
@@ -95,6 +99,7 @@ def admin():
 
 @app.route('/history/<sn>')
 def history(sn):
+    # Mengambil semua sejarah pergerakan berdasarkan Serial Number
     logs = RepairLog.query.filter_by(sn=sn).order_by(RepairLog.date_in.asc()).all()
     asset_info = logs[0] if logs else None
     return render_template('history.html', logs=logs, asset=asset_info, sn=sn)
@@ -105,8 +110,12 @@ def view_report(id):
     l = RepairLog.query.get_or_404(id)
     return render_template('view_report.html', l=l)
 
-@app.route('/incoming', methods=['POST'])
+@app.route('/incoming', methods=['GET', 'POST'])
 def incoming():
+    # Menambah sokongan GET untuk memaparkan borang jika perlu
+    if request.method == 'GET':
+        return render_template('incoming.html')
+        
     try:
         peralatan = request.form.get('peralatan', '').upper()
         pn = request.form.get('pn', '').upper()
@@ -128,7 +137,7 @@ def incoming():
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return "OK", 200
             
-        return redirect(url_for('index'))
+        return redirect(url_for('admin')) # Selepas submit, terus ke admin
     except Exception as e:
         db.session.rollback()
         return f"Database Error: {str(e)}", 500
@@ -244,7 +253,6 @@ def import_excel():
 
         logs_to_add = []
         for _, row in df.iterrows():
-            # Logik ringkas pembersihan data
             new_log = RepairLog(
                 peralatan=str(row.get('PERALATAN', 'N/A')).upper(),
                 pn=str(row.get('P/N', row.get('PART NUMBER', 'N/A'))).upper(),
@@ -273,7 +281,8 @@ def view_tag(id):
 @app.route('/download_qr/<int:id>')
 def download_qr(id):
     l = RepairLog.query.get_or_404(id)
-    qr_link = f"{request.url_root}view_tag/{id}"
+    # Link unik untuk sejarah asset
+    qr_link = f"{request.url_root}history/{l.sn}"
     qr = qrcode.make(qr_link)
     buf = io.BytesIO()
     qr.save(buf, format="PNG")
@@ -328,5 +337,6 @@ def logout():
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
+    # Memastikan port dinamik untuk deployment (cth: Render/Heroku)
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
