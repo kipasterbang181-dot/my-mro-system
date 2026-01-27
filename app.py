@@ -24,6 +24,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 # ==========================================
 # KONFIGURASI DATABASE (SUPABASE POSTGRES)
 # ==========================================
+# Menggunakan URL Supabase dengan mod SSL diaktifkan
 DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -39,7 +40,7 @@ db = SQLAlchemy(app)
 class RepairLog(db.Model):
     __tablename__ = 'repair_log'
     id = db.Column(db.Integer, primary_key=True)
-    drn = db.Column(db.String(100)) # Lajur tambahan dari SQL baru anda
+    drn = db.Column(db.String(100)) # Lajur tambahan
     peralatan = db.Column(db.String(255))
     pn = db.Column(db.String(255))
     sn = db.Column(db.String(255))
@@ -48,7 +49,7 @@ class RepairLog(db.Model):
     defect = db.Column(db.Text)
     status_type = db.Column(db.String(100)) # REPAIR / WARRANTY / ACTIVE
     pic = db.Column(db.String(255))
-    is_warranty = db.Column(db.Boolean, default=False) # Lajur tambahan dari SQL baru anda
+    is_warranty = db.Column(db.Boolean, default=False) # Lajur tambahan
     created_at = db.Column(db.DateTime, default=datetime.now)
     last_updated = db.Column(db.DateTime, default=datetime.now)
 
@@ -75,8 +76,10 @@ def login():
     next_page = request.args.get('next')
     
     if request.method == 'POST':
+        # Logik Login: Username (u) & Password (p)
         if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
             session['admin'] = True
+            
             target = request.form.get('next_target')
             if target and target != 'None' and target != '':
                 return redirect(target)
@@ -88,34 +91,54 @@ def login():
 
 @app.route('/admin')
 def admin():
-    """ Dashboard Pengurusan Data dengan Debugging Luas """
+    """ Dashboard Pengurusan Data dengan Jadual Dinamik """
     if not session.get('admin'): 
         return redirect(url_for('login', next=request.path))
     
     try:
         logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
 
-        # Pengiraan Ringkasan Unit mengikut Tahun (Hantar sebagai 'stats' dan 'summary_dict')
-        # Ini untuk mengelakkan ralat 'stats' is undefined di admin.html
-        stats = {}
+        # --- PROSES DATA UNTUK JADUAL RINGKASAN DINAMIK ---
+        
+        # Senarai Status mengikut susunan yang anda mahu
+        status_list = [
+            "SERVICEABLE", "RETURN SERVICEABLE", "RETURN UNSERVICEABLE",
+            "WAITING LO", "OV REPAIR", "UNDER REPAIR", "AWAITING SPARE",
+            "SPARE READY", "WARRANTY REPAIR", "QUOTE SUBMITTED",
+            "TDI IN PROGRESS", "TDI TO REVIEW", "TDI READY TO QUOTE",
+            "READY TO DELIVERED WARRANTY"
+        ]
+
+        # Ambil semua tahun unik yang ada dalam data
+        years = sorted(list(set([l.date_in.year for l in logs if l.date_in])))
+        
+        # Struktur Data: { 'STATUS': { 2024: count, 2025: count }, ... }
+        stats_matrix = {status: {year: 0 for year in years} for status in status_list}
+        row_totals = {status: 0 for status in status_list}
+        column_totals = {year: 0 for year in years}
+        grand_total = 0
+
         for l in logs:
-            if l.date_in:
-                try:
-                    year = str(l.date_in.year)
-                    stats[year] = stats.get(year, 0) + 1
-                except:
-                    continue
+            if l.date_in and l.status_type:
+                stat_key = l.status_type.upper().strip()
+                year_key = l.date_in.year
+                
+                if stat_key in stats_matrix and year_key in years:
+                    stats_matrix[stat_key][year_key] += 1
+                    row_totals[stat_key] += 1
+                    column_totals[year_key] += 1
+                    grand_total += 1
 
-        sorted_years = sorted(stats.keys())
-        total_units = len(logs)
-
-        # Kami hantar kedua-dua nama pembolehubah untuk keselamatan
         return render_template('admin.html', 
                                logs=logs, 
-                               stats=stats, 
-                               summary_dict=stats, 
-                               sorted_years=sorted_years, 
-                               total_units=total_units)
+                               years=years,
+                               status_list=status_list,
+                               stats_matrix=stats_matrix,
+                               row_totals=row_totals,
+                               column_totals=column_totals,
+                               grand_total=grand_total,
+                               total_units=len(logs))
+                               
     except Exception as e:
         error_details = traceback.format_exc()
         return f"<h3>Admin Dashboard Error (500)</h3><p>{str(e)}</p><pre>{error_details}</pre>", 500
@@ -141,13 +164,11 @@ def incoming():
         return render_template('incoming.html')
         
     try:
-        # Mengambil data dan menukar semua kepada HURUF BESAR
         peralatan = request.form.get('peralatan', '').upper()
         pn = request.form.get('pn', '').upper()
         sn = request.form.get('sn', '').upper()
         drn = request.form.get('drn', '').upper()
         
-        # Penukaran String Tarikh ke Objek Date Python
         date_in_val = request.form.get('date_in')
         d_in = datetime.strptime(date_in_val, '%Y-%m-%d').date() if date_in_val else datetime.now().date()
         
@@ -305,6 +326,10 @@ def import_excel():
     except Exception as e:
         return f"Excel Import Error: {str(e)}"
 
+# ==========================================
+# PENGURUSAN QR & TAG
+# ==========================================
+
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
     l = RepairLog.query.get_or_404(id)
@@ -320,6 +345,10 @@ def download_qr(id):
     qr.save(buf, format="PNG")
     buf.seek(0)
     return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f"QR_{l.sn}.png")
+
+# ==========================================
+# EDIT, DELETE & LOGOUT
+# ==========================================
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):

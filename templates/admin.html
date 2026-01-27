@@ -15,7 +15,6 @@
         body { 
             font-family: 'Inter', sans-serif; 
             letter-spacing: -0.01em; 
-            /* Latar belakang sedikit berwarna biru lembut */
             background-color: #f0f4f8; 
         }
         .table-row-hover:hover { background-color: #f8fafc; transition: all 0.2s; }
@@ -46,7 +45,7 @@
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
         }
 
-        /* Rainbow border animation untuk elemen penting */
+        /* Rainbow border animation */
         .rainbow-border {
             position: relative;
             z-index: 0;
@@ -68,6 +67,71 @@
             animation: rotate 4s linear infinite;
         }
         @keyframes rotate { 100% { transform: rotate(1turn); } }
+
+        /* Custom Table Styling for Summary */
+        .summary-table th { background-color: #1e293b; color: white; padding: 12px; font-size: 11px; text-transform: uppercase; }
+        .summary-table td { padding: 10px; border: 1px solid #e2e8f0; font-weight: 800; text-align: center; }
+
+        /* G7 ACTION BUTTONS STYLING - GLASSMORPHISM STYLE */
+        .action-group-container {
+            display: flex;
+            align-items: center;
+            background: white;
+            padding: 4px 12px;
+            border-radius: 99px;
+            border: 2px solid #f1f5f9;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            gap: 4px;
+        }
+        .action-btn-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
+        .btn-qr-color { color: #2563eb; }
+        .btn-view-color { color: #059669; }
+        .btn-tag-color { color: #d97706; }
+        
+        .action-btn-item:hover {
+            background-color: #f8fafc;
+            transform: translateY(-1px);
+        }
+        .action-divider {
+            width: 1px;
+            height: 20px;
+            background-color: #e2e8f0;
+            margin: 0 4px;
+        }
+        .edit-btn-style {
+            background-color: #eff6ff;
+            color: #2563eb;
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            transition: all 0.2s;
+        }
+        .delete-btn-style {
+            background-color: #fff1f2;
+            color: #e11d48;
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            transition: all 0.2s;
+        }
+        .edit-btn-style:hover, .delete-btn-style:hover {
+            transform: scale(1.05);
+            filter: brightness(0.95);
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -96,6 +160,45 @@
 
     <main class="max-w-7xl mx-auto px-6 py-10">
         
+        <div class="mb-10 bg-white rounded-[2.5rem] shadow-2xl border-4 border-slate-900 overflow-hidden">
+            <div class="bg-slate-900 text-white px-8 py-4 flex justify-between items-center">
+                <h3 class="font-black italic uppercase tracking-widest text-lg">Unit Status Summary Table</h3>
+                <span class="text-xs bg-blue-600 px-3 py-1 rounded-full font-bold">AS AT {{ logs[0].date_in if logs else 'N/A' }}</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full summary-table">
+                    <thead>
+                        <tr>
+                            <th class="text-left pl-8">STATUS CATEGORY</th>
+                            {% for year in years %}
+                            <th>YEAR {{ year }}</th>
+                            {% endfor %}
+                            <th class="bg-blue-900">GRAND TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="bg-emerald-100">
+                            <td class="text-left pl-8 font-black text-slate-900">TOTAL UNITS</td>
+                            {% for year in years %}
+                            <td class="text-emerald-700">{{ column_totals[year] }}</td>
+                            {% endfor %}
+                            <td class="bg-emerald-600 text-white">{{ grand_total }}</td>
+                        </tr>
+
+                        {% for status in status_list %}
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="text-left pl-8 text-slate-700 text-xs font-bold">{{ status }}</td>
+                            {% for year in years %}
+                            <td class="text-slate-500">{{ stats_matrix[status][year] }}</td>
+                            {% endfor %}
+                            <td class="bg-slate-100 text-slate-900">{{ row_totals[status] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <div class="mb-10 bg-white p-8 rounded-[2.5rem] border-2 border-dashed border-emerald-200 shadow-xl shadow-emerald-100/50">
             <h4 class="text-sm font-black uppercase tracking-widest text-emerald-700 mb-5 flex items-center gap-3">
                 <span class="bg-emerald-500 text-white p-2 rounded-xl shadow-lg shadow-emerald-200">📥</span> 
@@ -132,14 +235,14 @@
         </div>
 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
-            {% for year in ['2022', '2023', '2024', '2025'] %}
+            {% for year in years %}
             {% set colors = {'2022': 'blue', '2023': 'purple', '2024': 'rose', '2025': 'amber'} %}
-            {% set c = colors.get(year, 'blue') %}
+            {% set c = colors.get(year|string, 'blue') %}
             <div class="bg-white p-6 rounded-[2rem] border border-{{c}}-100 shadow-xl shadow-{{c}}-50 group hover:-translate-y-2 transition-all">
                 <p class="text-[10px] font-black text-{{c}}-400 uppercase tracking-widest mb-2 group-hover:text-{{c}}-600">{{ year }} TOTAL ASSETS</p>
-                <h3 class="text-4xl font-black text-slate-900">{{ stats.get(year, 0) }}</h3>
+                <h3 class="text-4xl font-black text-slate-900">{{ column_totals[year] }}</h3>
                 <div class="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">
-                    <div class="bg-{{c}}-500 h-full shadow-[0_0_10px_rgba(0,0,0,0.1)]" style="width: {{ (stats.get(year, 0) / (logs|length if logs|length > 0 else 1) * 100)|round }}%"></div>
+                    <div class="bg-{{c}}-500 h-full" style="width: {{ (column_totals[year] / (logs|length if logs|length > 0 else 1) * 100)|round }}%"></div>
                 </div>
             </div>
             {% endfor %}
@@ -158,13 +261,9 @@
             
             <select id="statusFilter" onchange="filterTable()" class="bg-white border-2 border-slate-100 rounded-[1.5rem] px-8 py-5 text-sm font-black text-blue-900 outline-none focus:border-blue-500 transition-all shadow-xl shadow-blue-50/50 uppercase tracking-widest cursor-pointer">
                 <option value="">🌈 ALL STATUS</option>
-                <option value="SERVICEABLE">✅ SERVICEABLE</option>
-                <option value="READY TO QUOTE">💰 READY TO QUOTE</option>
-                <option value="READY TO DELIVERED">📦 READY TO DELIVERED</option>
-                <option value="WARRANTY REPAIR">🛡️ WARRANTY REPAIR</option>
-                <option value="TDI ON PROGRESS">🛠️ TDI ON PROGRESS</option>
-                <option value="OV TDI">🔍 OV TDI</option>
-                <option value="RETURN TO AEROTREE">✈️ RETURN TO AEROTREE</option>
+                {% for status in status_list %}
+                <option value="{{ status }}">{{ status }}</option>
+                {% endfor %}
             </select>
         </div>
 
@@ -196,12 +295,12 @@
                                 </td>
                                 <td class="px-8 py-8">
                                     <div class="flex flex-col">
-                                        <a href="/history/{{ item.sn }}" class="save-scroll font-black text-slate-900 uppercase text-lg row-name hover:text-blue-600 transition-colors decoration-blue-500/30 underline underline-offset-8 decoration-2">
+                                        <a href="/history/{{ item.sn }}" class="font-black text-slate-900 uppercase text-lg row-name hover:text-blue-600 transition-colors underline underline-offset-8 decoration-2 decoration-blue-500/30">
                                             {{ item.peralatan or 'N/A' }}
                                         </a>
                                         <div class="flex gap-4 mt-3">
-                                            <span class="text-[10px] font-black bg-slate-100 text-slate-600 px-2 py-1 rounded-md uppercase tracking-tighter">P/N: <span class="text-slate-950">{{ item.pn or 'N/A' }}</span></span>
-                                            <span class="text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-1 rounded-md uppercase tracking-tighter">S/N: <span class="font-mono row-sn">{{ item.sn or 'N/A' }}</span></span>
+                                            <span class="text-[10px] font-black bg-slate-100 text-slate-600 px-2 py-1 rounded-md uppercase">P/N: <span class="text-slate-950">{{ item.pn or 'N/A' }}</span></span>
+                                            <span class="text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-1 rounded-md uppercase">S/N: <span class="font-mono row-sn">{{ item.sn or 'N/A' }}</span></span>
                                         </div>
                                     </div>
                                 </td>
@@ -227,41 +326,37 @@
                                 <td class="px-8 py-8 text-center">
                                     <div class="inline-flex flex-col items-center">
                                         <span class="text-[9px] font-black text-slate-400 mb-2 uppercase tracking-widest italic">PIC: {{ item.pic if (item.pic and item.pic != 'nan') else 'N/A' }}</span>
-                                        
-                                        {% set s = item.status_type|upper|trim if item.status_type else '' %}
-                                        <span class="status-badge px-4 py-2 rounded-xl text-[10px] font-black uppercase border-2 shadow-sm
-                                            {% if s == 'SERVICEABLE' %} 
-                                                bg-emerald-500 text-white border-emerald-400 shadow-emerald-100
-                                            {% elif s in ['READY TO QUOTE', 'READY TO DELIVERED', 'RETURN TO AEROTREE'] %} 
-                                                bg-blue-500 text-white border-blue-400 shadow-blue-100
-                                            {% elif s in ['WARRANTY REPAIR', 'TDI ON PROGRESS'] %} 
-                                                bg-amber-400 text-amber-950 border-amber-300 shadow-amber-100
-                                            {% elif s == 'OV TDI' %} 
-                                                bg-purple-500 text-white border-purple-400 shadow-purple-100
-                                            {% else %} 
-                                                bg-slate-100 text-slate-500 border-slate-200 
-                                            {% endif %}">
+                                        <span class="status-badge px-4 py-2 rounded-xl text-[10px] font-black uppercase border-2 shadow-sm 
+                                            {% if 'SERVICEABLE' in item.status_type|upper %} bg-emerald-500 text-white border-emerald-400 
+                                            {% elif 'TDI' in item.status_type|upper %} bg-amber-400 text-amber-950 border-amber-300
+                                            {% elif 'REPAIR' in item.status_type|upper %} bg-blue-500 text-white border-blue-400
+                                            {% else %} bg-slate-100 text-slate-500 border-slate-200 {% endif %}">
                                             {{ item.status_type or 'N/A' }}
                                         </span>
                                     </div>
                                 </td>
                                 <td class="px-8 py-8">
                                     <div class="flex justify-end items-center gap-3">
-                                        <div class="flex items-center bg-white rounded-2xl p-1.5 border-2 border-slate-100 shadow-lg">
-                                            <button type="button" onclick="showQR('{{ item.sn }}', '{{ request.url_root }}view_tag/{{ item.id }}', '{{ item.id }}')" title="View QR Tag" class="p-2.5 text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
+                                        <div class="action-group-container">
+                                            <button type="button" onclick="showQR('{{ item.sn }}', '{{ request.url_root }}view_tag/{{ item.id }}', '{{ item.id }}')" 
+                                                class="action-btn-item btn-qr-color" title="QR Code">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                                                 </svg>
                                             </button>
-                                            <div class="w-[2px] h-6 bg-slate-100 mx-1"></div>
-                                            <a href="/view_report/{{ item.id }}" title="View Digital Report" class="save-scroll p-2.5 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all">
+                                            
+                                            <div class="action-divider"></div>
+                                            
+                                            <a href="/view_report/{{ item.id }}" class="action-btn-item btn-view-color" title="View Report">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                 </svg>
                                             </a>
-                                            <div class="w-[2px] h-6 bg-slate-100 mx-1"></div>
-                                            <a href="/view_tag/{{ item.id }}" title="View Digital Tag" class="save-scroll p-2.5 text-amber-500 hover:bg-amber-50 rounded-xl transition-all">
+                                            
+                                            <div class="action-divider"></div>
+                                            
+                                            <a href="/view_tag/{{ item.id }}" class="action-btn-item btn-tag-color" title="Digital Tag">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                                                 </svg>
@@ -269,12 +364,12 @@
                                         </div>
                                         
                                         <div class="flex gap-2">
-                                            <a href="/edit/{{ item.id }}" class="save-scroll p-3 bg-blue-50 text-blue-600 rounded-2xl hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+                                            <a href="/edit/{{ item.id }}" class="edit-btn-style shadow-sm" title="Edit">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                 </svg>
                                             </a>
-                                            <button type="button" onclick="confirmSingleDelete('{{ item.id }}')" class="p-3 bg-rose-50 text-rose-600 rounded-2xl hover:bg-rose-600 hover:text-white transition-all shadow-sm">
+                                            <button type="button" onclick="confirmSingleDelete('{{ item.id }}')" class="delete-btn-style shadow-sm" title="Delete">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                 </svg>
@@ -288,98 +383,32 @@
                     </table>
                 </form>
             </div>
-            
-            <form id="singleDeleteForm" action="/delete_bulk" method="POST" style="display: none;">
-                <input type="hidden" name="selected_ids" id="singleDeleteId">
-            </form>
-
-            <div class="px-8 py-8 bg-slate-900 text-center">
-                <p class="text-[11px] font-black text-blue-400 uppercase tracking-[0.4em] italic">
-                    🚀 G7 Aerospace Digital Maintenance System — 2026 Edition
-                </p>
-            </div>
         </div>
     </main>
 
     <div id="qrModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-[3rem] shadow-[0_0_50px_rgba(59,130,246,0.3)] w-[95%] max-w-md overflow-hidden transform transition-all scale-95 opacity-0 border-4 border-blue-600" id="modalContent">
+        <div class="bg-white rounded-[3rem] w-[95%] max-w-md overflow-hidden transform transition-all scale-95 opacity-0 border-4 border-blue-600" id="modalContent">
             <div class="p-10 text-center">
                 <h3 id="t-modal-title" class="text-blue-900 font-black italic uppercase tracking-tighter text-3xl mb-2">QR Digital Tag</h3>
                 <p class="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-8">Asset Serial Number: <span id="modalSN" class="text-blue-600">---</span></p>
-                
                 <div class="bg-gradient-to-br from-blue-50 to-white p-6 rounded-[2.5rem] border-2 border-blue-100 inline-block mb-10 shadow-inner">
                     <div id="qrcode" class="flex justify-center p-3 bg-white rounded-2xl"></div>
                 </div>
-
-                <a id="downloadLink" href="#" class="no-print w-full bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-200 transition-all uppercase tracking-[0.2em] text-xs mb-5 flex items-center justify-center no-underline">
-                    Cetakan QR Tag
-                </a>
-                <button onclick="closeQR()" id="t-modal-close" class="no-print text-slate-400 hover:text-rose-500 font-black uppercase tracking-widest text-[11px] transition-colors flex items-center justify-center w-full gap-2">
-                    ✖ Tutup Paparan
-                </button>
+                <a id="downloadLink" href="#" class="no-print w-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-black py-5 rounded-2xl flex items-center justify-center no-underline">Cetakan QR Tag</a>
+                <button onclick="closeQR()" class="no-print text-slate-400 hover:text-rose-500 font-black uppercase tracking-widest text-[11px] mt-4">✖ Tutup Paparan</button>
             </div>
         </div>
     </div>
 
     <script>
-        // --- TRANSLATION SYSTEM ---
         const translations = {
-            ms: {
-                navMain: "Log Utama",
-                navLogout: "Keluar",
-                importTitle: "Bulk Import Excel (2022-2025)",
-                btnProcess: "Proses & Masuk Database",
-                btnProcessing: "Memproses...",
-                consoleTitle: "Management Console",
-                dbLive: "Supabase Database Live",
-                records: "Rekod",
-                btnDelete: "Padam Pilihan 🗑️",
-                btnPdf: "Ringkasan Laporan (PDF) 📄",
-                btnExcel: "Eksport Excel 📗",
-                searchPlaceholder: "Cari Peralatan, SN atau Kerosakan...",
-                thAsset: "Butiran Aset",
-                thDefect: "Kerosakan & Catatan",
-                thTimeline: "Garis Masa",
-                thStatus: "Status & Remark",
-                thActions: "Tindakan",
-                modalTitle: "Tag Digital QR",
-                modalPrint: "Cetakan QR Tag",
-                modalClose: "✖ Tutup Paparan",
-                alertSelect: "Sila pilih sekurang-kurangnya satu rekod untuk dipadam.",
-                confirmBulk: "Adakah tuan pasti nak padam {count} rekod yang dipilih?",
-                confirmSingle: "Adakah anda pasti mahu memadam rekod ini?"
-            },
-            en: {
-                navMain: "Main Log",
-                navLogout: "Logout",
-                importTitle: "Bulk Import Excel (2022-2025)",
-                btnProcess: "Process & Import Database",
-                btnProcessing: "Processing...",
-                consoleTitle: "Management Console",
-                dbLive: "Supabase Database Live",
-                records: "Records",
-                btnDelete: "Delete Selected 🗑️",
-                btnPdf: "Full Report Summary (PDF) 📄",
-                btnExcel: "Export Excel 📗",
-                searchPlaceholder: "Search Equipment, SN or Defect...",
-                thAsset: "Asset Detail",
-                thDefect: "Defect & Remarks",
-                thTimeline: "Timeline",
-                thStatus: "Status & Remark",
-                thActions: "Actions",
-                modalTitle: "QR Digital Tag",
-                modalPrint: "Print QR Tag",
-                modalClose: "✖ Close Preview",
-                alertSelect: "Please select at least one record to delete.",
-                confirmBulk: "Are you sure you want to delete {count} selected records?",
-                confirmSingle: "Are you sure you want to delete this record?"
-            }
+            ms: { navMain: "Log Utama", navLogout: "Keluar", importTitle: "Bulk Import Excel (2022-2025)", btnProcess: "Proses & Masuk Database", btnProcessing: "Memproses...", consoleTitle: "Management Console", dbLive: "Supabase Database Live", records: "Rekod", btnDelete: "Padam Pilihan 🗑️", btnPdf: "Ringkasan Laporan (PDF) 📄", btnExcel: "Eksport Excel 📗", searchPlaceholder: "Cari Peralatan, SN atau Kerosakan...", thAsset: "Butiran Aset", thDefect: "Kerosakan & Catatan", thTimeline: "Garis Masa", thStatus: "Status & Remark", thActions: "Tindakan", modalTitle: "Tag Digital QR", modalPrint: "Cetakan QR Tag", modalClose: "✖ Tutup Paparan", alertSelect: "Sila pilih sekurang-kurangnya satu rekod untuk dipadam.", confirmBulk: "Adakah tuan pasti nak padam {count} rekod yang dipilih?", confirmSingle: "Adakah anda pasti mahu memadam rekod ini?" },
+            en: { navMain: "Main Log", navLogout: "Logout", importTitle: "Bulk Import Excel (2022-2025)", btnProcess: "Process & Import Database", btnProcessing: "Processing...", consoleTitle: "Management Console", dbLive: "Supabase Database Live", records: "Records", btnDelete: "Delete Selected 🗑️", btnPdf: "Full Report Summary (PDF) 📄", btnExcel: "Export Excel 📗", searchPlaceholder: "Search Equipment, SN or Defect...", thAsset: "Asset Detail", thDefect: "Defect & Remarks", thTimeline: "Timeline", thStatus: "Status & Remark", thActions: "Actions", modalTitle: "QR Digital Tag", modalPrint: "Print QR Tag", modalClose: "✖ Close Preview", alertSelect: "Please select at least one record to delete.", confirmBulk: "Are you sure you want to delete {count} selected records?", confirmSingle: "Are you sure you want to delete this record?" }
         };
 
         function changeLanguage(lang) {
             localStorage.setItem('g7_lang', lang);
             const t = translations[lang];
-
             document.getElementById('t-nav-main').innerText = t.navMain;
             document.getElementById('t-nav-logout').innerText = t.navLogout;
             document.getElementById('t-import-title').innerText = t.importTitle;
@@ -398,8 +427,6 @@
             document.getElementById('th-actions').innerText = t.thActions;
             document.getElementById('t-modal-title').innerText = t.modalTitle;
             document.getElementById('downloadLink').innerText = t.modalPrint;
-            document.getElementById('t-modal-close').innerText = t.modalClose;
-
             document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('btn-' + lang).classList.add('active');
         }
@@ -407,98 +434,58 @@
         const savedLang = localStorage.getItem('g7_lang') || 'ms';
         document.addEventListener('DOMContentLoaded', () => changeLanguage(savedLang));
 
-        // --- FILTER FUNCTION ---
         function filterTable() {
             let searchInput = document.getElementById("searchInput").value.toUpperCase();
             let statusInput = document.getElementById("statusFilter").value.toUpperCase();
-            let table = document.getElementById("maintenanceTable");
-            let tr = table.getElementsByTagName("tr");
-
+            let tr = document.getElementById("maintenanceTable").getElementsByTagName("tr");
             for (let i = 1; i < tr.length; i++) {
                 let name = tr[i].getElementsByClassName("row-name")[0];
                 let sn = tr[i].getElementsByClassName("row-sn")[0];
-                let defect = tr[i].getElementsByClassName("row-defect")[0];
                 let badge = tr[i].getElementsByClassName("status-badge")[0];
-
-                if (name || sn || defect || badge) {
-                    let txtValue = (name.textContent || name.innerText) + 
-                                   (sn.textContent || sn.innerText) + 
-                                   (defect.textContent || defect.innerText);
-                    let statusValue = (badge.textContent || badge.innerText).trim().toUpperCase();
-
-                    let matchesSearch = txtValue.toUpperCase().indexOf(searchInput) > -1;
-                    let matchesStatus = statusInput === "" || statusValue === statusInput || statusValue.includes(statusInput.replace(/[^A-Z]/g, ''));
-
-                    tr[i].style.display = (matchesSearch && matchesStatus) ? "" : "none";
+                if (name || sn || badge) {
+                    let txt = (name.innerText + sn.innerText).toUpperCase();
+                    let st = (badge.innerText).toUpperCase();
+                    tr[i].style.display = (txt.includes(searchInput) && (statusInput === "" || st.includes(statusInput))) ? "" : "none";
                 }
             }
         }
 
         function confirmSingleDelete(id) {
-            const lang = localStorage.getItem('g7_lang') || 'ms';
-            if (confirm(translations[lang].confirmSingle)) {
-                const input = document.getElementById('singleDeleteId');
-                input.value = id;
-                document.getElementById('singleDeleteForm').submit();
+            if (confirm(translations[localStorage.getItem('g7_lang') || 'ms'].confirmSingle)) {
+                const f = document.createElement('form'); f.method = 'POST'; f.action = '/delete_bulk';
+                const i = document.createElement('input'); i.type = 'hidden'; i.name = 'selected_ids'; i.value = id;
+                f.appendChild(i); document.body.appendChild(f); f.submit();
             }
         }
 
         function showLoading(form) {
-            const lang = localStorage.getItem('g7_lang') || 'ms';
             const btn = document.getElementById('importBtn');
-            const btnText = document.getElementById('btnText');
             btn.disabled = true;
-            btn.classList.add('opacity-75', 'cursor-not-allowed');
-            btnText.innerHTML = `<span class="loader"></span> ${translations[lang].btnProcessing}`;
+            document.getElementById('btnText').innerHTML = `<span class="loader"></span> Processing...`;
         }
 
         document.getElementById('selectAll').addEventListener('change', function() {
-            const checkboxes = document.querySelectorAll('.item-checkbox');
-            checkboxes.forEach(cb => cb.checked = this.checked);
+            document.querySelectorAll('.item-checkbox').forEach(cb => cb.checked = this.checked);
         });
 
         function confirmBulkDelete() {
-            const lang = localStorage.getItem('g7_lang') || 'ms';
-            const selected = document.querySelectorAll('.item-checkbox:checked');
-            if (selected.length === 0) {
-                alert(translations[lang].alertSelect);
-                return;
-            }
-            let msg = translations[lang].confirmBulk.replace('{count}', selected.length);
-            if (confirm(msg)) {
-                document.getElementById('bulkDeleteForm').submit();
-            }
+            const sel = document.querySelectorAll('.item-checkbox:checked');
+            if (sel.length === 0) return alert("Sila pilih rekod!");
+            if (confirm(`Padam ${sel.length} rekod?`)) document.getElementById('bulkDeleteForm').submit();
         }
 
         function showQR(sn, link, id) {
-            const modal = document.getElementById('qrModal');
-            const content = document.getElementById('modalContent');
-            const qrContainer = document.getElementById('qrcode');
-            const downloadBtn = document.getElementById('downloadLink');
             document.getElementById('modalSN').innerText = sn;
-            downloadBtn.href = "/download_qr/" + id;
-            qrContainer.innerHTML = "";
-            new QRCode(qrContainer, {
-                text: link,
-                width: 200,
-                height: 200,
-                colorDark : "#1e3a8a",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
-            });
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                content.classList.remove('scale-95', 'opacity-0');
-                content.classList.add('scale-100', 'opacity-100');
-            }, 10);
+            document.getElementById('downloadLink').href = "/download_qr/" + id;
+            const q = document.getElementById('qrcode'); q.innerHTML = "";
+            new QRCode(q, { text: link, width: 200, height: 200 });
+            document.getElementById('qrModal').classList.remove('hidden');
+            setTimeout(() => { document.getElementById('modalContent').classList.add('scale-100', 'opacity-100'); }, 10);
         }
 
         function closeQR() {
-            const modal = document.getElementById('qrModal');
-            const content = document.getElementById('modalContent');
-            content.classList.remove('scale-100', 'opacity-100');
-            content.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => { modal.classList.add('hidden'); }, 200);
+            document.getElementById('modalContent').classList.remove('scale-100', 'opacity-100');
+            setTimeout(() => { document.getElementById('qrModal').classList.add('hidden'); }, 200);
         }
     </script>
 </body>
