@@ -28,6 +28,14 @@
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .table-sticky-first td:first-child, 
+        .table-sticky-first th:first-child {
+            position: sticky;
+            left: 0;
+            background-color: inherit;
+            z-index: 10;
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -47,7 +55,10 @@
                 </div>
             </div>
             <div class="flex gap-4">
-                <button onclick="window.location.reload()" class="bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-xl text-xs font-bold transition-all">
+                <a href="/" class="bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-xl text-xs font-bold transition-all no-underline text-white">
+                    BACK TO MAIN LOG
+                </a>
+                <button onclick="window.location.reload()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-500/20">
                     REFRESH DATA
                 </button>
             </div>
@@ -57,8 +68,11 @@
     <main class="max-w-[1700px] mx-auto p-6 lg:p-10">
         
         <div class="mb-10">
-            <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight">Executive Dashboard</h2>
-            <p class="text-slate-500 font-medium">Laporan status komponen dan ringkasan tahunan merentas pangkalan data.</p>
+            <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight italic uppercase">Executive Dashboard</h2>
+            <div class="flex items-center gap-2 mt-1">
+                <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                <p class="text-slate-500 font-medium text-sm uppercase tracking-wider">Laporan Status Komponen Bersepadu (2022 - 2026)</p>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
@@ -66,14 +80,14 @@
             <div class="lg:col-span-5 bg-white rounded-3xl card-shadow border border-slate-200 overflow-hidden flex flex-col">
                 <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                     <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest italic">Status Breakdown</h3>
-                    <span class="bg-blue-100 text-blue-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase">Real-time</span>
+                    <span class="bg-blue-100 text-blue-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-tighter">Live Database</span>
                 </div>
                 
                 <div class="overflow-x-auto flex-grow p-4">
-                    <table class="w-full text-left border-separate border-spacing-y-2">
+                    <table class="w-full text-left border-separate border-spacing-y-2 table-sticky-first">
                         <thead>
                             <tr class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                                <th class="px-4 py-2">Category Status</th>
+                                <th class="px-4 py-2 bg-white">Category Status</th>
                                 {% for year in sorted_years %}
                                 <th class="px-4 py-2 text-center bg-slate-100/50 rounded-t-lg">CY {{ year }}</th>
                                 {% endfor %}
@@ -82,130 +96,167 @@
                         <tbody class="text-xs">
                             {% for status in status_list %}
                             <tr class="group hover:bg-blue-50/50 transition-all">
-                                <td class="px-4 py-3 font-bold text-slate-700 border-l-4 border-transparent group-hover:border-blue-500 transition-all rounded-r-lg">
+                                <td class="px-4 py-3 font-bold text-slate-700 border-l-4 border-transparent group-hover:border-blue-500 transition-all rounded-r-lg bg-white group-hover:bg-blue-50/50">
                                     {{ status }}
                                 </td>
                                 {% for year in sorted_years %}
-                                <td class="px-4 py-3 text-center font-mono font-bold text-slate-500">
-                                    {{ summary_data.get(status, {}).get(year, 0) or '-' }}
+                                <td class="px-4 py-3 text-center font-mono font-bold text-slate-600">
+                                    {{ summary_data.get(status, {}).get(year, 0) if summary_data.get(status, {}).get(year, 0) > 0 else '-' }}
                                 </td>
                                 {% endfor %}
                             </tr>
                             {% endfor %}
                         </tbody>
                         <tfoot>
-                            <tr class="bg-slate-900 text-white rounded-2xl overflow-hidden">
-                                <td class="px-4 py-4 font-black rounded-l-2xl">ANNUAL TOTAL</td>
+                            <tr class="bg-slate-900 text-white">
+                                <td class="px-4 py-4 font-black rounded-l-2xl uppercase italic text-[10px] tracking-widest">Annual Total</td>
+                                {% set grand_total = namespace(value=0) %}
                                 {% for year in sorted_years %}
-                                <td class="px-4 py-4 text-center font-black text-blue-400 rounded-r-2xl">
-                                    {% set total_year = namespace(value=0) %}
-                                    {% for s in status_list %}
-                                        {% set total_year.value = total_year.value + summary_data.get(s, {}).get(year, 0) %}
-                                    {% endfor %}
-                                    {{ total_year.value }}
-                                </td>
+                                    <td class="px-4 py-4 text-center font-black text-blue-400">
+                                        {% set total_year = namespace(value=0) %}
+                                        {% for s in status_list %}
+                                            {% set count = summary_data.get(s, {}).get(year, 0) %}
+                                            {% set total_year.value = total_year.value + count %}
+                                        {% endfor %}
+                                        {% set grand_total.value = grand_total.value + total_year.value %}
+                                        {{ total_year.value }}
+                                    </td>
                                 {% endfor %}
+                            </tr>
+                            <tr class="bg-blue-600 text-white">
+                                <td class="px-4 py-3 font-black rounded-bl-2xl uppercase italic text-[10px]">Grand Total</td>
+                                <td colspan="{{ sorted_years|length }}" class="px-4 py-3 text-right font-black text-lg pr-8 rounded-br-2xl tracking-tighter italic">
+                                    {{ grand_total.value }} <span class="text-xs font-normal opacity-80 uppercase ml-1">Units Managed</span>
+                                </td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
             </div>
 
-            <div class="lg:col-span-7 bg-white rounded-3xl card-shadow border border-slate-200 p-8">
+            <div class="lg:col-span-7 bg-white rounded-3xl card-shadow border border-slate-200 p-8 flex flex-col">
                 <div class="flex flex-col mb-8">
                     <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest italic">Performance Visualization</h3>
-                    <p class="text-xs text-slate-400 mt-1">Perbandingan data unit mengikut status tahunan.</p>
+                    <p class="text-xs text-slate-400 mt-1 uppercase font-bold tracking-tight">Perbandingan Volumetri Status Mengikut Kitaran Tahun</p>
                 </div>
-                <div class="relative h-[450px]">
+                <div class="relative flex-grow min-h-[400px]">
                     <canvas id="statusChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <div class="bg-slate-900 rounded-3xl p-8 text-white flex justify-between items-center shadow-2xl shadow-blue-900/20">
-            <div>
-                <h4 class="text-xl font-bold italic tracking-tighter">MASTER DATA LOGS</h4>
-                <p class="text-slate-400 text-sm">Lihat butiran penuh setiap rekod peralatan di bawah.</p>
+        <div class="bg-slate-900 rounded-3xl p-8 text-white flex flex-col md:flex-row justify-between items-center shadow-2xl shadow-blue-900/20 border border-white/5">
+            <div class="mb-4 md:mb-0 text-center md:text-left">
+                <h4 class="text-xl font-black italic tracking-tighter uppercase">Master Data Logs Repository</h4>
+                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Audit trail dan butiran teknikal penuh peralatan</p>
             </div>
-            <button onclick="document.getElementById('master-section').scrollIntoView({behavior: 'smooth'})" class="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-2xl font-bold text-xs tracking-widest transition-all">
-                VIEW TABLE
+            <button onclick="document.getElementById('master-section').scrollIntoView({behavior: 'smooth'})" class="group bg-blue-600 hover:bg-white hover:text-blue-600 px-8 py-4 rounded-2xl font-black text-xs tracking-[0.2em] transition-all flex items-center gap-3">
+                VIEW FULL DATABASE
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 group-hover:translate-y-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+                </svg>
             </button>
         </div>
 
-        <div id="master-section" class="mt-10 min-h-[200px]">
-            {% include 'admin_table_content.html' %} 
+        <div id="master-section" class="mt-10 min-h-[400px] bg-white rounded-3xl card-shadow border border-slate-200 overflow-hidden">
+            <div class="p-4">
+                {% include 'admin_table_content.html' %} 
+            </div>
         </div>
     </main>
 
     <script>
-        const ctx = document.getElementById('statusChart').getContext('2d');
-        
-        // Custom Gradient for Chart
-        const gradient1 = ctx.createLinearGradient(0, 0, 0, 400);
-        gradient1.addColorStop(0, '#3b82f6');
-        gradient1.addColorStop(1, '#1d4ed8');
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('statusChart').getContext('2d');
+            
+            // Generate Gradients
+            const createGradient = (color1, color2) => {
+                const g = ctx.createLinearGradient(0, 0, 0, 400);
+                g.addColorStop(0, color1);
+                g.addColorStop(1, color2);
+                return g;
+            };
 
-        const gradient2 = ctx.createLinearGradient(0, 0, 0, 400);
-        gradient2.addColorStop(0, '#10b981');
-        gradient2.addColorStop(1, '#059669');
+            const colors = [
+                { main: '#3b82f6', light: '#60a5fa' }, // Blue
+                { main: '#10b981', light: '#34d399' }, // Green
+                { main: '#f59e0b', light: '#fbbf24' }, // Orange
+                { main: '#6366f1', light: '#818cf8' }, // Indigo
+                { main: '#f43f5e', light: '#fb7185' }  // Rose
+            ];
 
-        const labels = {{ status_list|tojson }};
-        const years = {{ sorted_years|tojson }};
-        const summaryData = {{ summary_data|tojson }};
+            const labels = {{ status_list|tojson }};
+            const years = {{ sorted_years|tojson }};
+            const summaryData = {{ summary_data|tojson }};
 
-        const datasets = years.map((year, index) => {
-            const palette = [gradient1, gradient2, '#f59e0b', '#ef4444'];
-            return {
-                label: 'CY ' + year,
-                data: labels.map(s => (summaryData[s] && summaryData[s][year]) ? summaryData[s][year] : 0),
-                backgroundColor: palette[index % palette.length],
-                borderRadius: 8,
-                barThickness: 20,
-            }
-        });
+            const datasets = years.map((year, index) => {
+                const colorSet = colors[index % colors.length];
+                return {
+                    label: 'CY ' + year,
+                    data: labels.map(s => (summaryData[s] && summaryData[s][year]) ? summaryData[s][year] : 0),
+                    backgroundColor: createGradient(colorSet.main, colorSet.light),
+                    hoverBackgroundColor: colorSet.main,
+                    borderRadius: 6,
+                    barThickness: 'flex',
+                    maxBarThickness: 30,
+                    categoryPercentage: 0.8,
+                    barPercentage: 0.9
+                }
+            });
 
-        new Chart(ctx, {
-            type: 'bar',
-            data: { labels: labels, datasets: datasets },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        align: 'end',
-                        labels: {
+            new Chart(ctx, {
+                type: 'bar',
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: { size: 10, weight: '800', family: 'Plus Jakarta Sans' },
+                                padding: 25,
+                                color: '#64748b'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#0f172a',
+                            padding: 15,
+                            cornerRadius: 12,
+                            titleFont: { size: 14, weight: '800' },
+                            bodyFont: { size: 12 },
                             usePointStyle: true,
-                            pointStyle: 'circle',
-                            font: { size: 11, weight: 'bold', family: 'Plus Jakarta Sans' },
-                            padding: 20
+                            callbacks: {
+                                label: (context) => ` ${context.dataset.label}: ${context.raw} Units`
+                            }
                         }
                     },
-                    tooltip: {
-                        backgroundColor: '#0f172a',
-                        titleFont: { size: 13, weight: 'bold' },
-                        padding: 12,
-                        cornerRadius: 10,
-                        displayColors: true
-                    }
-                },
-                scales: {
-                    y: {
-                        grid: { display: true, color: '#f1f5f9' },
-                        ticks: { font: { weight: 'bold' }, color: '#94a3b8' }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { 
-                            font: { weight: 'bold', size: 10 }, 
-                            color: '#64748b',
-                            autoSkip: false,
-                            maxRotation: 45,
-                            minRotation: 45
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#f1f5f9', drawBorder: false },
+                            ticks: { 
+                                font: { weight: '700', size: 11 }, 
+                                color: '#94a3b8',
+                                padding: 10
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { 
+                                font: { weight: '800', size: 9 }, 
+                                color: '#475569',
+                                autoSkip: false,
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
                         }
                     }
                 }
-            }
+            });
         });
     </script>
 </body>

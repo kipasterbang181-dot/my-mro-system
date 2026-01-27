@@ -17,7 +17,8 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 
 # --- DATABASE CONFIG ---
-DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
+# Gunakan env var jika ada, jika tidak guna URL yang anda berikan
+DB_URL = os.environ.get("DATABASE_URL", "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require")
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -40,6 +41,7 @@ class RepairLog(db.Model):
     pic = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.now)
 
+# Initialize database
 with app.app_context():
     db.create_all()
 
@@ -74,6 +76,8 @@ def admin():
         return redirect(url_for('login', next=request.path))
     return render_template('admin.html')
 
+# --- DASHBOARD & SUMMARY TABLE ROUTE ---
+@app.route('/summary')
 @app.route('/admin/table')
 def admin_table():
     if not session.get('admin'): 
@@ -83,33 +87,56 @@ def admin_table():
 
     # --- LOGIK RINGKASAN DATA (UNTUK DASHBOARD) ---
     summary_data = {}
-    years = set()
+    years_found = set()
+    
+    # Senarai status mengikut keperluan imej Excel anda
     status_list = [
-        'SERVICEABLE', 'RETURN SERVICEABLE', 'RETURN UNSERVICEABLE', 'WAITING LO', 
-        'OV REPAIR', 'UNDER REPAIR', 'AWAITING SPARE', 'SPARE READY',
-        'WARRANTY REPAIR', 'QUOTE SUBMITTED', 'TDI IN PROGRESS', 
-        'TDI TO REVIEW', 'TDI READY TO QUOTE', 'READY TO DELIVERED WARRANTY'
+        'SERVICEABLE', 
+        'RETURN SERVICEABLE', 
+        'RETURN UNSERVICEABLE', 
+        'WAITING LO', 
+        'OV REPAIR', 
+        'UNDER REPAIR', 
+        'AWAITING SPARE', 
+        'SPARE READY',
+        'WARRANTY REPAIR', 
+        'QUOTE SUBMITTED', 
+        'TDI IN PROGRESS', 
+        'TDI TO REVIEW', 
+        'TDI READY TO QUOTE', 
+        'READY TO DELIVERED WARRANTY'
     ]
 
     for l in logs:
         try:
-            # Ambil 4 digit pertama dari date_in (Tahun)
-            year = l.date_in[:4] if l.date_in and len(l.date_in) >= 4 else "N/A"
-            if year.isdigit():
-                years.add(year)
+            # Ekstrak tahun dari date_in (format YYYY-MM-DD)
+            # Ambil 4 digit pertama
+            raw_date = str(l.date_in)
+            year = raw_date[:4] if raw_date and len(raw_date) >= 4 else None
             
-            st = l.status_type.upper() if l.status_type else "UNKNOWN"
-            
-            if st not in summary_data:
-                summary_data[st] = {}
-            
-            summary_data[st][year] = summary_data[st].get(year, 0) + 1
-        except:
+            if year and year.isdigit():
+                years_found.add(year)
+                
+                # Standarisasi status ke UPPERCASE
+                st = l.status_type.upper().strip() if l.status_type else "UNKNOWN"
+                
+                if st not in summary_data:
+                    summary_data[st] = {}
+                
+                # Tambah kiraan bagi status dan tahun tersebut
+                summary_data[st][year] = summary_data[st].get(year, 0) + 1
+        except Exception as e:
+            print(f"Error processing log {l.id}: {e}")
             continue
 
-    sorted_years = sorted(list(years))
+    # Susun tahun secara menaik (2022, 2023, ...)
+    sorted_years = sorted(list(years_found))
     
-    return render_template('admin_table.html', 
+    # Jika database kosong, letakkan tahun semasa agar chart tidak ralat
+    if not sorted_years:
+        sorted_years = [str(datetime.now().year)]
+
+    return render_template('summary.html', 
                            logs=logs, 
                            summary_data=summary_data, 
                            sorted_years=sorted_years, 
