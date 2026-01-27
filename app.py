@@ -100,7 +100,6 @@ def admin():
             "READY TO DELIVERED WARRANTY", "READY TO QUOTE", "READY TO DELIVERED"
         ]
 
-        # Ambil status tambahan yang mungkin ada dalam DB tapi tiada dalam list manual
         db_statuses = db.session.query(RepairLog.status_type).distinct().all()
         for s in db_statuses:
             if s[0]:
@@ -130,11 +129,9 @@ def admin():
                     column_totals[year_key] += 1
                     grand_total += 1
                 elif year_key in years:
-                    # Jika status baru, tetap kira dalam column totals
                     column_totals[year_key] += 1
                     grand_total += 1
 
-        # Baiki rujukan data untuk template
         stats_data = column_totals 
 
         return render_template('admin.html', 
@@ -253,11 +250,19 @@ def import_excel():
         df = pd.read_excel(file)
         df.columns = [str(c).strip().upper() for c in df.columns]
         logs_to_add = []
+        
         for _, row in df.iterrows():
-            # Logik tarikh yang lebih selamat
-            d_in = pd.to_datetime(row.get('DATE IN')).date() if pd.notnull(row.get('DATE IN')) else datetime.now().date()
-            d_out = pd.to_datetime(row.get('DATE OUT')).date() if pd.notnull(row.get('DATE OUT')) else None
-            
+            # Pengendalian ralat tarikh untuk elakkan proses 'hang'
+            try:
+                raw_in = row.get('DATE IN')
+                d_in = pd.to_datetime(raw_in).date() if pd.notnull(raw_in) else datetime.now().date()
+                
+                raw_out = row.get('DATE OUT')
+                d_out = pd.to_datetime(raw_out).date() if pd.notnull(raw_out) else None
+            except:
+                d_in = datetime.now().date()
+                d_out = None
+
             new_log = RepairLog(
                 drn=str(row.get('DRN', 'N/A')).upper(),
                 peralatan=str(row.get('PERALATAN', 'N/A')).upper(),
@@ -270,11 +275,19 @@ def import_excel():
                 defect=str(row.get('DEFECT', 'N/A')).upper()
             )
             logs_to_add.append(new_log)
+        
+        # Gunakan chunking (pecahkan data) untuk elak sangkut di 80%
         if logs_to_add:
-            db.session.bulk_save_objects(logs_to_add)
-            db.session.commit()
+            chunk_size = 50 
+            for i in range(0, len(logs_to_add), chunk_size):
+                batch = logs_to_add[i:i + chunk_size]
+                db.session.bulk_save_objects(batch)
+                db.session.commit() # Simpan sikit-sikit ke database
+                
+        flash(f"Berjaya import {len(logs_to_add)} data.", "success")
         return redirect(url_for('admin'))
     except Exception as e:
+        db.session.rollback()
         return f"Excel Import Error: {str(e)}"
 
 @app.route('/view_tag/<int:id>')
