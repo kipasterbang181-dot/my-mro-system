@@ -169,7 +169,6 @@
         document.addEventListener('DOMContentLoaded', function() {
             const ctx = document.getElementById('statusChart').getContext('2d');
             
-            // Generate Gradients
             const createGradient = (color1, color2) => {
                 const g = ctx.createLinearGradient(0, 0, 0, 400);
                 g.addColorStop(0, color1);
