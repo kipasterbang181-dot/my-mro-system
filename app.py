@@ -74,16 +74,24 @@ def admin():
     # Ambil data dari database
     logs_raw = RepairLog.query.order_by(RepairLog.id.desc()).all()
     
-    # PROSES PEMBERSIHAN DATA (Untuk elak Error 500 di admin.html)
-    # Ini memastikan jika data kosong (None), ia diganti dengan string "N/A" supaya Jinja2 tak ralat
+    # PROSES PEMBERSIHAN DATA SECARA TOTAL (Convert to List of Dict)
+    # Ini memastikan admin.html menerima data yang "suci" dari NoneType
+    cleaned_logs = []
     for log in logs_raw:
-        if log.status_type is None: log.status_type = "N/A"
-        if log.date_in is None: log.date_in = ""
-        if log.peralatan is None: log.peralatan = "N/A"
-        if log.pn is None: log.pn = "N/A"
-        if log.sn is None: log.sn = "N/A"
+        cleaned_logs.append({
+            'id': log.id,
+            'drn': log.drn or "N/A",
+            'peralatan': log.peralatan or "N/A",
+            'pn': log.pn or "N/A",
+            'sn': log.sn or "N/A",
+            'date_in': str(log.date_in) if log.date_in else "",
+            'date_out': str(log.date_out) if log.date_out else "-",
+            'defect': log.defect or "N/A",
+            'status_type': str(log.status_type or "ACTIVE").strip().upper(),
+            'pic': log.pic or "N/A"
+        })
 
-    return render_template('admin.html', logs=logs_raw)
+    return render_template('admin.html', logs=cleaned_logs)
 
 # --- BAHAGIAN HISTORY ---
 @app.route('/history/<sn>')
