@@ -86,7 +86,10 @@
                     <p class="text-slate-600 text-[10px] font-bold uppercase tracking-[0.2em]"><span id="t-db-live">Supabase Database Live</span> 🚀 ({{ logs|length }} <span id="t-records">Rekod</span>)</p>
                 </div>
             </div>
-            <div class="flex gap-3">
+            <div class="flex flex-wrap gap-3">
+                <a href="/admin_table" id="t-btn-admin" class="bg-orange-500 text-white px-6 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-orange-600 transition-all shadow-sm flex items-center gap-2 italic no-underline">
+                    Summary Table 📊
+                </a>
                 <button onclick="confirmBulkDelete()" id="t-btn-delete" class="bg-rose-600 text-white px-6 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-rose-700 transition-all shadow-sm">
                     Delete Selected 🗑️
                 </button>
@@ -272,7 +275,6 @@
     </div>
 
     <script>
-        // --- TRANSLATION SYSTEM ---
         const translations = {
             ms: {
                 navMain: "Log Utama",
@@ -283,6 +285,7 @@
                 consoleTitle: "Management Console",
                 dbLive: "Supabase Database Live",
                 records: "Rekod",
+                btnAdmin: "Summary Table 📊",
                 btnDelete: "Padam Pilihan 🗑️",
                 btnPdf: "Ringkasan Laporan (PDF) 📄",
                 btnExcel: "Eksport Excel 📗",
@@ -308,6 +311,7 @@
                 consoleTitle: "Management Console",
                 dbLive: "Supabase Database Live",
                 records: "Records",
+                btnAdmin: "Summary Table 📊",
                 btnDelete: "Delete Selected 🗑️",
                 btnPdf: "Full Report Summary (PDF) 📄",
                 btnExcel: "Export Excel 📗",
@@ -337,6 +341,7 @@
             document.getElementById('t-console-title').innerText = t.consoleTitle;
             document.getElementById('t-db-live').innerText = t.dbLive;
             document.getElementById('t-records').innerText = t.records;
+            document.getElementById('t-btn-admin').innerHTML = t.btnAdmin;
             document.getElementById('t-btn-delete').innerHTML = t.btnDelete;
             document.getElementById('t-btn-pdf').innerHTML = t.btnPdf;
             document.getElementById('t-btn-excel').innerHTML = t.btnExcel;
@@ -357,7 +362,6 @@
         const savedLang = localStorage.getItem('g7_lang') || 'ms';
         document.addEventListener('DOMContentLoaded', () => changeLanguage(savedLang));
 
-        // --- FILTER FUNCTION (TEXT SEARCH + DROPDOWN STATUS) ---
         function filterTable() {
             let searchInput = document.getElementById("searchInput").value.toUpperCase();
             let statusInput = document.getElementById("statusFilter").value.toUpperCase();
