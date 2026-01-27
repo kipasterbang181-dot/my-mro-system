@@ -37,26 +37,6 @@
             background-color: #3b82f6;
             color: white;
         }
-
-        /* Pagination Styles */
-        .pagination-btn {
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 11px;
-            font-weight: 800;
-            text-transform: uppercase;
-            transition: all 0.2s;
-            border: 1px solid #e2e8f0;
-        }
-        .pagination-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .pagination-btn.active {
-            background-color: #1e293b;
-            color: white;
-            border-color: #1e293b;
-        }
     </style>
 </head>
 <body class="bg-[#f8fafc] min-h-screen">
@@ -119,14 +99,27 @@
             </div>
         </div>
 
-        <div class="mb-6 relative group">
-            <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+        <div class="mb-6 flex flex-col md:flex-row gap-4">
+            <div class="relative flex-1 group">
+                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                    <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search Equipment, SN or Defect..." 
+                    class="w-full bg-white border-2 border-slate-200 rounded-2xl py-4 pl-12 pr-6 text-sm font-semibold text-slate-800 focus:border-blue-500 outline-none transition-all shadow-sm">
             </div>
-            <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search Equipment, SN or Defect..." 
-                class="w-full bg-white border-2 border-slate-200 rounded-2xl py-4 pl-12 pr-6 text-sm font-semibold text-slate-800 focus:border-blue-500 outline-none transition-all shadow-sm">
+            
+            <select id="statusFilter" onchange="filterTable()" class="bg-white border-2 border-slate-200 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 transition-all shadow-sm uppercase tracking-widest cursor-pointer">
+                <option value="">ALL STATUS</option>
+                <option value="SERVICEABLE">SERVICEABLE</option>
+                <option value="READY TO QUOTE">READY TO QUOTE</option>
+                <option value="READY TO DELIVERED">READY TO DELIVERED</option>
+                <option value="WARRANTY REPAIR">WARRANTY REPAIR</option>
+                <option value="TDI ON PROGRESS">TDI ON PROGRESS</option>
+                <option value="OV TDI">OV TDI</option>
+                <option value="RETURN TO AEROTREE">RETURN TO AEROTREE</option>
+            </select>
         </div>
 
         <div class="bg-white rounded-[1.5rem] shadow-sm border border-slate-200 overflow-hidden">
@@ -146,9 +139,9 @@
                                 <th id="th-actions" class="px-8 py-5 text-[10px] font-bold uppercase text-slate-600 tracking-widest text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100" id="tableBody">
+                        <tbody class="divide-y divide-slate-100">
                             {% for item in logs %}
-                            <tr class="table-row-hover group transition-colors table-row-item">
+                            <tr class="table-row-hover group transition-colors">
                                 <td class="px-6 py-6 text-center text-[11px] font-bold text-slate-400">
                                     {{ loop.index }}
                                 </td>
@@ -188,7 +181,7 @@
                                         <span class="text-[9px] font-black text-slate-400 mb-1 uppercase tracking-tighter">Remark: {{ item.pic if (item.pic and item.pic != 'nan') else 'N/A' }}</span>
                                         
                                         {% set s = item.status_type|upper|trim if item.status_type else '' %}
-                                        <span class="px-2.5 py-1 rounded text-[9px] font-black uppercase border 
+                                        <span class="status-badge px-2.5 py-1 rounded text-[9px] font-black uppercase border 
                                             {% if s == 'SERVICEABLE' %} 
                                                 bg-emerald-50 text-emerald-700 border-emerald-200
                                             {% elif s in ['READY TO QUOTE', 'READY TO DELIVERED', 'RETURN TO AEROTREE'] %} 
@@ -247,14 +240,6 @@
                     </table>
                 </form>
             </div>
-
-            <div class="flex flex-col md:flex-row justify-between items-center px-8 py-5 bg-white border-t border-slate-100 gap-4">
-                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                    <span id="t-showing">Showing</span> <span id="pageStart">0</span> - <span id="pageEnd">0</span> <span id="t-of">of</span> <span id="totalLogs">0</span>
-                </div>
-                <div class="flex gap-2" id="paginationControls">
-                    </div>
-            </div>
             
             <form id="singleDeleteForm" action="/delete_bulk" method="POST" style="display: none;">
                 <input type="hidden" name="selected_ids" id="singleDeleteId">
@@ -287,11 +272,6 @@
     </div>
 
     <script>
-        // --- PAGINATION SETTINGS ---
-        let currentPage = 1;
-        const recordsPerPage = 15;
-        let filteredRows = [];
-
         // --- TRANSLATION SYSTEM ---
         const translations = {
             ms: {
@@ -317,9 +297,7 @@
                 modalClose: "Tutup",
                 alertSelect: "Sila pilih sekurang-kurangnya satu rekod untuk dipadam.",
                 confirmBulk: "Adakah tuan pasti nak padam {count} rekod yang dipilih?",
-                confirmSingle: "Adakah anda pasti mahu memadam rekod ini?",
-                showing: "Memaparkan",
-                of: "daripada"
+                confirmSingle: "Adakah anda pasti mahu memadam rekod ini?"
             },
             en: {
                 navMain: "Main Log",
@@ -344,9 +322,7 @@
                 modalClose: "Close",
                 alertSelect: "Please select at least one record to delete.",
                 confirmBulk: "Are you sure you want to delete {count} selected records?",
-                confirmSingle: "Are you sure you want to delete this record?",
-                showing: "Showing",
-                of: "of"
+                confirmSingle: "Are you sure you want to delete this record?"
             }
         };
 
@@ -373,112 +349,43 @@
             document.getElementById('t-modal-title').innerText = t.modalTitle;
             document.getElementById('downloadLink').innerText = t.modalPrint;
             document.getElementById('t-modal-close').innerText = t.modalClose;
-            
-            // New pagination labels
-            document.getElementById('t-showing').innerText = t.showing;
-            document.getElementById('t-of').innerText = t.of;
 
             document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('btn-' + lang).classList.add('active');
         }
 
-        // --- PAGINATION LOGIC ---
-        function updatePagination() {
-            const totalRecords = filteredRows.length;
-            const totalPages = Math.ceil(totalRecords / recordsPerPage);
-            
-            if (currentPage > totalPages) currentPage = totalPages || 1;
+        const savedLang = localStorage.getItem('g7_lang') || 'ms';
+        document.addEventListener('DOMContentLoaded', () => changeLanguage(savedLang));
 
-            const start = (currentPage - 1) * recordsPerPage;
-            const end = start + recordsPerPage;
+        // --- FILTER FUNCTION (TEXT SEARCH + DROPDOWN STATUS) ---
+        function filterTable() {
+            let searchInput = document.getElementById("searchInput").value.toUpperCase();
+            let statusInput = document.getElementById("statusFilter").value.toUpperCase();
+            let table = document.getElementById("maintenanceTable");
+            let tr = table.getElementsByTagName("tr");
 
-            // Hide all rows first
-            const allRows = document.querySelectorAll('.table-row-item');
-            allRows.forEach(row => row.style.display = 'none');
+            for (let i = 1; i < tr.length; i++) {
+                let name = tr[i].getElementsByClassName("row-name")[0];
+                let sn = tr[i].getElementsByClassName("row-sn")[0];
+                let defect = tr[i].getElementsByClassName("row-defect")[0];
+                let badge = tr[i].getElementsByClassName("status-badge")[0];
 
-            // Show only rows for current page
-            filteredRows.slice(start, end).forEach(row => row.style.display = '');
+                if (name || sn || defect || badge) {
+                    let txtValue = (name.textContent || name.innerText) + 
+                                   (sn.textContent || sn.innerText) + 
+                                   (defect.textContent || defect.innerText);
+                    let statusValue = (badge.textContent || badge.innerText).trim().toUpperCase();
 
-            // Update UI Counters
-            document.getElementById('pageStart').innerText = totalRecords ? start + 1 : 0;
-            document.getElementById('pageEnd').innerText = Math.min(end, totalRecords);
-            document.getElementById('totalLogs').innerText = totalRecords;
+                    let matchesSearch = txtValue.toUpperCase().indexOf(searchInput) > -1;
+                    let matchesStatus = statusInput === "" || statusValue === statusInput;
 
-            renderPaginationButtons(totalPages);
-        }
-
-        function renderPaginationButtons(totalPages) {
-            const container = document.getElementById('paginationControls');
-            container.innerHTML = '';
-
-            if (totalPages <= 1) return;
-
-            // Prev Button
-            const prevBtn = document.createElement('button');
-            prevBtn.innerText = '←';
-            prevBtn.className = 'pagination-btn';
-            prevBtn.disabled = currentPage === 1;
-            prevBtn.onclick = () => { currentPage--; updatePagination(); };
-            container.appendChild(prevBtn);
-
-            // Page Numbers
-            for (let i = 1; i <= totalPages; i++) {
-                if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-                    const btn = document.createElement('button');
-                    btn.innerText = i;
-                    btn.className = `pagination-btn ${i === currentPage ? 'active' : ''}`;
-                    btn.onclick = () => { currentPage = i; updatePagination(); };
-                    container.appendChild(btn);
-                } else if (i === currentPage - 2 || i === currentPage + 2) {
-                    const dot = document.createElement('span');
-                    dot.innerText = '...';
-                    dot.className = 'px-2 text-slate-400';
-                    container.appendChild(dot);
+                    tr[i].style.display = (matchesSearch && matchesStatus) ? "" : "none";
                 }
             }
-
-            // Next Button
-            const nextBtn = document.createElement('button');
-            nextBtn.innerText = '→';
-            nextBtn.className = 'pagination-btn';
-            nextBtn.disabled = currentPage === totalPages;
-            nextBtn.onclick = () => { currentPage++; updatePagination(); };
-            container.appendChild(nextBtn);
         }
 
-        // --- ORIGINAL FUNCTIONS MODIFIED FOR PAGINATION ---
-        function searchTable() {
-            let input = document.getElementById("searchInput");
-            let filter = input.value.toUpperCase();
-            let allRows = Array.from(document.querySelectorAll('.table-row-item'));
-            
-            filteredRows = allRows.filter(row => {
-                let name = row.getElementsByClassName("row-name")[0];
-                let sn = row.getElementsByClassName("row-sn")[0];
-                let defect = row.getElementsByClassName("row-defect")[0];
-                let txt = (name.textContent || name.innerText) + 
-                          (sn.textContent || sn.innerText) + 
-                          (defect.textContent || defect.innerText);
-                return txt.toUpperCase().indexOf(filter) > -1;
-            });
-
-            currentPage = 1;
-            updatePagination();
-        }
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            const savedLang = localStorage.getItem('g7_lang') || 'ms';
-            changeLanguage(savedLang);
-            
-            // Initial load of rows
-            filteredRows = Array.from(document.querySelectorAll('.table-row-item'));
-            updatePagination();
-        });
-
-        // --- KEEP-ALIVE & UTILS ---
         setInterval(function() {
-            fetch('/').then(response => console.log('Keep-alive')).catch(err => console.log('Ping failed'));
+            fetch('/').then(response => console.log('Keep-alive ping sent')).catch(err => console.log('Ping failed'));
         }, 180000); 
 
         document.querySelectorAll('.save-scroll').forEach(element => {
