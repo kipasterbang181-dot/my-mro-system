@@ -7,17 +7,22 @@ from flask import Flask, render_template, request, redirect, url_for, session, s
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
-# Library Tambahan untuk PDF Report
+# ==========================================
+# LIBRARY TAMBAHAN UNTUK PDF REPORT
+# ==========================================
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 app = Flask(__name__)
+
+# Kunci rahsia untuk sesi login dan keselamatan Flash message
 app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 
-# --- DATABASE CONFIG ---
-# Menggunakan URL Supabase yang anda berikan
+# ==========================================
+# KONFIGURASI DATABASE (SUPABASE POSTGRES)
+# ==========================================
 DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -27,7 +32,9 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 }
 db = SQLAlchemy(app)
 
-# Model Database
+# ==========================================
+# MODEL DATABASE (REPAIR_LOG)
+# ==========================================
 class RepairLog(db.Model):
     __tablename__ = 'repair_log'
     id = db.Column(db.Integer, primary_key=True)
@@ -37,26 +44,30 @@ class RepairLog(db.Model):
     date_in = db.Column(db.String(50))
     date_out = db.Column(db.String(50))
     defect = db.Column(db.Text)
-    status_type = db.Column(db.String(50))
+    status_type = db.Column(db.String(50)) # REPAIR / WARRANTY / ACTIVE
     pic = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.now)
 
-# Bina table jika belum wujud
+# Memastikan table wujud dalam Supabase setiap kali app dijalankan
 with app.app_context():
     db.create_all()
 
-# --- ROUTES ---
+# ==========================================
+# LALUAN (ROUTES) SISTEM
+# ==========================================
 
 @app.route('/')
 def index():
+    """ Halaman utama untuk akses awam/import """
     return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    """ Sistem kawalan akses Admin """
     next_page = request.args.get('next')
     
     if request.method == 'POST':
-        # Logik Login: admin / password123
+        # Logik Login: Username (u) & Password (p) dari login.html
         if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
             session['admin'] = True
             
@@ -71,16 +82,16 @@ def login():
 
 @app.route('/admin')
 def admin():
+    """ Dashboard Pengurusan Data """
     if not session.get('admin'): 
         return redirect(url_for('login', next=request.path))
     
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
 
-    # Logik Summary untuk Jadual di Dashboard
+    # Pengiraan Ringkasan Unit mengikut Tahun (Jadual di Dashboard)
     summary_dict = {}
     for l in logs:
         if l.date_in:
-            # Memastikan format tarikh sesuai untuk diambil tahunnya
             try:
                 year = str(l.date_in)[:4]
                 if year.isdigit():
@@ -99,31 +110,33 @@ def admin():
 
 @app.route('/history/<sn>')
 def history(sn):
-    # Mengambil semua sejarah pergerakan berdasarkan Serial Number
-    logs = RepairLog.query.filter_by(sn=sn).order_by(RepairLog.date_in.asc()).all()
+    """ Paparan Sejarah Aset untuk kegunaan Scan QR """
+    logs = RepairLog.query.filter_by(sn=sn).order_by(RepairLog.date_in.desc()).all()
     asset_info = logs[0] if logs else None
     return render_template('history.html', logs=logs, asset=asset_info, sn=sn)
 
 @app.route('/view_report/<int:id>')
 def view_report(id):
+    """ Preview Maintenance Report sebelum print """
     if not session.get('admin'): return redirect(url_for('login', next=request.path))
     l = RepairLog.query.get_or_404(id)
     return render_template('view_report.html', l=l)
 
 @app.route('/incoming', methods=['GET', 'POST'])
 def incoming():
-    # Menambah sokongan GET untuk memaparkan borang jika perlu
+    """ Kemasukan Data Baru (Manual atau melalui AJAX) """
     if request.method == 'GET':
         return render_template('incoming.html')
         
     try:
+        # Mengambil data dan menukar semua kepada HURUF BESAR
         peralatan = request.form.get('peralatan', '').upper()
         pn = request.form.get('pn', '').upper()
         sn = request.form.get('sn', '').upper()
         date_in = request.form.get('date_in') or datetime.now().strftime("%Y-%m-%d")
         date_out = request.form.get('date_out', '') 
         defect = request.form.get('defect', 'N/A').upper()
-        status = request.form.get('status', request.form.get('status_type', 'ACTIVE')).upper()
+        status = request.form.get('status_type', request.form.get('status', 'ACTIVE')).upper()
         pic = request.form.get('pic', 'N/A').upper()
 
         new_log = RepairLog(
@@ -137,13 +150,18 @@ def incoming():
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return "OK", 200
             
-        return redirect(url_for('admin')) # Selepas submit, terus ke admin
+        return redirect(url_for('admin'))
     except Exception as e:
         db.session.rollback()
         return f"Database Error: {str(e)}", 500
 
+# ==========================================
+# PENJANAAN DOKUMEN (PDF & EXCEL)
+# ==========================================
+
 @app.route('/download_single_report/<int:item_id>')
 def download_single_report(item_id):
+    """ Generate PDF Report untuk satu unit sahaja """
     if not session.get('admin'): return redirect(url_for('login', next=request.path))
     l = RepairLog.query.get_or_404(item_id)
     
@@ -173,10 +191,8 @@ def download_single_report(item_id):
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (1, 0), colors.HexColor('#1e293b')),
         ('TEXTCOLOR', (0, 0), (1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('FONTNAME', (0, 0), (1, 0), 'Helvetica-Bold'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')])
     ]))
@@ -188,6 +204,7 @@ def download_single_report(item_id):
 
 @app.route('/download_report')
 def download_report():
+    """ Generate PDF untuk keseluruhan log (Landscape) """
     if not session.get('admin'): return redirect(url_for('login', next=request.path))
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     
@@ -216,7 +233,6 @@ def download_report():
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e293b')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-        ('FONTSIZE', (0, 0), (-1, -1), 7),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f1f5f9')]),
     ]))
@@ -227,6 +243,7 @@ def download_report():
 
 @app.route('/export_excel')
 def export_excel_data():
+    """ Eksport data ke fail .xlsx """
     if not session.get('admin'): return redirect(url_for('login', next=request.path))
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     data = [{
@@ -244,6 +261,7 @@ def export_excel_data():
 
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
+    """ Import data dari fail Excel ke Database """
     if not session.get('admin'): return redirect(url_for('login', next=request.path))
     file = request.files.get('file_excel')
     if not file: return "Tiada fail dipilih"
@@ -272,16 +290,22 @@ def import_excel():
     except Exception as e:
         return f"Excel Import Error: {str(e)}"
 
+# ==========================================
+# PENGURUSAN QR & TAG
+# ==========================================
+
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
+    """ Paparan Service Tag (Label Biru) """
     l = RepairLog.query.get_or_404(id)
     count = RepairLog.query.filter_by(sn=l.sn).count()
     return render_template('view_tag.html', l=l, logs_count=count)
 
 @app.route('/download_qr/<int:id>')
 def download_qr(id):
+    """ Muat turun imej QR Code yang point ke halaman History """
     l = RepairLog.query.get_or_404(id)
-    # Link unik untuk sejarah asset
+    # QR akan membawa user ke sejarah pergerakan S/N tersebut
     qr_link = f"{request.url_root}history/{l.sn}"
     qr = qrcode.make(qr_link)
     buf = io.BytesIO()
@@ -289,8 +313,13 @@ def download_qr(id):
     buf.seek(0)
     return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f"QR_{l.sn}.png")
 
+# ==========================================
+# EDIT, DELETE & LOGOUT
+# ==========================================
+
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
+    """ Edit rekod sedia ada """
     if not session.get('admin'): return redirect(url_for('login', next=request.full_path))
     l = RepairLog.query.get_or_404(id)
     source = request.args.get('from', 'admin')
@@ -315,6 +344,7 @@ def edit(id):
 
 @app.route('/delete/<int:id>')
 def delete(id):
+    """ Padam satu rekod """
     if not session.get('admin'): return redirect(url_for('login', next=request.path))
     l = RepairLog.query.get_or_404(id)
     db.session.delete(l)
@@ -323,6 +353,7 @@ def delete(id):
 
 @app.route('/delete_bulk', methods=['POST'])
 def delete_bulk():
+    """ Padam rekod yang dipilih secara banyak (bulk) """
     if not session.get('admin'): return redirect(url_for('login', next=request.path))
     selected_ids = request.form.getlist('selected_ids')
     if selected_ids:
@@ -333,10 +364,11 @@ def delete_bulk():
 
 @app.route('/logout')
 def logout():
+    """ Keluar dari sesi Admin """
     session.clear()
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    # Memastikan port dinamik untuk deployment (cth: Render/Heroku)
+    # Berjalan pada port 5000 (Local) atau dinamik (Server)
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
