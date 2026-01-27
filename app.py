@@ -92,9 +92,9 @@ def incoming():
         sn = request.form.get('sn', '').upper()
         date_in = request.form.get('date_in') or datetime.now().strftime("%Y-%m-%d")
         
-        # PEMBETULAN: Jika date_out kosong, hantar None supaya DB tak error
+        # UBAHAN: Letak "N/A" jika kosong
         raw_date_out = request.form.get('date_out', '').strip()
-        date_out = raw_date_out if raw_date_out else None
+        date_out = raw_date_out if raw_date_out else "N/A"
 
         defect = request.form.get('defect', 'N/A').upper()
         status = request.form.get('status', request.form.get('status_type', 'ACTIVE')).upper()
@@ -143,7 +143,7 @@ def download_single_report(item_id):
         ["SERIAL NUMBER (S/N)", l.sn],
         ["DEFECT / REMARKS", Paragraph(l.defect or "N/A", cell_style)],
         ["DATE IN", l.date_in],
-        ["DATE OUT", l.date_out or "-"],
+        ["DATE OUT", l.date_out or "N/A"],
         ["STATUS", l.status_type],
         ["JTP / PIC", l.pic],
         ["REPORT GENERATED", datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
@@ -204,7 +204,7 @@ def download_report():
             l.sn, 
             Paragraph(l.defect or "N/A", table_cell_style), 
             l.date_in, 
-            l.date_out or "-", 
+            l.date_out or "N/A", 
             l.status_type, 
             Paragraph(l.pic or "N/A", table_cell_style)
         ])
@@ -251,7 +251,7 @@ def export_excel_data():
             "SERIAL NUMBER (S/N)": l.sn,
             "DEFECT": l.defect if l.defect else "N/A",
             "DATE IN": l.date_in,
-            "DATE OUT": l.date_out if l.date_out else "-",
+            "DATE OUT": l.date_out if l.date_out else "N/A",
             "STATUS": l.status_type,
             "PIC": l.pic
         })
@@ -304,15 +304,11 @@ def import_excel():
         c_pn = find_col(['PART NO', 'P/N', 'PART NUMBER'])
         c_desc = find_col(['DESCRIPTION', 'PERALATAN', 'EQUIPMENT'])
         c_in = find_col(['DATE IN'])
-        c_out = find_col(['DATE OUT'])
-        c_status = find_col(['STATUS'])
-        c_defect = find_col(['DEFECT'])
-        c_jtp = find_col(['JTP', 'PIC'])
-        c_rem = find_col(['REMARKS'])
+        # Kita abaikan c_out kerana anda mahu dia hanya baca Date In
 
         def clean_val(val, is_date=False):
             if pd.isna(val) or str(val).strip().lower() in ['nan', '0', '0.0', '', '-']: 
-                return None if is_date else "N/A"
+                return "N/A"
             if is_date:
                 try:
                     if isinstance(val, (int, float)):
@@ -326,22 +322,16 @@ def import_excel():
             sn = clean_val(row.get(c_sn)) if c_sn else "N/A"
             if sn == "N/A": continue
             
-            raw_pic = row.get(c_jtp) if c_jtp else (row.get(c_rem) if c_rem else "N/A")
-            str_pic = str(raw_pic).strip().upper()
-            final_pic = "N/A" if 'WARRANTY' in str_pic or str_pic in ['NAN', 'N/A', '', '0', '0.0'] else str_pic
-
+            # UBAHAN: Paksa date_out jadi "N/A" semasa import
             new_log = RepairLog(
                 peralatan=clean_val(row.get(c_desc)) if c_desc else "N/A",
                 pn=clean_val(row.get(c_pn)) if c_pn else "N/A",
                 sn=sn,
-                date_in=clean_val(row.get(c_in), True) or datetime.now().strftime("%Y-%m-%d"),
-                
-                # PEMBETULAN: Jika date_out tidak sah, hantar None
-                date_out=clean_val(row.get(c_out), True),
-
-                status_type=clean_val(row.get(c_status)) or "ACTIVE",
-                pic=final_pic,
-                defect=clean_val(row.get(c_defect)) if c_defect else "N/A"
+                date_in=clean_val(row.get(c_in), True) if c_in else datetime.now().strftime("%Y-%m-%d"),
+                date_out="N/A", 
+                status_type="ACTIVE",
+                pic="N/A",
+                defect="N/A"
             )
             logs_to_add.append(new_log)
         
@@ -406,9 +396,9 @@ def edit(id):
         l.pic = request.form.get('pic', '').upper()
         l.date_in = request.form.get('date_in')
         
-        # PEMBETULAN: Sama juga untuk bahagian Edit
+        # UBAHAN: Letak "N/A" jika kosong semasa edit
         raw_date_out = request.form.get('date_out', '').strip()
-        l.date_out = raw_date_out if raw_date_out else None
+        l.date_out = raw_date_out if raw_date_out else "N/A"
 
         l.defect = request.form.get('defect', '').upper()
         l.status_type = request.form.get('status_type', '').upper()
