@@ -70,8 +70,20 @@ def login():
 def admin():
     if not session.get('admin'): 
         return redirect(url_for('login', next=request.path))
-    logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
-    return render_template('admin.html', logs=logs)
+    
+    # Ambil data dari database
+    logs_raw = RepairLog.query.order_by(RepairLog.id.desc()).all()
+    
+    # PROSES PEMBERSIHAN DATA (Untuk elak Error 500 di admin.html)
+    # Ini memastikan jika data kosong (None), ia diganti dengan string "N/A" supaya Jinja2 tak ralat
+    for log in logs_raw:
+        if log.status_type is None: log.status_type = "N/A"
+        if log.date_in is None: log.date_in = ""
+        if log.peralatan is None: log.peralatan = "N/A"
+        if log.pn is None: log.pn = "N/A"
+        if log.sn is None: log.sn = "N/A"
+
+    return render_template('admin.html', logs=logs_raw)
 
 # --- BAHAGIAN HISTORY ---
 @app.route('/history/<sn>')
@@ -141,13 +153,13 @@ def download_single_report(item_id):
         ["FIELD", "DETAILS"],
         ["DRN", l.drn or "N/A"],
         ["EQUIPMENT", Paragraph(l.peralatan or "N/A", cell_style)],
-        ["PART NUMBER (P/N)", l.pn],
-        ["SERIAL NUMBER (S/N)", l.sn],
+        ["PART NUMBER (P/N)", l.pn or "N/A"],
+        ["SERIAL NUMBER (S/N)", l.sn or "N/A"],
         ["DEFECT / REMARKS", Paragraph(l.defect or "N/A", cell_style)],
-        ["DATE IN", l.date_in],
+        ["DATE IN", l.date_in or "N/A"],
         ["DATE OUT", l.date_out or "-"],
-        ["STATUS", l.status_type],
-        ["JTP / PIC", l.pic],
+        ["STATUS", l.status_type or "N/A"],
+        ["JTP / PIC", l.pic or "N/A"],
         ["REPORT GENERATED", datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
     ]
     
@@ -196,7 +208,6 @@ def download_report():
     elements.append(Paragraph(f"G7 AEROSPACE - REPAIR LOG SUMMARY REPORT ({datetime.now().strftime('%d/%m/%Y')})", styles['Title']))
     elements.append(Spacer(1, 12))
     
-    # Ditambah kolum DRN mengikut SQL anda
     data = [["ID", "DRN", "PERALATAN", "P/N", "S/N", "DEFECT", "DATE IN", "DATE OUT", "STATUS", "PIC"]]
 
     for l in logs:
@@ -205,11 +216,11 @@ def download_report():
             l.drn or "N/A",
             Paragraph(l.peralatan or "N/A", table_cell_style), 
             Paragraph(l.pn or "N/A", table_cell_style), 
-            l.sn, 
+            l.sn or "N/A", 
             Paragraph(l.defect or "N/A", table_cell_style), 
-            l.date_in, 
+            l.date_in or "N/A", 
             l.date_out or "-", 
-            l.status_type, 
+            l.status_type or "N/A", 
             Paragraph(l.pic or "N/A", table_cell_style)
         ])
     
@@ -250,15 +261,15 @@ def export_excel_data():
     for l in logs:
         data.append({
             "ID": l.id,
-            "DRN": l.drn,
-            "PERALATAN": l.peralatan,
-            "PART NUMBER (P/N)": l.pn,
-            "SERIAL NUMBER (S/N)": l.sn,
+            "DRN": l.drn or "N/A",
+            "PERALATAN": l.peralatan or "N/A",
+            "PART NUMBER (P/N)": l.pn or "N/A",
+            "SERIAL NUMBER (S/N)": l.sn or "N/A",
             "DEFECT": l.defect if l.defect else "N/A",
-            "DATE IN": l.date_in,
+            "DATE IN": l.date_in or "N/A",
             "DATE OUT": l.date_out if l.date_out else "-",
-            "STATUS": l.status_type,
-            "PIC": l.pic
+            "STATUS": l.status_type or "N/A",
+            "PIC": l.pic or "N/A"
         })
     
     df = pd.DataFrame(data)
@@ -305,7 +316,7 @@ def import_excel():
                     return col
             return None
 
-        c_drn = find_col(['DRN', 'DEFECT REPORT']) # Tambah pengesan kolum DRN
+        c_drn = find_col(['DRN', 'DEFECT REPORT']) 
         c_sn = find_col(['SERIAL NO', 'S/N', 'SERIAL NUMBER'])
         c_pn = find_col(['PART NO', 'P/N', 'PART NUMBER'])
         c_desc = find_col(['DESCRIPTION', 'PERALATAN', 'EQUIPMENT'])
@@ -404,7 +415,7 @@ def edit(id):
     source = request.args.get('from', 'admin')
 
     if request.method == 'POST':
-        l.drn = request.form.get('drn', '').upper() # Tambah drn di edit
+        l.drn = request.form.get('drn', '').upper()
         l.peralatan = request.form.get('peralatan', '').upper()
         l.pn = request.form.get('pn', '').upper()
         l.sn = request.form.get('sn', '').upper()
