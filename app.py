@@ -91,7 +91,11 @@ def incoming():
         pn = request.form.get('pn', '').upper()
         sn = request.form.get('sn', '').upper()
         date_in = request.form.get('date_in') or datetime.now().strftime("%Y-%m-%d")
-        date_out = request.form.get('date_out', '') 
+        
+        # PEMBETULAN: Jika date_out kosong, hantar None supaya DB tak error
+        raw_date_out = request.form.get('date_out', '').strip()
+        date_out = raw_date_out if raw_date_out else None
+
         defect = request.form.get('defect', 'N/A').upper()
         status = request.form.get('status', request.form.get('status_type', 'ACTIVE')).upper()
         pic = request.form.get('pic', 'N/A').upper()
@@ -331,7 +335,10 @@ def import_excel():
                 pn=clean_val(row.get(c_pn)) if c_pn else "N/A",
                 sn=sn,
                 date_in=clean_val(row.get(c_in), True) or datetime.now().strftime("%Y-%m-%d"),
-                date_out=clean_val(row.get(c_out), True) or "-",
+                
+                # PEMBETULAN: Jika date_out tidak sah, hantar None
+                date_out=clean_val(row.get(c_out), True),
+
                 status_type=clean_val(row.get(c_status)) or "ACTIVE",
                 pic=final_pic,
                 defect=clean_val(row.get(c_defect)) if c_defect else "N/A"
@@ -398,7 +405,11 @@ def edit(id):
         l.sn = request.form.get('sn', '').upper()
         l.pic = request.form.get('pic', '').upper()
         l.date_in = request.form.get('date_in')
-        l.date_out = request.form.get('date_out')
+        
+        # PEMBETULAN: Sama juga untuk bahagian Edit
+        raw_date_out = request.form.get('date_out', '').strip()
+        l.date_out = raw_date_out if raw_date_out else None
+
         l.defect = request.form.get('defect', '').upper()
         l.status_type = request.form.get('status_type', '').upper()
         db.session.commit()
