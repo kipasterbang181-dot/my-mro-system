@@ -24,7 +24,6 @@ app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 # ==========================================
 # KONFIGURASI DATABASE (SUPABASE POSTGRES)
 # ==========================================
-# Menggunakan URL Supabase dengan mod SSL diaktifkan
 DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -40,20 +39,19 @@ db = SQLAlchemy(app)
 class RepairLog(db.Model):
     __tablename__ = 'repair_log'
     id = db.Column(db.Integer, primary_key=True)
-    drn = db.Column(db.String(100)) # Lajur tambahan
+    drn = db.Column(db.String(100)) 
     peralatan = db.Column(db.String(255))
     pn = db.Column(db.String(255))
     sn = db.Column(db.String(255))
-    date_in = db.Column(db.Date) # Menggunakan Date agar pengiraan tahun tepat
-    date_out = db.Column(db.Date) # Menggunakan Date agar pengiraan tahun tepat
+    date_in = db.Column(db.Date) 
+    date_out = db.Column(db.Date) 
     defect = db.Column(db.Text)
-    status_type = db.Column(db.String(100)) # REPAIR / WARRANTY / ACTIVE
+    status_type = db.Column(db.String(100)) 
     pic = db.Column(db.String(255))
-    is_warranty = db.Column(db.Boolean, default=False) # Lajur tambahan
+    is_warranty = db.Column(db.Boolean, default=False) 
     created_at = db.Column(db.DateTime, default=datetime.now)
     last_updated = db.Column(db.DateTime, default=datetime.now)
 
-# Memastikan table wujud dalam Supabase setiap kali app dijalankan
 with app.app_context():
     try:
         db.create_all()
@@ -67,52 +65,55 @@ with app.app_context():
 
 @app.route('/')
 def index():
-    """ Halaman utama untuk akses awam/import """
     return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """ Sistem kawalan akses Admin """
     next_page = request.args.get('next')
-    
     if request.method == 'POST':
-        # Logik Login: Username (u) & Password (p)
         if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
             session['admin'] = True
-            
             target = request.form.get('next_target')
             if target and target != 'None' and target != '':
                 return redirect(target)
             return redirect(url_for('admin'))
         else:
             flash("Username atau Password salah!", "error")
-            
     return render_template('login.html', next_page=next_page)
 
 @app.route('/admin')
 def admin():
-    """ Dashboard Pengurusan Data dengan Jadual Dinamik """
     if not session.get('admin'): 
         return redirect(url_for('login', next=request.path))
     
     try:
         logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
 
-        # --- PROSES DATA UNTUK JADUAL RINGKASAN DINAMIK ---
+        # --- LOGIK PANJANG UNTUK JADUAL RINGKASAN & STATS ---
         
-        # Senarai Status mengikut susunan yang anda mahu
+        # 1. Senarai Status Lengkap
         status_list = [
             "SERVICEABLE", "RETURN SERVICEABLE", "RETURN UNSERVICEABLE",
             "WAITING LO", "OV REPAIR", "UNDER REPAIR", "AWAITING SPARE",
             "SPARE READY", "WARRANTY REPAIR", "QUOTE SUBMITTED",
             "TDI IN PROGRESS", "TDI TO REVIEW", "TDI READY TO QUOTE",
-            "READY TO DELIVERED WARRANTY"
+            "READY TO DELIVERED WARRANTY", "READY TO QUOTE", "READY TO DELIVERED"
         ]
 
-        # Ambil semua tahun unik yang ada dalam data
+        # Ambil status tambahan yang mungkin ada dalam DB tapi tiada dalam list manual
+        db_statuses = db.session.query(RepairLog.status_type).distinct().all()
+        for s in db_statuses:
+            if s[0]:
+                up_s = s[0].upper().strip()
+                if up_s not in status_list:
+                    status_list.append(up_s)
+
+        # 2. Kenalpasti tahun unik dari database
         years = sorted(list(set([l.date_in.year for l in logs if l.date_in])))
-        
-        # Struktur Data: { 'STATUS': { 2024: count, 2025: count }, ... }
+        if not years:
+            years = [datetime.now().year]
+
+        # 3. Bina Matriks Statistik (Panjang & Detail)
         stats_matrix = {status: {year: 0 for year in years} for status in status_list}
         row_totals = {status: 0 for status in status_list}
         column_totals = {year: 0 for year in years}
@@ -128,53 +129,55 @@ def admin():
                     row_totals[stat_key] += 1
                     column_totals[year_key] += 1
                     grand_total += 1
+                elif year_key in years:
+                    # Jika status baru, tetap kira dalam column totals
+                    column_totals[year_key] += 1
+                    grand_total += 1
+
+        # Baiki rujukan data untuk template
+        stats_data = column_totals 
 
         return render_template('admin.html', 
                                logs=logs, 
+                               sorted_years=years,
                                years=years,
                                status_list=status_list,
                                stats_matrix=stats_matrix,
                                row_totals=row_totals,
                                column_totals=column_totals,
                                grand_total=grand_total,
-                               total_units=len(logs))
-                               
+                               total_units=len(logs),
+                               stats=stats_data) 
+                                   
     except Exception as e:
         error_details = traceback.format_exc()
         return f"<h3>Admin Dashboard Error (500)</h3><p>{str(e)}</p><pre>{error_details}</pre>", 500
 
 @app.route('/history/<sn>')
 def history(sn):
-    """ Paparan Sejarah Aset untuk kegunaan Scan QR """
     logs = RepairLog.query.filter_by(sn=sn).order_by(RepairLog.date_in.desc()).all()
     asset_info = logs[0] if logs else None
     return render_template('history.html', logs=logs, asset=asset_info, sn=sn)
 
 @app.route('/view_report/<int:id>')
 def view_report(id):
-    """ Preview Maintenance Report sebelum print """
     if not session.get('admin'): return redirect(url_for('login', next=request.path))
     l = RepairLog.query.get_or_404(id)
     return render_template('view_report.html', l=l)
 
 @app.route('/incoming', methods=['GET', 'POST'])
 def incoming():
-    """ Kemasukan Data Baru (Manual atau melalui AJAX) """
     if request.method == 'GET':
         return render_template('incoming.html')
-        
     try:
         peralatan = request.form.get('peralatan', '').upper()
         pn = request.form.get('pn', '').upper()
         sn = request.form.get('sn', '').upper()
         drn = request.form.get('drn', '').upper()
-        
         date_in_val = request.form.get('date_in')
         d_in = datetime.strptime(date_in_val, '%Y-%m-%d').date() if date_in_val else datetime.now().date()
-        
         date_out_val = request.form.get('date_out')
         d_out = datetime.strptime(date_out_val, '%Y-%m-%d').date() if date_out_val else None
-
         defect = request.form.get('defect', 'N/A').upper()
         status = request.form.get('status_type', request.form.get('status', 'ACTIVE')).upper()
         pic = request.form.get('pic', 'N/A').upper()
@@ -186,75 +189,24 @@ def incoming():
         )
         db.session.add(new_log)
         db.session.commit()
-        
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return "OK", 200
-            
         return redirect(url_for('admin'))
     except Exception as e:
         db.session.rollback()
         return f"Database Error: {str(e)}", 500
 
-# ==========================================
-# PENJANAAN DOKUMEN (PDF & EXCEL)
-# ==========================================
-
-@app.route('/download_single_report/<int:item_id>')
-def download_single_report(item_id):
-    if not session.get('admin'): return redirect(url_for('login', next=request.path))
-    l = RepairLog.query.get_or_404(item_id)
-    
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=letter)
-    elements = []
-    styles = getSampleStyleSheet()
-    cell_style = ParagraphStyle(name='CellStyle', fontSize=10, leading=12)
-
-    elements.append(Paragraph("G7 AEROSPACE - UNIT MAINTENANCE REPORT", styles['Title']))
-    elements.append(Spacer(1, 20))
-    
-    report_data = [
-        ["FIELD", "DETAILS"],
-        ["EQUIPMENT", Paragraph(l.peralatan or "N/A", cell_style)],
-        ["PART NUMBER (P/N)", l.pn],
-        ["SERIAL NUMBER (S/N)", l.sn],
-        ["DEFECT / REMARKS", Paragraph(l.defect or "N/A", cell_style)],
-        ["DATE IN", str(l.date_in)],
-        ["DATE OUT", str(l.date_out) if l.date_out else "-"],
-        ["STATUS", l.status_type],
-        ["JTP / PIC", l.pic],
-        ["REPORT GENERATED", datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
-    ]
-    
-    t = Table(report_data, colWidths=[150, 300])
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (1, 0), colors.HexColor('#1e293b')),
-        ('TEXTCOLOR', (0, 0), (1, 0), colors.whitesmoke),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-        ('FONTNAME', (0, 0), (1, 0), 'Helvetica-Bold'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')])
-    ]))
-    
-    elements.append(t)
-    doc.build(elements)
-    buf.seek(0)
-    return send_file(buf, mimetype='application/pdf', as_attachment=True, download_name=f"Report_{l.sn}.pdf")
-
 @app.route('/download_report')
 def download_report():
     if not session.get('admin'): return redirect(url_for('login', next=request.path))
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
-    
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=landscape(letter), leftMargin=15, rightMargin=15)
     elements = []
     styles = getSampleStyleSheet()
     table_cell_style = ParagraphStyle(name='TableCell', fontSize=7, leading=8, alignment=1)
-
     elements.append(Paragraph(f"G7 AEROSPACE - REPAIR LOG SUMMARY ({datetime.now().strftime('%d/%m/%Y')})", styles['Title']))
     elements.append(Spacer(1, 12))
-    
     data = [["ID", "PERALATAN", "P/N", "S/N", "DEFECT", "DATE IN", "DATE OUT", "STATUS", "PIC"]]
     for l in logs:
         data.append([
@@ -264,14 +216,11 @@ def download_report():
             str(l.date_in), str(l.date_out) if l.date_out else "-", l.status_type, 
             Paragraph(l.pic or "N/A", table_cell_style)
         ])
-    
-    col_widths = [30, 120, 90, 70, 180, 60, 60, 80, 80]
-    t = Table(data, repeatRows=1, colWidths=col_widths)
+    t = Table(data, repeatRows=1)
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e293b')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f1f5f9')]),
     ]))
     elements.append(t)
@@ -288,7 +237,6 @@ def export_excel_data():
         "DEFECT": l.defect or "N/A", "DATE IN": str(l.date_in), "DATE OUT": str(l.date_out) if l.date_out else "-",
         "STATUS": l.status_type, "PIC": l.pic
     } for l in logs]
-    
     df = pd.DataFrame(data)
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -304,31 +252,30 @@ def import_excel():
     try:
         df = pd.read_excel(file)
         df.columns = [str(c).strip().upper() for c in df.columns]
-
         logs_to_add = []
         for _, row in df.iterrows():
+            # Logik tarikh yang lebih selamat
+            d_in = pd.to_datetime(row.get('DATE IN')).date() if pd.notnull(row.get('DATE IN')) else datetime.now().date()
+            d_out = pd.to_datetime(row.get('DATE OUT')).date() if pd.notnull(row.get('DATE OUT')) else None
+            
             new_log = RepairLog(
                 drn=str(row.get('DRN', 'N/A')).upper(),
                 peralatan=str(row.get('PERALATAN', 'N/A')).upper(),
                 pn=str(row.get('P/N', row.get('PART NUMBER', 'N/A'))).upper(),
                 sn=str(row.get('S/N', row.get('SERIAL NUMBER', 'N/A'))).upper(),
-                date_in=pd.to_datetime(row.get('DATE IN')).date() if pd.notnull(row.get('DATE IN')) else datetime.now().date(),
+                date_in=d_in,
+                date_out=d_out,
                 status_type=str(row.get('STATUS', 'ACTIVE')).upper(),
                 pic=str(row.get('PIC', 'N/A')).upper(),
                 defect=str(row.get('DEFECT', 'N/A')).upper()
             )
             logs_to_add.append(new_log)
-        
         if logs_to_add:
             db.session.bulk_save_objects(logs_to_add)
             db.session.commit()
         return redirect(url_for('admin'))
     except Exception as e:
         return f"Excel Import Error: {str(e)}"
-
-# ==========================================
-# PENGURUSAN QR & TAG
-# ==========================================
 
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
@@ -339,23 +286,17 @@ def view_tag(id):
 @app.route('/download_qr/<int:id>')
 def download_qr(id):
     l = RepairLog.query.get_or_404(id)
-    qr_link = f"{request.url_root}history/{l.sn}"
-    qr = qrcode.make(qr_link)
+    qr = qrcode.make(f"{request.url_root}history/{l.sn}")
     buf = io.BytesIO()
     qr.save(buf, format="PNG")
     buf.seek(0)
     return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f"QR_{l.sn}.png")
-
-# ==========================================
-# EDIT, DELETE & LOGOUT
-# ==========================================
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
     if not session.get('admin'): return redirect(url_for('login', next=request.full_path))
     l = RepairLog.query.get_or_404(id)
     source = request.args.get('from', 'admin')
-
     if request.method == 'POST':
         l.peralatan = request.form.get('peralatan', '').upper()
         l.pn = request.form.get('pn', '').upper()
@@ -364,20 +305,21 @@ def edit(id):
         l.pic = request.form.get('pic', '').upper()
         
         d_in_str = request.form.get('date_in')
-        l.date_in = datetime.strptime(d_in_str, '%Y-%m-%d').date() if d_in_str else l.date_in
-        
+        if d_in_str:
+            l.date_in = datetime.strptime(d_in_str, '%Y-%m-%d').date()
+            
         d_out_str = request.form.get('date_out')
-        l.date_out = datetime.strptime(d_out_str, '%Y-%m-%d').date() if d_out_str else None
-        
+        if d_out_str:
+            l.date_out = datetime.strptime(d_out_str, '%Y-%m-%d').date()
+        else:
+            l.date_out = None
+            
         l.defect = request.form.get('defect', '').upper()
         l.status_type = request.form.get('status_type', '').upper()
+        l.last_updated = datetime.now()
+        
         db.session.commit()
-        
-        origin = request.form.get('origin_source')
-        if origin == 'view_tag':
-            return redirect(url_for('view_tag', id=l.id))
         return redirect(url_for('admin'))
-        
     return render_template('edit.html', item=l, source=source)
 
 @app.route('/delete/<int:id>')

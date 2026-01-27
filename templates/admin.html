@@ -45,7 +45,6 @@
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
         }
 
-        /* Rainbow border animation */
         .rainbow-border {
             position: relative;
             z-index: 0;
@@ -72,7 +71,7 @@
         .summary-table th { background-color: #1e293b; color: white; padding: 12px; font-size: 11px; text-transform: uppercase; }
         .summary-table td { padding: 10px; border: 1px solid #e2e8f0; font-weight: 800; text-align: center; }
 
-        /* G7 ACTION BUTTONS STYLING - GLASSMORPHISM STYLE */
+        /* G7 ACTION BUTTONS STYLING */
         .action-group-container {
             display: flex;
             align-items: center;
@@ -137,12 +136,8 @@
 <body class="min-h-screen">
 
     <div class="fixed top-24 right-6 flex gap-1 bg-white shadow-xl p-1.5 rounded-full border border-blue-100 z-50 no-print">
-        <button onclick="changeLanguage('ms')" id="btn-ms" class="lang-btn px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all text-slate-400">
-            MS
-        </button>
-        <button onclick="changeLanguage('en')" id="btn-en" class="lang-btn px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all text-slate-400">
-            EN
-        </button>
+        <button onclick="changeLanguage('ms')" id="btn-ms" class="lang-btn px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all">MS</button>
+        <button onclick="changeLanguage('en')" id="btn-en" class="lang-btn px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all">EN</button>
     </div>
 
     <nav class="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-950 text-white sticky top-0 z-50 border-b border-blue-500/30 shadow-2xl">
@@ -163,14 +158,14 @@
         <div class="mb-10 bg-white rounded-[2.5rem] shadow-2xl border-4 border-slate-900 overflow-hidden">
             <div class="bg-slate-900 text-white px-8 py-4 flex justify-between items-center">
                 <h3 class="font-black italic uppercase tracking-widest text-lg">Unit Status Summary Table</h3>
-                <span class="text-xs bg-blue-600 px-3 py-1 rounded-full font-bold">AS AT {{ logs[0].date_in if logs else 'N/A' }}</span>
+                <span class="text-xs bg-blue-600 px-3 py-1 rounded-full font-bold">LATEST UPDATE</span>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full summary-table">
                     <thead>
                         <tr>
                             <th class="text-left pl-8">STATUS CATEGORY</th>
-                            {% for year in years %}
+                            {% for year in sorted_years %}
                             <th>YEAR {{ year }}</th>
                             {% endfor %}
                             <th class="bg-blue-900">GRAND TOTAL</th>
@@ -179,8 +174,11 @@
                     <tbody>
                         <tr class="bg-emerald-100">
                             <td class="text-left pl-8 font-black text-slate-900">TOTAL UNITS</td>
-                            {% for year in years %}
-                            <td class="text-emerald-700">{{ column_totals[year] }}</td>
+                            {% for year in sorted_years %}
+                            <td class="text-emerald-700">
+                                {# Baiki ralat stats is undefined #}
+                                {{ stats.get(year, 0) if stats else column_totals.get(year, 0) }}
+                            </td>
                             {% endfor %}
                             <td class="bg-emerald-600 text-white">{{ grand_total }}</td>
                         </tr>
@@ -188,10 +186,12 @@
                         {% for status in status_list %}
                         <tr class="hover:bg-slate-50 transition-colors">
                             <td class="text-left pl-8 text-slate-700 text-xs font-bold">{{ status }}</td>
-                            {% for year in years %}
-                            <td class="text-slate-500">{{ stats_matrix[status][year] }}</td>
+                            {% for year in sorted_years %}
+                            <td class="text-slate-500">
+                                {{ stats_matrix[status][year] if status in stats_matrix else 0 }}
+                            </td>
                             {% endfor %}
-                            <td class="bg-slate-100 text-slate-900">{{ row_totals[status] }}</td>
+                            <td class="bg-slate-100 text-slate-900">{{ row_totals[status] if status in row_totals else 0 }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -204,7 +204,7 @@
                 <span class="bg-emerald-500 text-white p-2 rounded-xl shadow-lg shadow-emerald-200">📥</span> 
                 <span id="t-import-title">Bulk Import Excel (2022-2025)</span>
             </h4>
-            <form action="/import_excel" method="POST" enctype="multipart/form-data" class="flex flex-wrap items-center gap-4" onsubmit="showLoading(this)">
+            <form action="/import_excel" method="POST" enctype="multipart/form-data" class="flex flex-wrap items-center gap-4" onsubmit="showLoading()">
                 <input type="file" name="file_excel" accept=".xlsx, .xls, .csv" required
                     class="block w-full md:w-auto text-sm text-slate-500 file:mr-4 file:py-3 file:px-6 file:rounded-2xl file:border-0 file:text-xs file:font-bold file:uppercase file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 transition-all cursor-pointer">
                 <button type="submit" id="importBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-200 flex items-center gap-2">
@@ -232,20 +232,6 @@
                     Export Excel 📗
                 </a>
             </div>
-        </div>
-
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
-            {% for year in years %}
-            {% set colors = {'2022': 'blue', '2023': 'purple', '2024': 'rose', '2025': 'amber'} %}
-            {% set c = colors.get(year|string, 'blue') %}
-            <div class="bg-white p-6 rounded-[2rem] border border-{{c}}-100 shadow-xl shadow-{{c}}-50 group hover:-translate-y-2 transition-all">
-                <p class="text-[10px] font-black text-{{c}}-400 uppercase tracking-widest mb-2 group-hover:text-{{c}}-600">{{ year }} TOTAL ASSETS</p>
-                <h3 class="text-4xl font-black text-slate-900">{{ column_totals[year] }}</h3>
-                <div class="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">
-                    <div class="bg-{{c}}-500 h-full" style="width: {{ (column_totals[year] / (logs|length if logs|length > 0 else 1) * 100)|round }}%"></div>
-                </div>
-            </div>
-            {% endfor %}
         </div>
 
         <div class="mb-8 flex flex-col md:flex-row gap-4">
@@ -327,9 +313,10 @@
                                     <div class="inline-flex flex-col items-center">
                                         <span class="text-[9px] font-black text-slate-400 mb-2 uppercase tracking-widest italic">PIC: {{ item.pic if (item.pic and item.pic != 'nan') else 'N/A' }}</span>
                                         <span class="status-badge px-4 py-2 rounded-xl text-[10px] font-black uppercase border-2 shadow-sm 
-                                            {% if 'SERVICEABLE' in item.status_type|upper %} bg-emerald-500 text-white border-emerald-400 
-                                            {% elif 'TDI' in item.status_type|upper %} bg-amber-400 text-amber-950 border-amber-300
-                                            {% elif 'REPAIR' in item.status_type|upper %} bg-blue-500 text-white border-blue-400
+                                            {% if 'SERVICEABLE' in item.status_type|upper or 'READY TO DELIVERED' in item.status_type|upper %} bg-emerald-500 text-white border-emerald-400 
+                                            {% elif 'TDI' in item.status_type|upper or 'QUOTE' in item.status_type|upper %} bg-amber-400 text-amber-950 border-amber-300
+                                            {% elif 'REPAIR' in item.status_type|upper or 'WARRANTY' in item.status_type|upper %} bg-blue-500 text-white border-blue-400
+                                            {% elif 'WAITING' in item.status_type|upper %} bg-orange-400 text-white border-orange-300
                                             {% else %} bg-slate-100 text-slate-500 border-slate-200 {% endif %}">
                                             {{ item.status_type or 'N/A' }}
                                         </span>
@@ -401,14 +388,56 @@
     </div>
 
     <script>
+        // TRANSLATIONS SYSTEM (Asal Kekal)
         const translations = {
-            ms: { navMain: "Log Utama", navLogout: "Keluar", importTitle: "Bulk Import Excel (2022-2025)", btnProcess: "Proses & Masuk Database", btnProcessing: "Memproses...", consoleTitle: "Management Console", dbLive: "Supabase Database Live", records: "Rekod", btnDelete: "Padam Pilihan 🗑️", btnPdf: "Ringkasan Laporan (PDF) 📄", btnExcel: "Eksport Excel 📗", searchPlaceholder: "Cari Peralatan, SN atau Kerosakan...", thAsset: "Butiran Aset", thDefect: "Kerosakan & Catatan", thTimeline: "Garis Masa", thStatus: "Status & Remark", thActions: "Tindakan", modalTitle: "Tag Digital QR", modalPrint: "Cetakan QR Tag", modalClose: "✖ Tutup Paparan", alertSelect: "Sila pilih sekurang-kurangnya satu rekod untuk dipadam.", confirmBulk: "Adakah tuan pasti nak padam {count} rekod yang dipilih?", confirmSingle: "Adakah anda pasti mahu memadam rekod ini?" },
-            en: { navMain: "Main Log", navLogout: "Logout", importTitle: "Bulk Import Excel (2022-2025)", btnProcess: "Process & Import Database", btnProcessing: "Processing...", consoleTitle: "Management Console", dbLive: "Supabase Database Live", records: "Records", btnDelete: "Delete Selected 🗑️", btnPdf: "Full Report Summary (PDF) 📄", btnExcel: "Export Excel 📗", searchPlaceholder: "Search Equipment, SN or Defect...", thAsset: "Asset Detail", thDefect: "Defect & Remarks", thTimeline: "Timeline", thStatus: "Status & Remark", thActions: "Actions", modalTitle: "QR Digital Tag", modalPrint: "Print QR Tag", modalClose: "✖ Close Preview", alertSelect: "Please select at least one record to delete.", confirmBulk: "Are you sure you want to delete {count} selected records?", confirmSingle: "Are you sure you want to delete this record?" }
+            ms: {
+                navMain: "Log Utama",
+                navLogout: "Keluar",
+                importTitle: "Bulk Import Excel (2022-2025)",
+                btnProcess: "Proses & Masuk Database",
+                consoleTitle: "Management Console",
+                dbLive: "Supabase Database Live",
+                records: "Rekod",
+                btnDelete: "Padam Pilihan 🗑️",
+                btnPdf: "Ringkasan Laporan (PDF) 📄",
+                btnExcel: "Eksport Excel 📗",
+                searchPlaceholder: "Cari Peralatan, SN atau Kerosakan...",
+                thAsset: "Butiran Aset",
+                thDefect: "Kerosakan & Catatan",
+                thTimeline: "Garis Masa",
+                thStatus: "Status & Remark",
+                thActions: "Tindakan",
+                modalTitle: "Tag Digital QR",
+                modalPrint: "Cetakan QR Tag",
+                modalClose: "✖ Tutup Paparan"
+            },
+            en: {
+                navMain: "Main Log",
+                navLogout: "Logout",
+                importTitle: "Bulk Import Excel (2022-2025)",
+                btnProcess: "Process & Import Database",
+                consoleTitle: "Management Console",
+                dbLive: "Supabase Database Live",
+                records: "Records",
+                btnDelete: "Delete Selected 🗑️",
+                btnPdf: "Full Report Summary (PDF) 📄",
+                btnExcel: "Export Excel 📗",
+                searchPlaceholder: "Search Equipment, SN or Defect...",
+                thAsset: "Asset Detail",
+                thDefect: "Defect & Remarks",
+                thTimeline: "Timeline",
+                thStatus: "Status & Remark",
+                thActions: "Actions",
+                modalTitle: "QR Digital Tag",
+                modalPrint: "Print QR Tag",
+                modalClose: "✖ Close Preview"
+            }
         };
 
         function changeLanguage(lang) {
             localStorage.setItem('g7_lang', lang);
             const t = translations[lang];
+            
             document.getElementById('t-nav-main').innerText = t.navMain;
             document.getElementById('t-nav-logout').innerText = t.navLogout;
             document.getElementById('t-import-title').innerText = t.importTitle;
@@ -416,10 +445,9 @@
             document.getElementById('t-console-title').innerText = t.consoleTitle;
             document.getElementById('t-db-live').innerText = t.dbLive;
             document.getElementById('t-records').innerText = t.records;
-            document.getElementById('t-btn-delete').innerHTML = t.btnDelete;
-            document.getElementById('t-btn-pdf').innerHTML = t.btnPdf;
-            document.getElementById('t-btn-excel').innerHTML = t.btnExcel;
-            document.getElementById('searchInput').placeholder = t.searchPlaceholder;
+            document.getElementById('t-btn-delete').innerText = t.btnDelete;
+            document.getElementById('t-btn-pdf').innerText = t.btnPdf;
+            document.getElementById('t-btn-excel').innerText = t.btnExcel;
             document.getElementById('th-asset').innerText = t.thAsset;
             document.getElementById('th-defect').innerText = t.thDefect;
             document.getElementById('th-timeline').innerText = t.thTimeline;
@@ -427,38 +455,46 @@
             document.getElementById('th-actions').innerText = t.thActions;
             document.getElementById('t-modal-title').innerText = t.modalTitle;
             document.getElementById('downloadLink').innerText = t.modalPrint;
+            document.getElementById('searchInput').placeholder = t.searchPlaceholder;
+
             document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('btn-' + lang).classList.add('active');
         }
 
+        // Initialize language
         const savedLang = localStorage.getItem('g7_lang') || 'ms';
-        document.addEventListener('DOMContentLoaded', () => changeLanguage(savedLang));
+        changeLanguage(savedLang);
 
         function filterTable() {
             let searchInput = document.getElementById("searchInput").value.toUpperCase();
             let statusInput = document.getElementById("statusFilter").value.toUpperCase();
             let tr = document.getElementById("maintenanceTable").getElementsByTagName("tr");
+
             for (let i = 1; i < tr.length; i++) {
                 let name = tr[i].getElementsByClassName("row-name")[0];
                 let sn = tr[i].getElementsByClassName("row-sn")[0];
                 let badge = tr[i].getElementsByClassName("status-badge")[0];
+
                 if (name || sn || badge) {
-                    let txt = (name.innerText + sn.innerText).toUpperCase();
-                    let st = (badge.innerText).toUpperCase();
-                    tr[i].style.display = (txt.includes(searchInput) && (statusInput === "" || st.includes(statusInput))) ? "" : "none";
+                    let txt = (name.innerText + (sn ? sn.innerText : "")).toUpperCase();
+                    let st = (badge ? badge.innerText : "").toUpperCase();
+                    
+                    if (txt.indexOf(searchInput) > -1 && (statusInput === "" || st.indexOf(statusInput) > -1)) {
+                        tr[i].style.display = "";
+                    } else {
+                        tr[i].style.display = "none";
+                    }
                 }
             }
         }
 
         function confirmSingleDelete(id) {
-            if (confirm(translations[localStorage.getItem('g7_lang') || 'ms'].confirmSingle)) {
-                const f = document.createElement('form'); f.method = 'POST'; f.action = '/delete_bulk';
-                const i = document.createElement('input'); i.type = 'hidden'; i.name = 'selected_ids'; i.value = id;
-                f.appendChild(i); document.body.appendChild(f); f.submit();
+            if (confirm("Adakah anda pasti mahu memadam rekod ini?")) {
+                window.location.href = "/delete/" + id;
             }
         }
 
-        function showLoading(form) {
+        function showLoading() {
             const btn = document.getElementById('importBtn');
             btn.disabled = true;
             document.getElementById('btnText').innerHTML = `<span class="loader"></span> Processing...`;
