@@ -19,7 +19,8 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 
 # --- DATABASE CONFIG (SUPABASE) ---
-DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
+# PEMBETULAN: URL telah dibetulkan (membuang pengulangan hostname)
+DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -28,7 +29,7 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 }
 db = SQLAlchemy(app)
 
-# --- MODEL DATABASE (Diselaraskan dengan kolum baru) ---
+# --- MODEL DATABASE ---
 class RepairLog(db.Model):
     __tablename__ = 'repair_log'
     id = db.Column(db.Integer, primary_key=True)
@@ -41,7 +42,6 @@ class RepairLog(db.Model):
     defect = db.Column(db.Text)
     status_type = db.Column(db.String(100))
     pic = db.Column(db.String(255))
-    # Kolum Tambahan
     is_warranty = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
     last_updated = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
@@ -50,7 +50,7 @@ class RepairLog(db.Model):
 with app.app_context():
     db.create_all()
     try:
-        # SQL Trigger untuk update last_updated secara automatik di peringkat database
+        # SQL Trigger untuk update last_updated secara automatik
         db.session.execute(text("""
             CREATE OR REPLACE FUNCTION update_modified_column()
             RETURNS TRIGGER AS $$
@@ -102,7 +102,7 @@ def admin():
     
     logs_raw = RepairLog.query.order_by(RepairLog.id.desc()).all()
     
-    # PROSES PEMBERSIHAN DATA (Guna logik asal anda)
+    # PROSES PEMBERSIHAN DATA (Logik Asal Anda)
     cleaned_logs = []
     for log in logs_raw:
         cleaned_logs.append({
@@ -116,7 +116,7 @@ def admin():
             'defect': log.defect or "N/A",
             'status_type': str(log.status_type or "ACTIVE").strip().upper(),
             'pic': log.pic or "N/A",
-            'is_warranty': log.is_warranty # Data tambahan untuk frontend
+            'is_warranty': log.is_warranty
         })
     return render_template('admin.html', logs=cleaned_logs)
 
@@ -144,7 +144,6 @@ def incoming():
         defect = request.form.get('defect', 'N/A').upper()
         status = request.form.get('status', request.form.get('status_type', 'ACTIVE')).upper()
         pic = request.form.get('pic', 'N/A').upper()
-        # Warranty check
         warranty = True if request.form.get('is_warranty') == 'on' else False
 
         new_log = RepairLog(
@@ -187,7 +186,7 @@ def download_single_report(item_id):
         ["DATE OUT", l.date_out or "-"],
         ["STATUS", l.status_type or "N/A"],
         ["JTP / PIC", l.pic or "N/A"],
-        ["WARRANTY", "YES" if l.is_warranty else "NO"], # Kolum baru dalam report
+        ["WARRANTY", "YES" if l.is_warranty else "NO"],
         ["REPORT GENERATED", datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
     ]
     
