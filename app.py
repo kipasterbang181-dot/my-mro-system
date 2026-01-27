@@ -26,17 +26,19 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 }
 db = SQLAlchemy(app)
 
+# Model diselaraskan dengan arahan SQL CREATE TABLE anda
 class RepairLog(db.Model):
     __tablename__ = 'repair_log'
     id = db.Column(db.Integer, primary_key=True)
-    peralatan = db.Column(db.String(100))
+    drn = db.Column(db.String(100)) # Kolum tambahan sepadan dengan SQL anda
+    peralatan = db.Column(db.String(255))
     pn = db.Column(db.String(100))
     sn = db.Column(db.String(100))
-    date_in = db.Column(db.String(50))
-    date_out = db.Column(db.String(50))
+    date_in = db.Column(db.Text) # Guna Text supaya tak crash dengan format tarikh pelik
+    date_out = db.Column(db.Text)
     defect = db.Column(db.Text)
-    status_type = db.Column(db.String(50))
-    pic = db.Column(db.String(100))
+    status_type = db.Column(db.String(100))
+    pic = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 with app.app_context():
@@ -74,7 +76,7 @@ def admin():
 # --- BAHAGIAN HISTORY ---
 @app.route('/history/<sn>')
 def history(sn):
-    logs = RepairLog.query.filter_by(sn=sn).order_by(RepairLog.date_in.asc()).all()
+    logs = RepairLog.query.filter_by(sn=sn).order_by(RepairLog.id.asc()).all()
     asset_info = logs[0] if logs else None
     return render_template('history.html', logs=logs, asset=asset_info, sn=sn)
 
@@ -87,6 +89,8 @@ def view_report(id):
 @app.route('/incoming', methods=['POST'])
 def incoming():
     try:
+        # Tambah drn untuk sokongan SQL baru
+        drn = request.form.get('drn', '').upper()
         peralatan = request.form.get('peralatan', '').upper()
         pn = request.form.get('pn', '').upper()
         sn = request.form.get('sn', '').upper()
@@ -97,6 +101,7 @@ def incoming():
         pic = request.form.get('pic', 'N/A').upper()
 
         new_log = RepairLog(
+            drn=drn,
             peralatan=peralatan,
             pn=pn,
             sn=sn,
@@ -134,6 +139,7 @@ def download_single_report(item_id):
     
     report_data = [
         ["FIELD", "DETAILS"],
+        ["DRN", l.drn or "N/A"],
         ["EQUIPMENT", Paragraph(l.peralatan or "N/A", cell_style)],
         ["PART NUMBER (P/N)", l.pn],
         ["SERIAL NUMBER (S/N)", l.sn],
@@ -190,11 +196,13 @@ def download_report():
     elements.append(Paragraph(f"G7 AEROSPACE - REPAIR LOG SUMMARY REPORT ({datetime.now().strftime('%d/%m/%Y')})", styles['Title']))
     elements.append(Spacer(1, 12))
     
-    data = [["ID", "PERALATAN", "P/N", "S/N", "DEFECT", "DATE IN", "DATE OUT", "STATUS", "PIC"]]
+    # Ditambah kolum DRN mengikut SQL anda
+    data = [["ID", "DRN", "PERALATAN", "P/N", "S/N", "DEFECT", "DATE IN", "DATE OUT", "STATUS", "PIC"]]
 
     for l in logs:
         data.append([
             l.id, 
+            l.drn or "N/A",
             Paragraph(l.peralatan or "N/A", table_cell_style), 
             Paragraph(l.pn or "N/A", table_cell_style), 
             l.sn, 
@@ -205,7 +213,7 @@ def download_report():
             Paragraph(l.pic or "N/A", table_cell_style)
         ])
     
-    col_widths = [30, 120, 90, 70, 180, 60, 60, 80, 80]
+    col_widths = [30, 60, 100, 80, 70, 150, 60, 60, 80, 80]
     
     t = Table(data, repeatRows=1, hAlign='CENTER', colWidths=col_widths)
     t.setStyle(TableStyle([
@@ -242,6 +250,7 @@ def export_excel_data():
     for l in logs:
         data.append({
             "ID": l.id,
+            "DRN": l.drn,
             "PERALATAN": l.peralatan,
             "PART NUMBER (P/N)": l.pn,
             "SERIAL NUMBER (S/N)": l.sn,
@@ -257,12 +266,12 @@ def export_excel_data():
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name='Repair Logs')
         worksheet = writer.sheets['Repair Logs']
-        worksheet.set_column('A:A', 5)   
-        worksheet.set_column('B:B', 30)  
-        worksheet.set_column('C:D', 20)  
-        worksheet.set_column('E:E', 45)  
-        worksheet.set_column('F:G', 15)  
-        worksheet.set_column('H:I', 20)  
+        worksheet.set_column('A:B', 10) 
+        worksheet.set_column('C:C', 30)  
+        worksheet.set_column('D:E', 20)  
+        worksheet.set_column('F:F', 45)  
+        worksheet.set_column('G:H', 15)  
+        worksheet.set_column('I:J', 20)  
         
     output.seek(0)
     return send_file(
@@ -296,6 +305,7 @@ def import_excel():
                     return col
             return None
 
+        c_drn = find_col(['DRN', 'DEFECT REPORT']) # Tambah pengesan kolum DRN
         c_sn = find_col(['SERIAL NO', 'S/N', 'SERIAL NUMBER'])
         c_pn = find_col(['PART NO', 'P/N', 'PART NUMBER'])
         c_desc = find_col(['DESCRIPTION', 'PERALATAN', 'EQUIPMENT'])
@@ -327,6 +337,7 @@ def import_excel():
             final_pic = "N/A" if 'WARRANTY' in str_pic or str_pic in ['NAN', 'N/A', '', '0', '0.0'] else str_pic
 
             new_log = RepairLog(
+                drn=clean_val(row.get(c_drn)) if c_drn else "N/A",
                 peralatan=clean_val(row.get(c_desc)) if c_desc else "N/A",
                 pn=clean_val(row.get(c_pn)) if c_pn else "N/A",
                 sn=sn,
@@ -393,6 +404,7 @@ def edit(id):
     source = request.args.get('from', 'admin')
 
     if request.method == 'POST':
+        l.drn = request.form.get('drn', '').upper() # Tambah drn di edit
         l.peralatan = request.form.get('peralatan', '').upper()
         l.pn = request.form.get('pn', '').upper()
         l.sn = request.form.get('sn', '').upper()
