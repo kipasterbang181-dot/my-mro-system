@@ -24,7 +24,6 @@ app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 # ==========================================
 # KONFIGURASI DATABASE (SUPABASE POSTGRES)
 # ==========================================
-# Menggunakan URL Supabase dengan mod SSL diaktifkan
 DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -40,15 +39,18 @@ db = SQLAlchemy(app)
 class RepairLog(db.Model):
     __tablename__ = 'repair_log'
     id = db.Column(db.Integer, primary_key=True)
+    drn = db.Column(db.String(100)) # Lajur tambahan dari SQL baru anda
     peralatan = db.Column(db.String(255))
     pn = db.Column(db.String(255))
     sn = db.Column(db.String(255))
-    date_in = db.Column(db.String(100))
-    date_out = db.Column(db.String(100))
+    date_in = db.Column(db.Date) # Menggunakan Date agar pengiraan tahun tepat
+    date_out = db.Column(db.Date) # Menggunakan Date agar pengiraan tahun tepat
     defect = db.Column(db.Text)
     status_type = db.Column(db.String(100)) # REPAIR / WARRANTY / ACTIVE
     pic = db.Column(db.String(255))
+    is_warranty = db.Column(db.Boolean, default=False) # Lajur tambahan dari SQL baru anda
     created_at = db.Column(db.DateTime, default=datetime.now)
+    last_updated = db.Column(db.DateTime, default=datetime.now)
 
 # Memastikan table wujud dalam Supabase setiap kali app dijalankan
 with app.app_context():
@@ -73,10 +75,8 @@ def login():
     next_page = request.args.get('next')
     
     if request.method == 'POST':
-        # Logik Login: Username (u) & Password (p) dari login.html
         if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
             session['admin'] = True
-            
             target = request.form.get('next_target')
             if target and target != 'None' and target != '':
                 return redirect(target)
@@ -95,27 +95,28 @@ def admin():
     try:
         logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
 
-        # Pengiraan Ringkasan Unit mengikut Tahun (Jadual di Dashboard)
-        summary_dict = {}
+        # Pengiraan Ringkasan Unit mengikut Tahun (Hantar sebagai 'stats' dan 'summary_dict')
+        # Ini untuk mengelakkan ralat 'stats' is undefined di admin.html
+        stats = {}
         for l in logs:
             if l.date_in:
                 try:
-                    year = str(l.date_in)[:4]
-                    if year.isdigit():
-                        summary_dict[year] = summary_dict.get(year, 0) + 1
+                    year = str(l.date_in.year)
+                    stats[year] = stats.get(year, 0) + 1
                 except:
                     continue
 
-        sorted_years = sorted(summary_dict.keys())
-        total_units = sum(summary_dict.values())
+        sorted_years = sorted(stats.keys())
+        total_units = len(logs)
 
+        # Kami hantar kedua-dua nama pembolehubah untuk keselamatan
         return render_template('admin.html', 
                                logs=logs, 
-                               summary_dict=summary_dict, 
+                               stats=stats, 
+                               summary_dict=stats, 
                                sorted_years=sorted_years, 
                                total_units=total_units)
     except Exception as e:
-        # Jika ralat berlaku, paparkan punca ralat secara terperinci (Traceback)
         error_details = traceback.format_exc()
         return f"<h3>Admin Dashboard Error (500)</h3><p>{str(e)}</p><pre>{error_details}</pre>", 500
 
@@ -144,15 +145,22 @@ def incoming():
         peralatan = request.form.get('peralatan', '').upper()
         pn = request.form.get('pn', '').upper()
         sn = request.form.get('sn', '').upper()
-        date_in = request.form.get('date_in') or datetime.now().strftime("%Y-%m-%d")
-        date_out = request.form.get('date_out', '') 
+        drn = request.form.get('drn', '').upper()
+        
+        # Penukaran String Tarikh ke Objek Date Python
+        date_in_val = request.form.get('date_in')
+        d_in = datetime.strptime(date_in_val, '%Y-%m-%d').date() if date_in_val else datetime.now().date()
+        
+        date_out_val = request.form.get('date_out')
+        d_out = datetime.strptime(date_out_val, '%Y-%m-%d').date() if date_out_val else None
+
         defect = request.form.get('defect', 'N/A').upper()
         status = request.form.get('status_type', request.form.get('status', 'ACTIVE')).upper()
         pic = request.form.get('pic', 'N/A').upper()
 
         new_log = RepairLog(
-            peralatan=peralatan, pn=pn, sn=sn,
-            date_in=date_in, date_out=date_out,
+            drn=drn, peralatan=peralatan, pn=pn, sn=sn,
+            date_in=d_in, date_out=d_out,
             defect=defect, status_type=status, pic=pic
         )
         db.session.add(new_log)
@@ -172,7 +180,6 @@ def incoming():
 
 @app.route('/download_single_report/<int:item_id>')
 def download_single_report(item_id):
-    """ Generate PDF Report untuk satu unit sahaja """
     if not session.get('admin'): return redirect(url_for('login', next=request.path))
     l = RepairLog.query.get_or_404(item_id)
     
@@ -191,8 +198,8 @@ def download_single_report(item_id):
         ["PART NUMBER (P/N)", l.pn],
         ["SERIAL NUMBER (S/N)", l.sn],
         ["DEFECT / REMARKS", Paragraph(l.defect or "N/A", cell_style)],
-        ["DATE IN", l.date_in],
-        ["DATE OUT", l.date_out or "-"],
+        ["DATE IN", str(l.date_in)],
+        ["DATE OUT", str(l.date_out) if l.date_out else "-"],
         ["STATUS", l.status_type],
         ["JTP / PIC", l.pic],
         ["REPORT GENERATED", datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
@@ -215,7 +222,6 @@ def download_single_report(item_id):
 
 @app.route('/download_report')
 def download_report():
-    """ Generate PDF untuk keseluruhan log (Landscape) """
     if not session.get('admin'): return redirect(url_for('login', next=request.path))
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     
@@ -234,7 +240,7 @@ def download_report():
             l.id, Paragraph(l.peralatan or "N/A", table_cell_style), 
             Paragraph(l.pn or "N/A", table_cell_style), l.sn, 
             Paragraph(l.defect or "N/A", table_cell_style), 
-            l.date_in, l.date_out or "-", l.status_type, 
+            str(l.date_in), str(l.date_out) if l.date_out else "-", l.status_type, 
             Paragraph(l.pic or "N/A", table_cell_style)
         ])
     
@@ -254,12 +260,11 @@ def download_report():
 
 @app.route('/export_excel')
 def export_excel_data():
-    """ Eksport data ke fail .xlsx """
     if not session.get('admin'): return redirect(url_for('login', next=request.path))
     logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
     data = [{
-        "ID": l.id, "PERALATAN": l.peralatan, "P/N": l.pn, "S/N": l.sn,
-        "DEFECT": l.defect or "N/A", "DATE IN": l.date_in, "DATE OUT": l.date_out or "-",
+        "ID": l.id, "DRN": l.drn, "PERALATAN": l.peralatan, "P/N": l.pn, "S/N": l.sn,
+        "DEFECT": l.defect or "N/A", "DATE IN": str(l.date_in), "DATE OUT": str(l.date_out) if l.date_out else "-",
         "STATUS": l.status_type, "PIC": l.pic
     } for l in logs]
     
@@ -272,7 +277,6 @@ def export_excel_data():
 
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
-    """ Import data dari fail Excel ke Database """
     if not session.get('admin'): return redirect(url_for('login', next=request.path))
     file = request.files.get('file_excel')
     if not file: return "Tiada fail dipilih"
@@ -283,11 +287,11 @@ def import_excel():
         logs_to_add = []
         for _, row in df.iterrows():
             new_log = RepairLog(
+                drn=str(row.get('DRN', 'N/A')).upper(),
                 peralatan=str(row.get('PERALATAN', 'N/A')).upper(),
                 pn=str(row.get('P/N', row.get('PART NUMBER', 'N/A'))).upper(),
                 sn=str(row.get('S/N', row.get('SERIAL NUMBER', 'N/A'))).upper(),
-                date_in=str(row.get('DATE IN', datetime.now().strftime("%Y-%m-%d"))),
-                date_out=str(row.get('DATE OUT', '-')),
+                date_in=pd.to_datetime(row.get('DATE IN')).date() if pd.notnull(row.get('DATE IN')) else datetime.now().date(),
                 status_type=str(row.get('STATUS', 'ACTIVE')).upper(),
                 pic=str(row.get('PIC', 'N/A')).upper(),
                 defect=str(row.get('DEFECT', 'N/A')).upper()
@@ -301,22 +305,15 @@ def import_excel():
     except Exception as e:
         return f"Excel Import Error: {str(e)}"
 
-# ==========================================
-# PENGURUSAN QR & TAG
-# ==========================================
-
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
-    """ Paparan Service Tag (Label Biru) """
     l = RepairLog.query.get_or_404(id)
     count = RepairLog.query.filter_by(sn=l.sn).count()
     return render_template('view_tag.html', l=l, logs_count=count)
 
 @app.route('/download_qr/<int:id>')
 def download_qr(id):
-    """ Muat turun imej QR Code yang point ke halaman History """
     l = RepairLog.query.get_or_404(id)
-    # QR akan membawa user ke sejarah pergerakan S/N tersebut
     qr_link = f"{request.url_root}history/{l.sn}"
     qr = qrcode.make(qr_link)
     buf = io.BytesIO()
@@ -324,13 +321,8 @@ def download_qr(id):
     buf.seek(0)
     return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f"QR_{l.sn}.png")
 
-# ==========================================
-# EDIT, DELETE & LOGOUT
-# ==========================================
-
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
-    """ Edit rekod sedia ada """
     if not session.get('admin'): return redirect(url_for('login', next=request.full_path))
     l = RepairLog.query.get_or_404(id)
     source = request.args.get('from', 'admin')
@@ -339,9 +331,15 @@ def edit(id):
         l.peralatan = request.form.get('peralatan', '').upper()
         l.pn = request.form.get('pn', '').upper()
         l.sn = request.form.get('sn', '').upper()
+        l.drn = request.form.get('drn', '').upper()
         l.pic = request.form.get('pic', '').upper()
-        l.date_in = request.form.get('date_in')
-        l.date_out = request.form.get('date_out')
+        
+        d_in_str = request.form.get('date_in')
+        l.date_in = datetime.strptime(d_in_str, '%Y-%m-%d').date() if d_in_str else l.date_in
+        
+        d_out_str = request.form.get('date_out')
+        l.date_out = datetime.strptime(d_out_str, '%Y-%m-%d').date() if d_out_str else None
+        
         l.defect = request.form.get('defect', '').upper()
         l.status_type = request.form.get('status_type', '').upper()
         db.session.commit()
@@ -355,7 +353,6 @@ def edit(id):
 
 @app.route('/delete/<int:id>')
 def delete(id):
-    """ Padam satu rekod """
     if not session.get('admin'): return redirect(url_for('login', next=request.path))
     l = RepairLog.query.get_or_404(id)
     db.session.delete(l)
@@ -364,7 +361,6 @@ def delete(id):
 
 @app.route('/delete_bulk', methods=['POST'])
 def delete_bulk():
-    """ Padam rekod yang dipilih secara banyak (bulk) """
     if not session.get('admin'): return redirect(url_for('login', next=request.path))
     selected_ids = request.form.getlist('selected_ids')
     if selected_ids:
@@ -375,11 +371,9 @@ def delete_bulk():
 
 @app.route('/logout')
 def logout():
-    """ Keluar dari sesi Admin """
     session.clear()
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    # Berjalan pada port 5000 (Local) atau dinamik (Server)
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
