@@ -198,10 +198,11 @@ def incoming():
         db.session.add(new_log)
         db.session.commit()
 
-        # [UPDATE] Notifikasi Berjaya
+        # [UPDATE] Mesej Berjaya
         flash(f"Data {sn} berjaya disimpan!", "success")
 
         # [UPDATE] Kekal di halaman Incoming (Stay on page)
+        # Kami tidak lagi redirect ke 'admin', sebaliknya ke 'incoming' semula
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return "OK", 200
         return redirect(url_for('incoming'))
