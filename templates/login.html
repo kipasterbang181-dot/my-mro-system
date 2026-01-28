@@ -157,6 +157,12 @@
         let bullets = [];
         let keys = {};
 
+        // BOSS VARIABLES
+        let bossActive = false;
+        let boss = { x: 110, y: -80, w: 80, h: 60, hp: 500, maxHp: 500, speed: 2, dir: 1 };
+        let bossStones = [];
+        let lastBossShot = 0;
+
         // Cheat Logic Functions
         function toggleGodMode() {
             godMode = !godMode;
@@ -204,6 +210,10 @@
             score = 0;
             meteors = [];
             bullets = [];
+            bossStones = [];
+            bossActive = false;
+            boss.hp = 500;
+            boss.y = -80;
             player.x = 140;
             player.y = 180;
             reviveScreen.classList.add('hidden');
@@ -215,12 +225,13 @@
             if(!gameActive) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // Pergerakan Player
             if ((keys['ArrowLeft'] || keys['KeyA']) && player.x > 0) player.x -= player.speed;
             if ((keys['ArrowRight'] || keys['KeyD']) && player.x < canvas.width - player.w) player.x += player.speed;
             if ((keys['ArrowUp'] || keys['KeyW']) && player.y > 0) player.y -= player.speed;
             if ((keys['ArrowDown'] || keys['KeyS']) && player.y < canvas.height - player.h) player.y += player.speed;
 
-            // Draw Ship
+            // DRAW PLAYER SHIP
             ctx.fillStyle = godMode ? "#fbbf24" : "#3b82f6";
             ctx.shadowBlur = godMode ? 20 : 10;
             ctx.shadowColor = godMode ? "#fbbf24" : "#3b82f6";
@@ -231,15 +242,17 @@
             ctx.fill();
             ctx.shadowBlur = 0;
             
+            // Engine Flame
             ctx.fillStyle = (Date.now() % 200 < 100) ? "#ef4444" : "#f97316";
             ctx.fillRect(player.x + player.w/2 - 3, player.y + player.h, 6, 4);
 
-            // Auto-firing (Influenced by Rapid Fire Cheat)
+            // AUTO FIRING
             let fireInterval = rapidFire ? 40 : 160;
             if(Date.now() % fireInterval < 20) {
                 bullets.push({x: player.x + player.w/2 - 1.5, y: player.y, w: 3, h: 10});
             }
 
+            // BULLET LOGIC
             bullets.forEach((b, i) => {
                 b.y -= 7;
                 ctx.fillStyle = "#fbbf24";
@@ -247,9 +260,73 @@
                 ctx.shadowColor = "#fbbf24";
                 ctx.fillRect(b.x, b.y, b.w, b.h);
                 ctx.shadowBlur = 0;
+
+                // Hit Boss?
+                if (bossActive && b.y < boss.y + boss.h && b.x > boss.x && b.x < boss.x + boss.w && b.y > boss.y) {
+                    boss.hp -= 2;
+                    bullets.splice(i, 1);
+                    if(boss.hp <= 0) {
+                        bossActive = false;
+                        score += 5000;
+                        document.getElementById('game-score').innerText = "Score: " + score;
+                    }
+                }
+
                 if(b.y < 0) bullets.splice(i, 1);
             });
 
+            // BOSS LOGIC
+            if (score >= 1000) bossActive = true;
+
+            if (bossActive) {
+                // Pergerakan Boss
+                if (boss.y < 20) boss.y += 1; // Turun perlahan
+                boss.x += boss.speed * boss.dir;
+                if (boss.x <= 0 || boss.x >= canvas.width - boss.w) boss.dir *= -1;
+
+                // Draw Boss (👹)
+                ctx.font = "50px Arial";
+                ctx.fillText("👹", boss.x + 10, boss.y + 45);
+
+                // BOSS HP BAR
+                ctx.fillStyle = "#333";
+                ctx.fillRect(boss.x, boss.y - 15, boss.w, 6);
+                ctx.fillStyle = "#ff0000";
+                ctx.fillRect(boss.x, boss.y - 15, (boss.hp / boss.maxHp) * boss.w, 6);
+                ctx.strokeStyle = "white";
+                ctx.lineWidth = 1;
+                ctx.strokeRect(boss.x, boss.y - 15, boss.w, 6);
+
+                // Boss Serang (Baling Batu)
+                if (Date.now() - lastBossShot > 1500) {
+                    bossStones.push({ x: boss.x + boss.w/2, y: boss.y + boss.h, size: 20, speed: 3 });
+                    lastBossShot = Date.now();
+                }
+            }
+
+            // BOSS STONE LOGIC
+            bossStones.forEach((s, si) => {
+                s.y += s.speed;
+                // Draw Stone
+                ctx.fillStyle = "#ef4444";
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = "red";
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size/2, 0, Math.PI*2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // Hit Player?
+                let dx = (player.x + player.w/2) - s.x;
+                let dy = (player.y + player.h/2) - s.y;
+                if(Math.sqrt(dx*dx + dy*dy) < s.size/2 + 8) {
+                    if(!godMode) gameOver();
+                    else bossStones.splice(si, 1);
+                }
+                if (s.y > canvas.height) bossStones.splice(si, 1);
+            });
+
+            // METEOR LOGIC
             if(Math.random() < 0.04) {
                 meteors.push({
                     x: Math.random() * (canvas.width - 20), 
@@ -280,17 +357,8 @@
                 let pdx = (player.x + player.w/2) - m.x;
                 let pdy = (player.y + player.h/2) - m.y;
                 if(Math.sqrt(pdx*pdx + pdy*pdy) < m.size/2 + 8) {
-                    if(!godMode) {
-                        gameActive = false;
-                        reviveScreen.classList.remove('hidden');
-                        document.getElementById('final-score').innerText = "Meteors: " + score;
-                        if(score > best) {
-                            best = score;
-                            localStorage.setItem('g7_meteor_best', best);
-                            document.getElementById('high-score').innerText = "High Score: " + best;
-                        }
-                    } else {
-                        // In God Mode, meteors explode on contact
+                    if(!godMode) gameOver();
+                    else {
                         meteors.splice(mi, 1);
                         score += 5;
                     }
@@ -300,6 +368,17 @@
             });
 
             requestAnimationFrame(gameLoop);
+        }
+
+        function gameOver() {
+            gameActive = false;
+            reviveScreen.classList.remove('hidden');
+            document.getElementById('final-score').innerText = "Score: " + score;
+            if(score > best) {
+                best = score;
+                localStorage.setItem('g7_meteor_best', best);
+                document.getElementById('high-score').innerText = "High Score: " + best;
+            }
         }
     </script>
 </body>
