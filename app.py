@@ -24,7 +24,6 @@ app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 # ==========================================
 # KONFIGURASI DATABASE (SUPABASE POSTGRES)
 # ==========================================
-# PEMBETULAN: Menggunakan postgresql+psycopg2 untuk kestabilan SQLAlchemy di Render
 DB_URL = "postgresql+psycopg2://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
@@ -54,7 +53,6 @@ class RepairLog(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     last_updated = db.Column(db.DateTime, default=datetime.now)
 
-# Inisialisasi Database (Bina table jika belum ada)
 with app.app_context():
     try:
         db.create_all()
@@ -107,8 +105,7 @@ def admin():
                     status_list.append(up_s)
 
         years = sorted(list(set([l.date_in.year for l in logs if l.date_in])))
-        if not years:
-            years = [datetime.now().year]
+        if not years: years = [datetime.now().year]
 
         stats_matrix = {status: {year: 0 for year in years} for status in status_list}
         row_totals = {status: 0 for status in status_list}
@@ -158,9 +155,7 @@ def incoming():
     if request.method == 'GET':
         return render_template('incoming.html')
     try:
-        # PEMBETULAN DI SINI: Menyokong 'status' atau 'status_type' dari HTML
         status_val = request.form.get('status') or request.form.get('status_type') or "UNDER REPAIR"
-        
         d_in_val = request.form.get('date_in')
         d_in = datetime.strptime(d_in_val, '%Y-%m-%d').date() if d_in_val else datetime.now().date()
         
@@ -176,7 +171,11 @@ def incoming():
         )
         db.session.add(new_log)
         db.session.commit()
-        return redirect(url_for('admin'))
+        
+        # PEMBETULAN: Kekal di halaman incoming selepas save
+        flash("Data Berjaya Disimpan!", "success")
+        return redirect(url_for('incoming')) 
+        
     except Exception as e:
         db.session.rollback()
         return f"Database Error: {str(e)}", 500
@@ -282,9 +281,7 @@ def edit(id):
     l = RepairLog.query.get_or_404(id)
     source = request.args.get('from', 'admin')
     if request.method == 'POST':
-        # PEMBETULAN DI SINI: Mengambil status dari 'status' (HTML) atau 'status_type'
         new_status = request.form.get('status') or request.form.get('status_type')
-        
         l.peralatan = request.form.get('peralatan', '').upper()
         l.pn = request.form.get('pn', '').upper()
         l.sn = request.form.get('sn', '').upper()
@@ -292,21 +289,20 @@ def edit(id):
         l.pic = request.form.get('pic', '').upper()
         
         d_in_str = request.form.get('date_in')
-        if d_in_str: 
-            l.date_in = datetime.strptime(d_in_str, '%Y-%m-%d').date()
-            
+        if d_in_str: l.date_in = datetime.strptime(d_in_str, '%Y-%m-%d').date()
         d_out_str = request.form.get('date_out')
         l.date_out = datetime.strptime(d_out_str, '%Y-%m-%d').date() if d_out_str else None
             
         l.defect = request.form.get('defect', '').upper()
-        
-        if new_status:
-            l.status_type = new_status.upper().strip()
+        if new_status: l.status_type = new_status.upper().strip()
             
         l.last_updated = datetime.now()
-        
         db.session.commit()
-        return redirect(url_for('admin'))
+        
+        # PEMBETULAN: Kekal di halaman edit selepas simpan kemas kini
+        flash("Rekod Berjaya Dikemaskini!", "success")
+        return redirect(url_for('edit', id=id, source=source))
+
     return render_template('edit.html', item=l, source=source)
 
 @app.route('/delete/<int:id>')
