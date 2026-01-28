@@ -74,7 +74,6 @@ def index():
 def login():
     next_page = request.args.get('next')
     if request.method == 'POST':
-        # Nota: Password statik anda
         if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
             session['admin'] = True
             target = request.form.get('next_target')
@@ -100,7 +99,6 @@ def admin():
             "READY TO DELIVERED WARRANTY", "READY TO QUOTE", "READY TO DELIVERED"
         ]
 
-        # Ambil status unik dari DB untuk statistik
         db_statuses = db.session.query(RepairLog.status_type).distinct().all()
         for s in db_statuses:
             if s[0]:
@@ -108,7 +106,6 @@ def admin():
                 if up_s not in status_list:
                     status_list.append(up_s)
 
-        # Proses statistik tahunan
         years = sorted(list(set([l.date_in.year for l in logs if l.date_in])))
         if not years:
             years = [datetime.now().year]
@@ -161,8 +158,8 @@ def incoming():
     if request.method == 'GET':
         return render_template('incoming.html')
     try:
-        # Menangani input status yang mungkin dinamakan 'status' atau 'status_type' dalam HTML
-        status_val = request.form.get('status_type') or request.form.get('status') or "ACTIVE"
+        # PEMBETULAN DI SINI: Menyokong 'status' atau 'status_type' dari HTML
+        status_val = request.form.get('status') or request.form.get('status_type') or "UNDER REPAIR"
         
         d_in_val = request.form.get('date_in')
         d_in = datetime.strptime(d_in_val, '%Y-%m-%d').date() if d_in_val else datetime.now().date()
@@ -252,7 +249,7 @@ def import_excel():
                 sn=str(row.get('S/N', row.get('SERIAL NUMBER', 'N/A'))).upper(),
                 date_in=d_in,
                 date_out=d_out,
-                status_type=str(row.get('STATUS', 'ACTIVE')).upper(),
+                status_type=str(row.get('STATUS', 'UNDER REPAIR')).upper(),
                 pic=str(row.get('PIC', 'N/A')).upper(),
                 defect=str(row.get('DEFECT', 'N/A')).upper()
             )
@@ -285,6 +282,9 @@ def edit(id):
     l = RepairLog.query.get_or_404(id)
     source = request.args.get('from', 'admin')
     if request.method == 'POST':
+        # PEMBETULAN DI SINI: Mengambil status dari 'status' (HTML) atau 'status_type'
+        new_status = request.form.get('status') or request.form.get('status_type')
+        
         l.peralatan = request.form.get('peralatan', '').upper()
         l.pn = request.form.get('pn', '').upper()
         l.sn = request.form.get('sn', '').upper()
@@ -299,7 +299,10 @@ def edit(id):
         l.date_out = datetime.strptime(d_out_str, '%Y-%m-%d').date() if d_out_str else None
             
         l.defect = request.form.get('defect', '').upper()
-        l.status_type = (request.form.get('status_type') or request.form.get('status', 'ACTIVE')).upper()
+        
+        if new_status:
+            l.status_type = new_status.upper().strip()
+            
         l.last_updated = datetime.now()
         
         db.session.commit()
@@ -330,6 +333,5 @@ def logout():
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    # Gunakan PORT dari environment (penting untuk Render)
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
