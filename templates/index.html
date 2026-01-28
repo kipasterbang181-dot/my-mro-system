@@ -220,20 +220,38 @@
             }
         });
 
-        // --- FUNGSI PARSE YANG DIBETULKAN (TIADA PAKSAAN 2026) ---
+        // --- FUNGSI PARSE YANG DIBETULKAN (MENGAMBIL TARIKH ASAL EXCEL) ---
         function parseExcelDate(val) {
             if (!val || val === "0" || val === "" || val === 0 || String(val).toUpperCase() === "N/A") return "";
             
+            // Handle jika format adalah nombor siri Excel
             if (typeof val === 'number') {
                 const date = new Date(Math.round((val - 25569) * 86400 * 1000));
-                return date.toISOString().split('T')[0];
+                let year = date.getFullYear();
+                let month = String(date.getMonth() + 1).padStart(2, '0');
+                let day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
             }
             
+            // Handle jika format adalah objek Date
             if (val instanceof Date) {
                 if (isNaN(val.getTime())) return "";
-                return val.toISOString().split('T')[0];
+                let year = val.getFullYear();
+                let month = String(val.getMonth() + 1).padStart(2, '0');
+                let day = String(val.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
             }
             
+            // Handle jika format adalah String (contoh: "21-01-25")
+            let parts = String(val).split(/[-/]/);
+            if (parts.length === 3) {
+                let d = parts[0].padStart(2, '0');
+                let m = parts[1].padStart(2, '0');
+                let y = parts[2].length === 2 ? "20" + parts[2] : parts[2];
+                // Jika user letak DD-MM-YY
+                return `${y}-${m}-${d}`;
+            }
+
             let d = new Date(val);
             if (!isNaN(d.getTime())) {
                 return d.toISOString().split('T')[0];
@@ -249,6 +267,7 @@
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
+                    // Penting: cellDates: true supaya SheetJS detect tarikh
                     const workbook = XLSX.read(data, {type: 'array', cellDates: true});
                     const firstSheetName = workbook.SheetNames[0];
                     const firstSheet = workbook.Sheets[firstSheetName];
@@ -277,7 +296,7 @@
                             return foundKey ? row[foundKey] : "";
                         };
 
-                        // BAIKI: Ambil tarikh dari excel, jika tiada biar kosong (bukan 2026)
+                        // AMBIL TARIKH DARI KOLUM EXCEL
                         let rawDateValue = getVal(["DATE IN", "DATE_IN", "INCOMING", "TARIKH MASUK"]);
                         let finalDate = parseExcelDate(rawDateValue);
 
@@ -290,7 +309,7 @@
                             status: String(getVal(["STATUS"]) || "SERVICEABLE").toUpperCase(),
                             status_type: 'REPAIR',
                             defect: String(getVal(["DEFECT", "REMARKS", "KEROSAKAN", "CATATAN"]) || "N/A").toUpperCase(),
-                            date_in: finalDate 
+                            date_in: finalDate // Menggunakan tarikh dari fail Excel
                         };
                     }).filter(item => {
                         const sn = String(item.sn).toUpperCase().trim();
