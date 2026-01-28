@@ -176,7 +176,11 @@ def incoming():
         date_out_val = request.form.get('date_out')
         d_out = datetime.strptime(date_out_val, '%Y-%m-%d').date() if date_out_val else None
         defect = request.form.get('defect', 'N/A').upper()
-        status = request.form.get('status_type', request.form.get('status', 'ACTIVE')).upper()
+        
+        # Penambahbaikan: Pastikan status ditangkap dengan betul dan dibersihkan
+        status_raw = request.form.get('status_type', request.form.get('status', 'ACTIVE'))
+        status = status_raw.upper().strip()
+        
         pic = request.form.get('pic', 'N/A').upper()
 
         new_log = RepairLog(
@@ -252,7 +256,7 @@ def import_excel():
         logs_to_add = []
         
         for _, row in df.iterrows():
-            # Pengendalian ralat tarikh untuk elakkan proses 'hang'
+            # Logik tarikh yang lebih selamat
             try:
                 raw_in = row.get('DATE IN')
                 d_in = pd.to_datetime(raw_in).date() if pd.notnull(raw_in) else datetime.now().date()
@@ -263,6 +267,9 @@ def import_excel():
                 d_in = datetime.now().date()
                 d_out = None
 
+            # Penambahbaikan: Ambil status dan pastikan SERVICEABLE tidak bertukar
+            status_val = str(row.get('STATUS', row.get('STATUS_TYPE', 'ACTIVE'))).upper().strip()
+
             new_log = RepairLog(
                 drn=str(row.get('DRN', 'N/A')).upper(),
                 peralatan=str(row.get('PERALATAN', 'N/A')).upper(),
@@ -270,19 +277,19 @@ def import_excel():
                 sn=str(row.get('S/N', row.get('SERIAL NUMBER', 'N/A'))).upper(),
                 date_in=d_in,
                 date_out=d_out,
-                status_type=str(row.get('STATUS', 'ACTIVE')).upper(),
+                status_type=status_val,
                 pic=str(row.get('PIC', 'N/A')).upper(),
                 defect=str(row.get('DEFECT', 'N/A')).upper()
             )
             logs_to_add.append(new_log)
         
-        # Gunakan chunking (pecahkan data) untuk elak sangkut di 80%
+        # Teknik CHUNKING: Selesaikan masalah terhenti pada 80%
         if logs_to_add:
             chunk_size = 50 
             for i in range(0, len(logs_to_add), chunk_size):
                 batch = logs_to_add[i:i + chunk_size]
                 db.session.bulk_save_objects(batch)
-                db.session.commit() # Simpan sikit-sikit ke database
+                db.session.commit()
                 
         flash(f"Berjaya import {len(logs_to_add)} data.", "success")
         return redirect(url_for('admin'))
@@ -328,11 +335,22 @@ def edit(id):
             l.date_out = None
             
         l.defect = request.form.get('defect', '').upper()
-        l.status_type = request.form.get('status_type', '').upper()
+        
+        # Penambahbaikan: Kemaskini status_type dengan pembersihan string
+        status_input = request.form.get('status_type', '').upper().strip()
+        if status_input:
+            l.status_type = status_input
+            
         l.last_updated = datetime.now()
         
         db.session.commit()
+        
+        # Mengekalkan logik redirect asal anda
+        origin = request.form.get('origin_source')
+        if origin == 'view_tag':
+            return redirect(url_for('view_tag', id=l.id))
         return redirect(url_for('admin'))
+        
     return render_template('edit.html', item=l, source=source)
 
 @app.route('/delete/<int:id>')
