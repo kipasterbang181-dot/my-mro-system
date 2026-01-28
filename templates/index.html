@@ -174,7 +174,6 @@
             localStorage.setItem('g7_lang', lang);
             const t = dictionary[lang];
 
-            // Tukar Text
             document.getElementById('t-subtitle').innerText = t.subtitle;
             document.getElementById('t-label-equip').innerText = t.labelEquip;
             document.getElementById('p-equip').placeholder = t.phEquip;
@@ -194,16 +193,13 @@
             document.getElementById('t-btn-import').innerText = t.btnImport;
             document.getElementById('progressText').innerText = t.textReady;
 
-            // Style butang
             document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('btn-' + lang).classList.add('active');
         }
 
-        // Initialize Language
         const savedLang = localStorage.getItem('g7_lang') || 'ms';
         changeLanguage(savedLang);
 
-        // --- LOGIK ASAL (DIKEKALKAN) ---
         document.getElementById('current_date').value = new Date().toISOString().split('T')[0];
 
         const excelInput = document.getElementById('excelInput');
@@ -223,23 +219,16 @@
             }
         });
 
-        // --- FUNGSI BARU UNTUK HANDLE NOMBOR TARIKH EXCEL (CONTOH: 45281) ---
         function parseExcelDate(val) {
             if (!val || val === "0" || val === "" || val === 0) return "";
-            
-            // Jika val adalah nombor (format Excel serial date)
             if (typeof val === 'number') {
                 const date = new Date(Math.round((val - 25569) * 86400 * 1000));
                 return date.toISOString().split('T')[0];
             }
-            
-            // Jika val adalah objek Date dari SheetJS
             if (val instanceof Date) {
                 if (isNaN(val.getTime())) return "";
                 return val.toISOString().split('T')[0];
             }
-
-            // Jika val adalah string, cuba parse
             let d = new Date(val);
             if (isNaN(d.getTime())) return "";
             return d.toISOString().split('T')[0];
@@ -252,15 +241,12 @@
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    // Tambah cellDates: true untuk bantu SheetJS detect date
                     const workbook = XLSX.read(data, {type: 'array', cellDates: true});
                     const firstSheetName = workbook.SheetNames[0];
                     const firstSheet = workbook.Sheets[firstSheetName];
                     
-                    // Ambil rawRows untuk cari header secara dinamik
                     const rawRows = XLSX.utils.sheet_to_json(firstSheet, {header: 1, defval: ""});
                     
-                    // CARI BARIS HEADER (Cari baris yang ada keywords utama)
                     let headerIndex = -1;
                     for (let i = 0; i < rawRows.length; i++) {
                         const row = rawRows[i].map(c => String(c).toUpperCase().trim());
@@ -275,7 +261,6 @@
                         return;
                     }
 
-                    // Ambil data bermula dari headerIndex yang dijumpai
                     const jsonData = XLSX.utils.sheet_to_json(firstSheet, {range: headerIndex});
                     
                     const formattedData = jsonData.map(row => {
@@ -284,7 +269,6 @@
                             return foundKey ? row[foundKey] : "";
                         };
 
-                        // Mapping data dengan logic "OR" (cari pelbagai variasi nama kolum)
                         return {
                             drn: "-",
                             peralatan: String(getVal(["DESCRIPTION", "COMPONENT", "EQUIPMENT", "PERALATAN", "ITEM"])).toUpperCase(),
@@ -294,15 +278,29 @@
                             status: String(getVal(["STATUS"]) || "SERVICEABLE").toUpperCase(),
                             status_type: 'REPAIR',
                             defect: String(getVal(["DEFECT", "REMARKS", "KEROSAKAN", "CATATAN"]) || "N/A").toUpperCase(),
-                            // Gunakan fungsi parseExcelDate yang lebih mantap
                             date_in: parseExcelDate(getVal(["DATE IN", "DATE_IN", "INCOMING", "TARIKH MASUK"])) || new Date().toISOString().split('T')[0]
                         };
-                    }).filter(item => item.sn && item.sn !== "" && item.sn !== "SERIAL NO" && item.sn !== "undefined");
+                    }).filter(item => {
+                        // --- TAPISAN PADU (ANTI-N/A & KOSONG) ---
+                        const sn = String(item.sn).toUpperCase().trim();
+                        const pn = String(item.pn).toUpperCase().trim();
+                        
+                        return (
+                            sn !== "" && 
+                            sn !== "N/A" && 
+                            sn !== "NONE" && 
+                            sn !== "UNDEFINED" && 
+                            sn !== "SERIAL NO" && 
+                            sn !== "SERIAL NO." &&
+                            pn !== "" && 
+                            pn !== "N/A"
+                        );
+                    });
 
                     if (formattedData.length > 0) {
                         processImport(formattedData);
                     } else {
-                        alert("Tiada data sah dijumpai dalam fail tersebut.");
+                        alert("Tiada data sah dijumpai dalam fail tersebut (Data N/A atau Kosong diabaikan).");
                     }
                 } catch (err) {
                     console.error(err);
