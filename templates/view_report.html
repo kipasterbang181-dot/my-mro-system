@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Preview Report - {{ l.sn }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
@@ -71,9 +72,9 @@
     </div>
 
     <div class="fixed bottom-10 right-10 flex gap-4 no-print">
-        <a href="/download_single_report/{{ l.id }}" id="t-btn-print" class="bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-xl hover:bg-blue-700 transition-all uppercase text-xs tracking-widest no-underline flex items-center justify-center">
+        <button onclick="downloadNow()" id="t-btn-print" class="bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-xl hover:bg-blue-700 transition-all uppercase text-xs tracking-widest no-underline flex items-center justify-center cursor-pointer">
             Print / Save PDF 📄
-        </a>
+        </button>
         
         <a href="/admin" id="t-btn-back" class="bg-slate-800 text-white px-8 py-3 rounded-full font-bold shadow-xl hover:bg-slate-900 transition-all uppercase text-xs tracking-widest no-underline flex items-center justify-center">
             Kembali
@@ -81,6 +82,32 @@
     </div>
 
     <script>
+        // FUNGSI DOWNLOAD PDF (Yang anda minta)
+        function downloadNow() {
+            // Sembunyikan butang supaya tak masuk dalam PDF
+            const buttons = document.querySelectorAll('.no-print');
+            buttons.forEach(b => b.style.opacity = '0');
+
+            const element = document.getElementById('reportArea');
+            const options = {
+                margin: [0.5, 0.5],
+                filename: 'G7_Report_{{ l.sn }}.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 3, // Skala 3 untuk hasil yang sangat tajam
+                    useCORS: true, 
+                    letterRendering: true 
+                },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(options).from(element).save().then(() => {
+                // Tunjukkan balik butang selepas selesai
+                buttons.forEach(b => b.style.opacity = '1');
+            });
+        }
+
+        // SISTEM TRANSLATION (Kekal seperti asal)
         const reportTranslations = {
             ms: {
                 subtitle: "LAPORAN PENYELENGGARAAN UNIT",
@@ -119,7 +146,6 @@
         };
 
         function applyLanguage() {
-            // Ambil bahasa dari localStorage yang dipilih di Dashboard
             const lang = localStorage.getItem('g7_lang') || 'ms';
             const t = reportTranslations[lang];
 
@@ -138,12 +164,10 @@
             document.getElementById('t-btn-print').innerText = t.btnPrint;
             document.getElementById('t-btn-back').innerText = t.btnBack;
 
-            // Khas untuk label "Generated" (kekalkan tarikh)
             const dateStr = "{{ l.created_at.strftime('%Y-%m-%d %H:%M:%S') if l.created_at else '-' }}";
             document.getElementById('t-generated').innerText = t.generated + dateStr;
         }
 
-        // Jalankan fungsi sebaik sahaja halaman dimuatkan
         document.addEventListener('DOMContentLoaded', applyLanguage);
     </script>
 </body>
