@@ -84,7 +84,8 @@
             <input type="hidden" name="drn" value="-">
             <input type="hidden" name="status_type" value="REPAIR">
             <input type="hidden" name="pic" value="N/A"> 
-            <input type="hidden" name="date_in" id="current_date">
+            
+            <input type="hidden" name="date_in" id="current_date" value="">
 
             <div class="flex flex-col gap-4 pt-2">
                 <button type="submit" id="t-btn-save" class="w-full bg-blue-900 text-white font-black py-6 rounded-[2rem] hover:bg-black transition-all shadow-xl uppercase tracking-widest text-sm italic">
@@ -173,7 +174,6 @@
         function changeLanguage(lang) {
             localStorage.setItem('g7_lang', lang);
             const t = dictionary[lang];
-
             document.getElementById('t-subtitle').innerText = t.subtitle;
             document.getElementById('t-label-equip').innerText = t.labelEquip;
             document.getElementById('p-equip').placeholder = t.phEquip;
@@ -192,7 +192,6 @@
             document.getElementById('t-btn-browse').innerText = t.btnBrowse;
             document.getElementById('t-btn-import').innerText = t.btnImport;
             document.getElementById('progressText').innerText = t.textReady;
-
             document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('btn-' + lang).classList.add('active');
         }
@@ -200,9 +199,7 @@
         const savedLang = localStorage.getItem('g7_lang') || 'ms';
         changeLanguage(savedLang);
 
-        // BAIKI: Kita tak nak date_in automatik jadi 2026. Biarkan kosong supaya ia ambil dari Excel.
-        document.getElementById('current_date').value = "";
-
+        // UI Logic
         const excelInput = document.getElementById('excelInput');
         const fileNameDisplay = document.getElementById('fileName');
         const uploadBtn = document.getElementById('uploadBtn');
@@ -220,41 +217,47 @@
             }
         });
 
-        // --- FUNGSI PARSE YANG DIBETULKAN (MENGAMBIL TARIKH ASAL EXCEL) ---
+        /**
+         * FUNGSI UTAMA: Menukar sebarang input tarikh Excel kepada YYYY-MM-DD
+         * Memastikan tarikh 2025 dalam Excel tidak menjadi 2026.
+         */
         function parseExcelDate(val) {
             if (!val || val === "0" || val === "" || val === 0 || String(val).toUpperCase() === "N/A") return "";
             
-            // Handle jika format adalah nombor siri Excel
+            let date;
+
+            // 1. Jika ia adalah nombor siri Excel (e.g. 45678)
             if (typeof val === 'number') {
-                const date = new Date(Math.round((val - 25569) * 86400 * 1000));
+                date = new Date(Math.round((val - 25569) * 86400 * 1000));
+            } 
+            // 2. Jika ia sudah menjadi objek Date JS
+            else if (val instanceof Date) {
+                date = val;
+            } 
+            // 3. Jika ia adalah String (e.g. "21-01-25")
+            else {
+                let str = String(val).trim();
+                // Tukar format DD-MM-YY atau DD/MM/YY ke format yang boleh dibaca Date()
+                let parts = str.split(/[-/]/);
+                if (parts.length === 3) {
+                    let d = parts[0];
+                    let m = parts[1];
+                    let y = parts[2];
+                    // Jika tahun cuma 2 digit (25), jadikan 2025
+                    if (y.length === 2) y = "20" + y;
+                    // Format baru: YYYY-MM-DD
+                    date = new Date(`${y}-${m}-${d}`);
+                } else {
+                    date = new Date(str);
+                }
+            }
+
+            // Validasi tarikh hasil parsing
+            if (date && !isNaN(date.getTime())) {
                 let year = date.getFullYear();
                 let month = String(date.getMonth() + 1).padStart(2, '0');
                 let day = String(date.getDate()).padStart(2, '0');
                 return `${year}-${month}-${day}`;
-            }
-            
-            // Handle jika format adalah objek Date
-            if (val instanceof Date) {
-                if (isNaN(val.getTime())) return "";
-                let year = val.getFullYear();
-                let month = String(val.getMonth() + 1).padStart(2, '0');
-                let day = String(val.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            }
-            
-            // Handle jika format adalah String (contoh: "21-01-25")
-            let parts = String(val).split(/[-/]/);
-            if (parts.length === 3) {
-                let d = parts[0].padStart(2, '0');
-                let m = parts[1].padStart(2, '0');
-                let y = parts[2].length === 2 ? "20" + parts[2] : parts[2];
-                // Jika user letak DD-MM-YY
-                return `${y}-${m}-${d}`;
-            }
-
-            let d = new Date(val);
-            if (!isNaN(d.getTime())) {
-                return d.toISOString().split('T')[0];
             }
 
             return ""; 
@@ -267,7 +270,7 @@
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    // Penting: cellDates: true supaya SheetJS detect tarikh
+                    // cellDates: true amat penting untuk SheetJS memproses tarikh dengan betul
                     const workbook = XLSX.read(data, {type: 'array', cellDates: true});
                     const firstSheetName = workbook.SheetNames[0];
                     const firstSheet = workbook.Sheets[firstSheetName];
@@ -277,14 +280,14 @@
                     let headerIndex = -1;
                     for (let i = 0; i < rawRows.length; i++) {
                         const row = rawRows[i].map(c => String(c).toUpperCase().trim());
-                        if (row.includes("PART NO") || row.includes("DESCRIPTION") || row.includes("SERIAL NO") || row.includes("PART NUMBER")) {
+                        if (row.includes("PART NO") || row.includes("DESCRIPTION") || row.includes("SERIAL NO") || row.includes("DATE IN")) {
                             headerIndex = i;
                             break;
                         }
                     }
 
                     if (headerIndex === -1) {
-                        alert("Gagal cari tajuk kolum (PART NO/DESCRIPTION/SERIAL NO). Pastikan baris tajuk wujud.");
+                        alert("Gagal cari tajuk kolum. Pastikan kolum 'PART NO', 'DESCRIPTION', 'SERIAL NO', dan 'DATE IN' wujud.");
                         return;
                     }
 
@@ -296,7 +299,7 @@
                             return foundKey ? row[foundKey] : "";
                         };
 
-                        // AMBIL TARIKH DARI KOLUM EXCEL
+                        // Ambil tarikh dari Excel secara spesifik
                         let rawDateValue = getVal(["DATE IN", "DATE_IN", "INCOMING", "TARIKH MASUK"]);
                         let finalDate = parseExcelDate(rawDateValue);
 
@@ -309,28 +312,18 @@
                             status: String(getVal(["STATUS"]) || "SERVICEABLE").toUpperCase(),
                             status_type: 'REPAIR',
                             defect: String(getVal(["DEFECT", "REMARKS", "KEROSAKAN", "CATATAN"]) || "N/A").toUpperCase(),
-                            date_in: finalDate // Menggunakan tarikh dari fail Excel
+                            date_in: finalDate // Ini akan menghantar tarikh 2025/2024 dari Excel
                         };
                     }).filter(item => {
                         const sn = String(item.sn).toUpperCase().trim();
                         const pn = String(item.pn).toUpperCase().trim();
-                        
-                        return (
-                            sn !== "" && 
-                            sn !== "N/A" && 
-                            sn !== "NONE" && 
-                            sn !== "UNDEFINED" && 
-                            sn !== "SERIAL NO" && 
-                            sn !== "SERIAL NO." &&
-                            pn !== "" && 
-                            pn !== "N/A"
-                        );
+                        return (sn !== "" && sn !== "N/A" && pn !== "" && pn !== "N/A");
                     });
 
                     if (formattedData.length > 0) {
                         processImport(formattedData);
                     } else {
-                        alert("Tiada data sah dijumpai dalam fail tersebut.");
+                        alert("Tiada data sah dijumpai.");
                     }
                 } catch (err) {
                     console.error(err);
@@ -364,7 +357,7 @@
                 progressText.innerText = `${dictionary[lang].textImporting}: ${percentage}% (${currentProgress}/${total})`;
             }
             setTimeout(() => {
-                alert(`Selesai! ${successCount} rekod berjaya diimport.`);
+                alert(`Selesai! ${successCount} rekod berjaya diimport dengan tarikh asal.`);
                 window.location.reload();
             }, 800);
         }
