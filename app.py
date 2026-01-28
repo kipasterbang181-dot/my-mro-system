@@ -34,7 +34,7 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 db = SQLAlchemy(app)
 
 # ==========================================
-# MODEL DATABASE (Sesuai dengan Supabase asal)
+# MODEL DATABASE (REPAIR_LOG)
 # ==========================================
 class RepairLog(db.Model):
     __tablename__ = 'repair_log'
@@ -89,21 +89,21 @@ def admin():
     try:
         logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
 
-        # --- LOGIK PANJANG UNTUK JADUAL RINGKASAN & STATS ---
-        status_list = [
-            "SERVICEABLE", "RETURN SERVICEABLE", "RETURN UNSERVICEABLE",
-            "WAITING LO", "OV REPAIR", "UNDER REPAIR", "AWAITING SPARE",
-            "SPARE READY", "WARRANTY REPAIR", "QUOTE SUBMITTED",
-            "TDI IN PROGRESS", "TDI TO REVIEW", "TDI READY TO QUOTE",
-            "READY TO DELIVERED WARRANTY", "READY TO QUOTE", "READY TO DELIVERED"
-        ]
-
+        # --- LOGIK DINAMIK UNTUK JADUAL STATISTIK ---
+        # Kita ambil semua status unik yang wujud dalam DB supaya status dari Excel (cth: Serviceable) muncul automatik
         db_statuses = db.session.query(RepairLog.status_type).distinct().all()
+        status_list = []
         for s in db_statuses:
             if s[0]:
                 up_s = s[0].upper().strip()
                 if up_s not in status_list:
                     status_list.append(up_s)
+        
+        # Tambahan status default jika DB masih kosong
+        default_defaults = ["SERVICEABLE", "REPAIR", "UNDER REPAIR", "AWAITING SPARE"]
+        for d in default_defaults:
+            if d not in status_list:
+                status_list.append(d)
 
         years = sorted(list(set([l.date_in.year for l in logs if l.date_in])))
         if not years:
@@ -152,15 +152,11 @@ def view_report(id):
     l = RepairLog.query.get_or_404(id)
     return render_template('view_report.html', l=l)
 
-# ==========================================
-# BAHAGIAN INCOMING (DIBERSIHKAN SUPAYA STATUS BETUL)
-# ==========================================
 @app.route('/incoming', methods=['GET', 'POST'])
 def incoming():
     if request.method == 'GET':
         return render_template('incoming.html')
     try:
-        # Mengambil input dan menukar ke Huruf Besar (Upper)
         peralatan = request.form.get('peralatan', '').upper()
         pn = request.form.get('pn', '').upper()
         sn = request.form.get('sn', '').upper()
@@ -168,8 +164,7 @@ def incoming():
         defect = request.form.get('defect', 'N/A').upper()
         pic = request.form.get('pic', 'N/A').upper()
         
-        # LOGIK STATUS: Mengutamakan 'status_type' dari dropdown
-        status = request.form.get('status_type', request.form.get('status', 'ACTIVE')).upper()
+        status = request.form.get('status_type', request.form.get('status', 'REPAIR')).upper()
 
         date_in_val = request.form.get('date_in')
         d_in = datetime.strptime(date_in_val, '%Y-%m-%d').date() if date_in_val else datetime.now().date()
@@ -186,11 +181,6 @@ def incoming():
         db.session.commit()
 
         flash(f"Data {sn} berjaya disimpan dengan status {status}!", "success")
-        
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return "OK", 200
-            
-        # Supaya kekal di page sama jika dihantar dari borang luaran
         return redirect(request.referrer or url_for('admin'))
 
     except Exception as e:
@@ -245,18 +235,25 @@ def export_excel_data():
     output.seek(0)
     return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name="Repair_Log.xlsx")
 
+# ==========================================
+# BAHAGIAN IMPORT EXCEL (DISESUAIKAN DENGAN OS2022.XLXS)
+# ==========================================
 @app.route('/import_excel', methods=['POST'])
 def import_excel():
     if not session.get('admin'): return redirect(url_for('login', next=request.path))
     file = request.files.get('file_excel')
     if not file: return "Tiada fail dipilih"
     try:
+        # Baca fail excel
         df = pd.read_excel(file)
+        # Tukar nama column kepada huruf besar dan buang space
         df.columns = [str(c).strip().upper() for c in df.columns]
+        
         logs_to_add = []
         
         for _, row in df.iterrows():
             try:
+                # Logik Tarikh (Column DATE IN & DATE OUT)
                 raw_in = row.get('DATE IN')
                 d_in = pd.to_datetime(raw_in).date() if pd.notnull(raw_in) else datetime.now().date()
                 raw_out = row.get('DATE OUT')
@@ -265,13 +262,20 @@ def import_excel():
                 d_in = datetime.now().date()
                 d_out = None
 
+            # Mapping mengikut fail os2022.xlsx awak:
+            # DESCRIPTION -> peralatan
+            # PART NO -> pn
+            # SERIAL NO -> sn
+            # STATUS -> status_type
+            
             new_log = RepairLog(
-                drn=str(row.get('DRN', 'N/A')).upper(),
-                peralatan=str(row.get('PERALATAN', 'N/A')).upper(),
-                pn=str(row.get('P/N', row.get('PART NUMBER', 'N/A'))).upper(),
-                sn=str(row.get('S/N', row.get('SERIAL NUMBER', 'N/A'))).upper(),
-                date_in=d_in, date_out=d_out,
-                status_type=str(row.get('STATUS', 'ACTIVE')).upper(),
+                drn=str(row.get('NO', 'N/A')).upper(),
+                peralatan=str(row.get('DESCRIPTION', 'N/A')).upper(),
+                pn=str(row.get('PART NO', 'N/A')).upper(),
+                sn=str(row.get('SERIAL NO', 'N/A')).upper(),
+                date_in=d_in, 
+                date_out=d_out,
+                status_type=str(row.get('STATUS', 'REPAIR')).upper(),
                 pic=str(row.get('PIC', 'N/A')).upper(),
                 defect=str(row.get('DEFECT', 'N/A')).upper()
             )
