@@ -223,8 +223,23 @@
             }
         });
 
+        // --- FUNGSI BARU UNTUK HANDLE NOMBOR TARIKH EXCEL (CONTOH: 45281) ---
         function parseExcelDate(val) {
             if (!val || val === "0" || val === "" || val === 0) return "";
+            
+            // Jika val adalah nombor (format Excel serial date)
+            if (typeof val === 'number') {
+                const date = new Date(Math.round((val - 25569) * 86400 * 1000));
+                return date.toISOString().split('T')[0];
+            }
+            
+            // Jika val adalah objek Date dari SheetJS
+            if (val instanceof Date) {
+                if (isNaN(val.getTime())) return "";
+                return val.toISOString().split('T')[0];
+            }
+
+            // Jika val adalah string, cuba parse
             let d = new Date(val);
             if (isNaN(d.getTime())) return "";
             return d.toISOString().split('T')[0];
@@ -237,52 +252,61 @@
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
+                    // Tambah cellDates: true untuk bantu SheetJS detect date
                     const workbook = XLSX.read(data, {type: 'array', cellDates: true});
                     const firstSheetName = workbook.SheetNames[0];
                     const firstSheet = workbook.Sheets[firstSheetName];
+                    
+                    // Ambil rawRows untuk cari header secara dinamik
                     const rawRows = XLSX.utils.sheet_to_json(firstSheet, {header: 1, defval: ""});
                     
+                    // CARI BARIS HEADER (Cari baris yang ada keywords utama)
                     let headerIndex = -1;
                     for (let i = 0; i < rawRows.length; i++) {
                         const row = rawRows[i].map(c => String(c).toUpperCase().trim());
-                        if (row.includes("PART NO") || row.includes("DESCRIPTION") || row.includes("SERIAL NO")) {
+                        if (row.includes("PART NO") || row.includes("DESCRIPTION") || row.includes("SERIAL NO") || row.includes("PART NUMBER")) {
                             headerIndex = i;
                             break;
                         }
                     }
 
                     if (headerIndex === -1) {
-                        alert("Gagal cari tajuk kolum (PART NO/DESCRIPTION/SERIAL NO).");
+                        alert("Gagal cari tajuk kolum (PART NO/DESCRIPTION/SERIAL NO). Pastikan baris tajuk wujud.");
                         return;
                     }
 
+                    // Ambil data bermula dari headerIndex yang dijumpai
                     const jsonData = XLSX.utils.sheet_to_json(firstSheet, {range: headerIndex});
+                    
                     const formattedData = jsonData.map(row => {
                         const getVal = (keys) => {
                             const foundKey = Object.keys(row).find(k => keys.includes(k.trim().toUpperCase()));
                             return foundKey ? row[foundKey] : "";
                         };
 
+                        // Mapping data dengan logic "OR" (cari pelbagai variasi nama kolum)
                         return {
                             drn: "-",
-                            peralatan: String(getVal(["DESCRIPTION", "COMPONENT", "EQUIPMENT"])).toUpperCase(),
+                            peralatan: String(getVal(["DESCRIPTION", "COMPONENT", "EQUIPMENT", "PERALATAN", "ITEM"])).toUpperCase(),
                             pn: String(getVal(["PART NO", "PART NO.", "PART NUMBER", "P/N"])).toUpperCase(),
                             sn: String(getVal(["SERIAL NO", "SERIAL NO.", "SERIAL NUMBER", "S/N"])).toUpperCase(),
-                            pic: String(getVal(["JTP", "PIC"]) || "N/A").toUpperCase(),
+                            pic: String(getVal(["PIC", "VENDOR", "JKTEK", "JTP"]) || "N/A").toUpperCase(),
                             status: String(getVal(["STATUS"]) || "SERVICEABLE").toUpperCase(),
                             status_type: 'REPAIR',
-                            defect: String(getVal(["DEFECT", "REMARKS"]) || "N/A").toUpperCase(),
-                            date_in: parseExcelDate(getVal(["DATE IN", "DATE_IN"])) || new Date().toISOString().split('T')[0]
+                            defect: String(getVal(["DEFECT", "REMARKS", "KEROSAKAN", "CATATAN"]) || "N/A").toUpperCase(),
+                            // Gunakan fungsi parseExcelDate yang lebih mantap
+                            date_in: parseExcelDate(getVal(["DATE IN", "DATE_IN", "INCOMING", "TARIKH MASUK"])) || new Date().toISOString().split('T')[0]
                         };
-                    }).filter(item => item.sn && item.sn !== "" && item.sn !== "SERIAL NO");
+                    }).filter(item => item.sn && item.sn !== "" && item.sn !== "SERIAL NO" && item.sn !== "undefined");
 
                     if (formattedData.length > 0) {
                         processImport(formattedData);
                     } else {
-                        alert("Tiada data sah.");
+                        alert("Tiada data sah dijumpai dalam fail tersebut.");
                     }
                 } catch (err) {
-                    alert("Ralat: " + err.message);
+                    console.error(err);
+                    alert("Ralat memproses fail: " + err.message);
                 }
             };
             reader.readAsArrayBuffer(file);
@@ -312,7 +336,7 @@
                 progressText.innerText = `${dictionary[lang].textImporting}: ${percentage}% (${currentProgress}/${total})`;
             }
             setTimeout(() => {
-                alert(`Selesai! ${successCount} rekod berjaya.`);
+                alert(`Selesai! ${successCount} rekod berjaya diimport.`);
                 window.location.reload();
             }, 800);
         }
