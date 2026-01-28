@@ -34,7 +34,7 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 db = SQLAlchemy(app)
 
 # ==========================================
-# MODEL DATABASE (REPAIR_LOG)
+# MODEL DATABASE (Sesuai dengan Supabase asal)
 # ==========================================
 class RepairLog(db.Model):
     __tablename__ = 'repair_log'
@@ -90,8 +90,6 @@ def admin():
         logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
 
         # --- LOGIK PANJANG UNTUK JADUAL RINGKASAN & STATS ---
-        
-        # 1. Senarai Status Lengkap
         status_list = [
             "SERVICEABLE", "RETURN SERVICEABLE", "RETURN UNSERVICEABLE",
             "WAITING LO", "OV REPAIR", "UNDER REPAIR", "AWAITING SPARE",
@@ -107,12 +105,10 @@ def admin():
                 if up_s not in status_list:
                     status_list.append(up_s)
 
-        # 2. Kenalpasti tahun unik dari database
         years = sorted(list(set([l.date_in.year for l in logs if l.date_in])))
         if not years:
             years = [datetime.now().year]
 
-        # 3. Bina Matriks Statistik (Panjang & Detail)
         stats_matrix = {status: {year: 0 for year in years} for status in status_list}
         row_totals = {status: 0 for status in status_list}
         column_totals = {year: 0 for year in years}
@@ -128,11 +124,6 @@ def admin():
                     row_totals[stat_key] += 1
                     column_totals[year_key] += 1
                     grand_total += 1
-                elif year_key in years:
-                    column_totals[year_key] += 1
-                    grand_total += 1
-
-        stats_data = column_totals 
 
         return render_template('admin.html', 
                                logs=logs, 
@@ -143,8 +134,7 @@ def admin():
                                row_totals=row_totals,
                                column_totals=column_totals,
                                grand_total=grand_total,
-                               total_units=len(logs),
-                               stats=stats_data) 
+                               total_units=len(logs)) 
                                    
     except Exception as e:
         error_details = traceback.format_exc()
@@ -162,22 +152,30 @@ def view_report(id):
     l = RepairLog.query.get_or_404(id)
     return render_template('view_report.html', l=l)
 
+# ==========================================
+# BAHAGIAN INCOMING (DIBERSIHKAN SUPAYA STATUS BETUL)
+# ==========================================
 @app.route('/incoming', methods=['GET', 'POST'])
 def incoming():
     if request.method == 'GET':
         return render_template('incoming.html')
     try:
+        # Mengambil input dan menukar ke Huruf Besar (Upper)
         peralatan = request.form.get('peralatan', '').upper()
         pn = request.form.get('pn', '').upper()
         sn = request.form.get('sn', '').upper()
         drn = request.form.get('drn', '').upper()
+        defect = request.form.get('defect', 'N/A').upper()
+        pic = request.form.get('pic', 'N/A').upper()
+        
+        # LOGIK STATUS: Mengutamakan 'status_type' dari dropdown
+        status = request.form.get('status_type', request.form.get('status', 'ACTIVE')).upper()
+
         date_in_val = request.form.get('date_in')
         d_in = datetime.strptime(date_in_val, '%Y-%m-%d').date() if date_in_val else datetime.now().date()
+        
         date_out_val = request.form.get('date_out')
         d_out = datetime.strptime(date_out_val, '%Y-%m-%d').date() if date_out_val else None
-        defect = request.form.get('defect', 'N/A').upper()
-        status = request.form.get('status_type', request.form.get('status', 'ACTIVE')).upper()
-        pic = request.form.get('pic', 'N/A').upper()
 
         new_log = RepairLog(
             drn=drn, peralatan=peralatan, pn=pn, sn=sn,
@@ -186,9 +184,15 @@ def incoming():
         )
         db.session.add(new_log)
         db.session.commit()
+
+        flash(f"Data {sn} berjaya disimpan dengan status {status}!", "success")
+        
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return "OK", 200
-        return redirect(url_for('admin'))
+            
+        # Supaya kekal di page sama jika dihantar dari borang luaran
+        return redirect(request.referrer or url_for('admin'))
+
     except Exception as e:
         db.session.rollback()
         return f"Database Error: {str(e)}", 500
@@ -252,11 +256,9 @@ def import_excel():
         logs_to_add = []
         
         for _, row in df.iterrows():
-            # Pengendalian ralat tarikh untuk elakkan proses 'hang'
             try:
                 raw_in = row.get('DATE IN')
                 d_in = pd.to_datetime(raw_in).date() if pd.notnull(raw_in) else datetime.now().date()
-                
                 raw_out = row.get('DATE OUT')
                 d_out = pd.to_datetime(raw_out).date() if pd.notnull(raw_out) else None
             except:
@@ -268,21 +270,19 @@ def import_excel():
                 peralatan=str(row.get('PERALATAN', 'N/A')).upper(),
                 pn=str(row.get('P/N', row.get('PART NUMBER', 'N/A'))).upper(),
                 sn=str(row.get('S/N', row.get('SERIAL NUMBER', 'N/A'))).upper(),
-                date_in=d_in,
-                date_out=d_out,
+                date_in=d_in, date_out=d_out,
                 status_type=str(row.get('STATUS', 'ACTIVE')).upper(),
                 pic=str(row.get('PIC', 'N/A')).upper(),
                 defect=str(row.get('DEFECT', 'N/A')).upper()
             )
             logs_to_add.append(new_log)
         
-        # Gunakan chunking (pecahkan data) untuk elak sangkut di 80%
         if logs_to_add:
             chunk_size = 50 
             for i in range(0, len(logs_to_add), chunk_size):
                 batch = logs_to_add[i:i + chunk_size]
                 db.session.bulk_save_objects(batch)
-                db.session.commit() # Simpan sikit-sikit ke database
+                db.session.commit()
                 
         flash(f"Berjaya import {len(logs_to_add)} data.", "success")
         return redirect(url_for('admin'))
