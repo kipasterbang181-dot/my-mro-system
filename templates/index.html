@@ -119,7 +119,7 @@
         </div>
 
         <div class="mt-8 text-center">
-            <p class="text-[8px] font-bold text-slate-300 uppercase tracking-widest">© 2026 G7 Aerospace Digital System</p>
+            <p class="text-[8px] font-bold text-slate-300 uppercase tracking-widest">© 2024 G7 Aerospace Digital System</p>
         </div>
     </div>
 
@@ -200,7 +200,8 @@
         const savedLang = localStorage.getItem('g7_lang') || 'ms';
         changeLanguage(savedLang);
 
-        document.getElementById('current_date').value = new Date().toISOString().split('T')[0];
+        // BAIKI: Kita tak nak date_in automatik jadi 2026. Biarkan kosong supaya ia ambil dari Excel.
+        document.getElementById('current_date').value = "";
 
         const excelInput = document.getElementById('excelInput');
         const fileNameDisplay = document.getElementById('fileName');
@@ -219,23 +220,20 @@
             }
         });
 
-        // --- FUNGSI PARSE YANG DIBETULKAN ---
+        // --- FUNGSI PARSE YANG DIBETULKAN (TIADA PAKSAAN 2026) ---
         function parseExcelDate(val) {
             if (!val || val === "0" || val === "" || val === 0 || String(val).toUpperCase() === "N/A") return "";
             
-            // Jika ia nombor siri Excel (contoh: 45678)
             if (typeof val === 'number') {
                 const date = new Date(Math.round((val - 25569) * 86400 * 1000));
                 return date.toISOString().split('T')[0];
             }
             
-            // Jika ia memang objek Date
             if (val instanceof Date) {
                 if (isNaN(val.getTime())) return "";
                 return val.toISOString().split('T')[0];
             }
             
-            // Jika ia String (contoh: "2025-01-21")
             let d = new Date(val);
             if (!isNaN(d.getTime())) {
                 return d.toISOString().split('T')[0];
@@ -279,8 +277,7 @@
                             return foundKey ? row[foundKey] : "";
                         };
 
-                        // --- PEMBAIKAN TARIKH DI SINI ---
-                        // Kita buang "|| new Date()" supaya dia tak paksa tahun 2026
+                        // BAIKI: Ambil tarikh dari excel, jika tiada biar kosong (bukan 2026)
                         let rawDateValue = getVal(["DATE IN", "DATE_IN", "INCOMING", "TARIKH MASUK"]);
                         let finalDate = parseExcelDate(rawDateValue);
 
@@ -293,7 +290,7 @@
                             status: String(getVal(["STATUS"]) || "SERVICEABLE").toUpperCase(),
                             status_type: 'REPAIR',
                             defect: String(getVal(["DEFECT", "REMARKS", "KEROSAKAN", "CATATAN"]) || "N/A").toUpperCase(),
-                            date_in: finalDate // Jika kosong, database akan terima tarikh kosong/default, bukan 2026
+                            date_in: finalDate 
                         };
                     }).filter(item => {
                         const sn = String(item.sn).toUpperCase().trim();
