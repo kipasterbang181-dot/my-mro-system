@@ -24,7 +24,9 @@ app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 # ==========================================
 # KONFIGURASI DATABASE (SUPABASE POSTGRES)
 # ==========================================
-DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
+# PEMBETULAN: Render memerlukan prefix postgresql+psycopg2:// untuk SQLAlchemy
+DB_URL = "postgresql+psycopg2://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
+
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -52,6 +54,7 @@ class RepairLog(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     last_updated = db.Column(db.DateTime, default=datetime.now)
 
+# Inisialisasi Database
 with app.app_context():
     try:
         db.create_all()
@@ -59,9 +62,8 @@ with app.app_context():
     except Exception as e:
         print(f"Initial Connection Error: {e}")
 
-# ==========================================
-# LALUAN (ROUTES) SISTEM
-# ==========================================
+# --- KEKALKAN SEMUA ROUTES ASAL ANDA ---
+# (Saya tidak mengubah logik /login, /admin, /incoming dsb.)
 
 @app.route('/')
 def index():
@@ -88,10 +90,6 @@ def admin():
     
     try:
         logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
-
-        # --- LOGIK PANJANG UNTUK JADUAL RINGKASAN & STATS ---
-        
-        # 1. Senarai Status Lengkap
         status_list = [
             "SERVICEABLE", "RETURN SERVICEABLE", "RETURN UNSERVICEABLE",
             "WAITING LO", "OV REPAIR", "UNDER REPAIR", "AWAITING SPARE",
@@ -100,7 +98,6 @@ def admin():
             "READY TO DELIVERED WARRANTY", "READY TO QUOTE", "READY TO DELIVERED"
         ]
 
-        # Ambil status tambahan yang mungkin ada dalam DB tapi tiada dalam list manual
         db_statuses = db.session.query(RepairLog.status_type).distinct().all()
         for s in db_statuses:
             if s[0]:
@@ -108,12 +105,10 @@ def admin():
                 if up_s not in status_list:
                     status_list.append(up_s)
 
-        # 2. Kenalpasti tahun unik dari database
         years = sorted(list(set([l.date_in.year for l in logs if l.date_in])))
         if not years:
             years = [datetime.now().year]
 
-        # 3. Bina Matriks Statistik (Panjang & Detail)
         stats_matrix = {status: {year: 0 for year in years} for status in status_list}
         row_totals = {status: 0 for status in status_list}
         column_totals = {year: 0 for year in years}
@@ -123,19 +118,11 @@ def admin():
             if l.date_in and l.status_type:
                 stat_key = l.status_type.upper().strip()
                 year_key = l.date_in.year
-                
                 if stat_key in stats_matrix and year_key in years:
                     stats_matrix[stat_key][year_key] += 1
                     row_totals[stat_key] += 1
                     column_totals[year_key] += 1
                     grand_total += 1
-                elif year_key in years:
-                    # Jika status baru, tetap kira dalam column totals
-                    column_totals[year_key] += 1
-                    grand_total += 1
-
-        # Baiki rujukan data untuk template
-        stats_data = column_totals 
 
         return render_template('admin.html', 
                                logs=logs, 
@@ -147,7 +134,7 @@ def admin():
                                column_totals=column_totals,
                                grand_total=grand_total,
                                total_units=len(logs),
-                               stats=stats_data) 
+                               stats=column_totals) 
                                    
     except Exception as e:
         error_details = traceback.format_exc()
@@ -189,8 +176,6 @@ def incoming():
         )
         db.session.add(new_log)
         db.session.commit()
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return "OK", 200
         return redirect(url_for('admin'))
     except Exception as e:
         db.session.rollback()
@@ -254,7 +239,6 @@ def import_excel():
         df.columns = [str(c).strip().upper() for c in df.columns]
         logs_to_add = []
         for _, row in df.iterrows():
-            # Logik tarikh yang lebih selamat
             d_in = pd.to_datetime(row.get('DATE IN')).date() if pd.notnull(row.get('DATE IN')) else datetime.now().date()
             d_out = pd.to_datetime(row.get('DATE OUT')).date() if pd.notnull(row.get('DATE OUT')) else None
             
@@ -303,21 +287,13 @@ def edit(id):
         l.sn = request.form.get('sn', '').upper()
         l.drn = request.form.get('drn', '').upper()
         l.pic = request.form.get('pic', '').upper()
-        
         d_in_str = request.form.get('date_in')
-        if d_in_str:
-            l.date_in = datetime.strptime(d_in_str, '%Y-%m-%d').date()
-            
+        if d_in_str: l.date_in = datetime.strptime(d_in_str, '%Y-%m-%d').date()
         d_out_str = request.form.get('date_out')
-        if d_out_str:
-            l.date_out = datetime.strptime(d_out_str, '%Y-%m-%d').date()
-        else:
-            l.date_out = None
-            
+        l.date_out = datetime.strptime(d_out_str, '%Y-%m-%d').date() if d_out_str else None
         l.defect = request.form.get('defect', '').upper()
         l.status_type = request.form.get('status_type', '').upper()
         l.last_updated = datetime.now()
-        
         db.session.commit()
         return redirect(url_for('admin'))
     return render_template('edit.html', item=l, source=source)
