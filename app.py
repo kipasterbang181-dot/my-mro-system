@@ -4,7 +4,7 @@ import base64
 import qrcode
 import pandas as pd
 import traceback
-from flask import Flask, render_template, request, redirect, url_for, session, send_file, flash
+from flask import Flask, render_template, request, redirect, url_for, session, send_file, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
@@ -172,12 +172,19 @@ def incoming():
         db.session.add(new_log)
         db.session.commit()
         
-        # PEMBETULAN: Kekal di halaman incoming selepas save
+        # PEMBETULAN UNTUK JAVASCRIPT/AJAX:
+        # Jika request hantar data secara latar belakang (macam index.html awak buat)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+            return jsonify({"status": "success", "message": "Data Berjaya Disimpan!"}), 200
+
+        # Jika guna form biasa, stay di halaman asal
         flash("Data Berjaya Disimpan!", "success")
-        return redirect(url_for('incoming')) 
+        return redirect(url_for('index')) # Tukar ke 'incoming' jika awak nak stay di borang kemasukan
         
     except Exception as e:
         db.session.rollback()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"status": "error", "message": str(e)}), 500
         return f"Database Error: {str(e)}", 500
 
 @app.route('/download_report')
