@@ -43,7 +43,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "G7_AERO_SECURE_KEY_2026_TOTAL_MRO
 # Database Configuration (Supabase/PostgreSQL)
 DB_URL = "postgresql://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] False
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # FIXED: Added '=' here
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     "pool_pre_ping": True,
     "pool_recycle": 3600,
@@ -126,8 +126,7 @@ class FlexibleExcelEngine:
     @staticmethod
     def clean_header(df):
         """Detect and remove nested headers (like in your os2022.xlsx file)"""
-        # If first few rows have too many NaNs, it's a sub-header or empty
-        if df.iloc[0].isnull().sum() > (len(df.columns) * 0.7):
+        if len(df) > 0 and df.iloc[0].isnull().sum() > (len(df.columns) * 0.7):
             df = df.iloc[1:].reset_index(drop=True)
         return df
 
@@ -145,21 +144,15 @@ class FlexibleExcelEngine:
 
     @classmethod
     def process_file(cls, file_stream):
-        # Read Excel
         df = pd.read_excel(file_stream)
-        
-        # Clean headers
         df = cls.clean_header(df)
-        
-        # Identify Columns
         col_map = cls.map_columns(df.columns)
         
         logs = []
         for _, row in df.iterrows():
             if pd.isna(row.get(col_map.get('pn'))) and pd.isna(row.get(col_map.get('sn'))):
-                continue # Skip empty rows
+                continue
                 
-            # Date Parsing Logic
             def parse_dt(val):
                 try:
                     if pd.notnull(val):
@@ -167,14 +160,12 @@ class FlexibleExcelEngine:
                     return None
                 except: return None
 
-            # Get value safely
             def get_v(key, default="N/A"):
                 val = row.get(col_map.get(key))
                 if pd.notnull(val):
                     return str(val).strip().upper()
                 return default
 
-            # Special logic for Status (Your main concern)
             status_val = get_v('status', 'REPAIR')
             if status_val in ['NAN', '', 'NONE']: status_val = 'REPAIR'
 
@@ -201,16 +192,12 @@ class AnalyticsService:
     @staticmethod
     def get_dashboard_stats():
         all_logs = RepairLog.query.all()
-        
-        # Basic Counts
         total = len(all_logs)
         
-        # Status Breakdown
         status_counts = db.session.query(
             RepairLog.status_type, func.count(RepairLog.id)
         ).group_by(RepairLog.status_type).all()
         
-        # Yearly Breakdown
         yearly_stats = {}
         for l in all_logs:
             if l.date_in:
@@ -219,11 +206,9 @@ class AnalyticsService:
                 if yr not in yearly_stats: yearly_stats[yr] = {}
                 yearly_stats[yr][st] = yearly_stats[yr].get(st, 0) + 1
 
-        # Status List for Table Headers
         unique_statuses = sorted(list(set([s[0].upper() for s in status_counts if s[0]])))
         if not unique_statuses: unique_statuses = ["SERVICEABLE", "REPAIR"]
         
-        # Sort Years
         sorted_years = sorted(yearly_stats.keys(), reverse=True)
         if not sorted_years: sorted_years = [datetime.now().year]
 
@@ -243,7 +228,6 @@ def is_admin():
 
 @app.before_request
 def check_session_timeout():
-    # Logic to handle session timeouts or security checks can be added here
     pass
 
 # ==============================================================================
@@ -252,7 +236,6 @@ def check_session_timeout():
 
 @app.route('/')
 def index():
-    """Public Landing Page"""
     return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -293,10 +276,7 @@ def admin_dashboard():
 
         stats = AnalyticsService.get_dashboard_stats()
         
-        return render_template('admin.html', 
-                               logs=logs, 
-                               stats=stats,
-                               q=search_q)
+        return render_template('admin.html', logs=logs, stats=stats, q=search_q)
     except Exception as e:
         logger.error(f"Dashboard error: {traceback.format_exc()}")
         return f"System Error: {str(e)}", 500
@@ -316,8 +296,6 @@ def import_excel():
 
     try:
         logs = FlexibleExcelEngine.process_file(file)
-        
-        # Bulk Insert in chunks to avoid memory issues
         chunk_size = 100
         for i in range(0, len(logs), chunk_size):
             db.session.bulk_save_objects(logs[i:i+chunk_size])
@@ -389,18 +367,14 @@ def download_pdf_report():
     
     elements = []
     styles = getSampleStyleSheet()
-    
-    # Custom Styles
     title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], alignment=TA_CENTER, fontSize=16, spaceAfter=20)
     header_style = ParagraphStyle('HeaderStyle', fontSize=8, textColor=colors.whitesmoke, alignment=TA_CENTER)
     cell_style = ParagraphStyle('CellStyle', fontSize=7, alignment=TA_CENTER)
 
-    # Header Section
     elements.append(Paragraph("G7 AEROSPACE SDN BHD - MRO REPAIR LOG REPORT", title_style))
     elements.append(Paragraph(f"Generated on: {datetime.now().strftime('%d %B %Y %H:%M')}", styles['Normal']))
     elements.append(Spacer(1, 0.2*inch))
 
-    # Table Data
     data = [[
         Paragraph("<b>DRN</b>", header_style),
         Paragraph("<b>DESCRIPTION</b>", header_style),
@@ -424,7 +398,6 @@ def download_pdf_report():
             Paragraph(str(l.pic or "-"), cell_style)
         ])
 
-    # Styling Table
     table = Table(data, colWidths=[0.8*inch, 2.5*inch, 1.2*inch, 1.2*inch, 1.2*inch, 0.9*inch, 0.9*inch, 1*inch])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a237e')),
@@ -435,60 +408,43 @@ def download_pdf_report():
     
     elements.append(table)
     doc.build(elements)
-    
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name=f"G7_MRO_Report_{date.today()}.pdf", mimetype='application/pdf')
 
 @app.route('/generate_qr/<int:id>')
 def generate_qr(id):
     log = RepairLog.query.get_or_404(id)
-    # Generate link to public history page
     history_url = f"{request.url_root}history/{log.sn}"
-    
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(history_url)
     qr.make(fit=True)
-    
     img = qr.make_image(fill_color="black", back_color="white")
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
     buffer.seek(0)
-    
     return send_file(buffer, mimetype='image/png', as_attachment=True, download_name=f"QR_{log.sn}.png")
 
 @app.route('/history/<sn>')
 def view_history(sn):
-    """Public history page accessible via QR scan"""
     logs = RepairLog.query.filter_by(sn=sn).order_by(RepairLog.date_in.desc()).all()
-    if not logs:
-        return "Asset History Not Found", 404
+    if not logs: return "Asset History Not Found", 404
     return render_template('history.html', logs=logs, sn=sn)
 
 @app.route('/export_excel_full')
 def export_excel_full():
     if not is_admin(): return "Unauthorized", 403
-    
     logs = RepairLog.query.all()
     data = []
     for l in logs:
         data.append({
-            "DRN": l.drn,
-            "DESCRIPTION": l.peralatan,
-            "PART NO": l.pn,
-            "SERIAL NO": l.sn,
-            "DATE IN": l.date_in,
-            "DATE OUT": l.date_out,
-            "STATUS": l.status_type,
-            "DEFECT": l.defect,
-            "PIC": l.pic
+            "DRN": l.drn, "DESCRIPTION": l.peralatan, "PART NO": l.pn,
+            "SERIAL NO": l.sn, "DATE IN": l.date_in, "DATE OUT": l.date_out,
+            "STATUS": l.status_type, "DEFECT": l.defect, "PIC": l.pic
         })
-    
     df = pd.DataFrame(data)
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name='MRO_LOGS')
-        # Formatting can be added here
-        
     output.seek(0)
     return send_file(output, as_attachment=True, download_name=f"G7_MRO_Full_Export_{date.today()}.xlsx")
 
@@ -498,9 +454,7 @@ def export_excel_full():
 
 @app.route('/api/system_reset', methods=['POST'])
 def system_reset():
-    """Wipes the database - Use with caution!"""
     if not is_admin(): return jsonify({"status": "forbidden"}), 403
-    
     confirm = request.json.get('confirm')
     if confirm == "DELETE_ALL_G7_DATA":
         try:
@@ -513,20 +467,18 @@ def system_reset():
 
 @app.errorhandler(404)
 def page_not_found(e):
-    return "<h3>Error 404: Page Not Found</h3><p>Please check your URL.</p>", 404
+    return "<h3>Error 404: Page Not Found</h3>", 404
 
 @app.errorhandler(500)
 def internal_error(e):
-    return f"<h3>System Error 500</h3><p>Something went wrong on our side.</p><pre>{e}</pre>", 500
+    return f"<h3>System Error 500</h3><pre>{e}</pre>", 500
 
 # ==============================================================================
 # 11. APPLICATION RUNNER
 # ==============================================================================
 
 if __name__ == '__main__':
-    # For production, use Gunicorn. For local testing, use this:
     port = int(os.environ.get("PORT", 5000))
-    # debug=False for security in production-like environments
     app.run(host='0.0.0.0', port=port, debug=False)
 
 # ==============================================================================
