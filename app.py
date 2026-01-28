@@ -6,7 +6,7 @@ import pandas as pd
 import traceback
 from flask import Flask, render_template, request, redirect, url_for, session, send_file, flash
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # ==========================================
 # LIBRARY TAMBAHAN UNTUK PDF REPORT
@@ -21,6 +21,9 @@ app = Flask(__name__)
 # Kunci rahsia untuk sesi login dan keselamatan Flash message
 app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 
+# Tambahan: Menetapkan jangka hayat sesi supaya tidak terus ke login (logout paksa)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
+
 # ==========================================
 # KONFIGURASI DATABASE (SUPABASE POSTGRES)
 # ==========================================
@@ -30,6 +33,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     "pool_pre_ping": True,
     "pool_recycle": 300,
+    "pool_size": 10,
+    "max_overflow": 20,
 }
 db = SQLAlchemy(app)
 
@@ -72,6 +77,7 @@ def login():
     next_page = request.args.get('next')
     if request.method == 'POST':
         if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
+            session.permanent = True # Mengaktifkan jangka hayat sesi 8 jam
             session['admin'] = True
             target = request.form.get('next_target')
             if target and target != 'None' and target != '':
@@ -164,6 +170,7 @@ def view_report(id):
 
 @app.route('/incoming', methods=['GET', 'POST'])
 def incoming():
+    if not session.get('admin'): return redirect(url_for('login', next=request.path))
     if request.method == 'GET':
         return render_template('incoming.html')
     try:
@@ -268,6 +275,7 @@ def import_excel():
                 d_out = None
 
             # Penambahbaikan: Ambil status dan pastikan SERVICEABLE tidak bertukar
+            # Semak kedua-dua column 'STATUS' atau 'STATUS_TYPE'
             status_val = str(row.get('STATUS', row.get('STATUS_TYPE', 'ACTIVE'))).upper().strip()
 
             new_log = RepairLog(
@@ -284,8 +292,9 @@ def import_excel():
             logs_to_add.append(new_log)
         
         # Teknik CHUNKING: Selesaikan masalah terhenti pada 80%
+        # Kita pecahkan data kepada 20 baris setiap batch supaya server tak timeout
         if logs_to_add:
-            chunk_size = 50 
+            chunk_size = 20 
             for i in range(0, len(logs_to_add), chunk_size):
                 batch = logs_to_add[i:i + chunk_size]
                 db.session.bulk_save_objects(batch)
@@ -299,6 +308,7 @@ def import_excel():
 
 @app.route('/view_tag/<int:id>')
 def view_tag(id):
+    if not session.get('admin'): return redirect(url_for('login', next=request.path))
     l = RepairLog.query.get_or_404(id)
     count = RepairLog.query.filter_by(sn=l.sn).count()
     return render_template('view_tag.html', l=l, logs_count=count)
@@ -314,43 +324,54 @@ def download_qr(id):
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
-    if not session.get('admin'): return redirect(url_for('login', next=request.full_path))
+    if not session.get('admin'): 
+        # Jika sesi tamat, hantar ke login dengan return path
+        return redirect(url_for('login', next=request.full_path))
+        
     l = RepairLog.query.get_or_404(id)
     source = request.args.get('from', 'admin')
+    
     if request.method == 'POST':
-        l.peralatan = request.form.get('peralatan', '').upper()
-        l.pn = request.form.get('pn', '').upper()
-        l.sn = request.form.get('sn', '').upper()
-        l.drn = request.form.get('drn', '').upper()
-        l.pic = request.form.get('pic', '').upper()
-        
-        d_in_str = request.form.get('date_in')
-        if d_in_str:
-            l.date_in = datetime.strptime(d_in_str, '%Y-%m-%d').date()
+        try:
+            l.peralatan = request.form.get('peralatan', '').upper()
+            l.pn = request.form.get('pn', '').upper()
+            l.sn = request.form.get('sn', '').upper()
+            l.drn = request.form.get('drn', '').upper()
+            l.pic = request.form.get('pic', '').upper()
             
-        d_out_str = request.form.get('date_out')
-        if d_out_str:
-            l.date_out = datetime.strptime(d_out_str, '%Y-%m-%d').date()
-        else:
-            l.date_out = None
+            d_in_str = request.form.get('date_in')
+            if d_in_str:
+                l.date_in = datetime.strptime(d_in_str, '%Y-%m-%d').date()
+                
+            d_out_str = request.form.get('date_out')
+            if d_out_str:
+                l.date_out = datetime.strptime(d_out_str, '%Y-%m-%d').date()
+            else:
+                l.date_out = None
+                
+            l.defect = request.form.get('defect', '').upper()
             
-        l.defect = request.form.get('defect', '').upper()
-        
-        # Penambahbaikan: Kemaskini status_type dengan pembersihan string
-        status_input = request.form.get('status_type', '').upper().strip()
-        if status_input:
-            l.status_type = status_input
+            # Penambahbaikan: Kemaskini status_type dengan pembersihan string (Space)
+            # Ini memastikan "SERVICEABLE " menjadi "SERVICEABLE"
+            # Kita semak juga nama input 'status' jika 'status_type' tiada
+            status_input = request.form.get('status_type', request.form.get('status', ''))
+            status_cleaned = status_input.upper().strip()
+            if status_cleaned:
+                l.status_type = status_cleaned
+                
+            l.last_updated = datetime.now()
             
-        l.last_updated = datetime.now()
-        
-        db.session.commit()
-        
-        # Mengekalkan logik redirect asal anda
-        origin = request.form.get('origin_source')
-        if origin == 'view_tag':
-            return redirect(url_for('view_tag', id=l.id))
-        return redirect(url_for('admin'))
-        
+            db.session.commit()
+            
+            # Mengekalkan logik redirect asal anda
+            origin = request.form.get('origin_source')
+            if origin == 'view_tag':
+                return redirect(url_for('view_tag', id=l.id))
+            return redirect(url_for('admin'))
+        except Exception as e:
+            db.session.rollback()
+            return f"Update Error: {str(e)}"
+            
     return render_template('edit.html', item=l, source=source)
 
 @app.route('/delete/<int:id>')
