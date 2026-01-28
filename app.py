@@ -24,7 +24,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 # ==========================================
 # KONFIGURASI DATABASE (SUPABASE POSTGRES)
 # ==========================================
-# PEMBETULAN: Render memerlukan prefix postgresql+psycopg2:// untuk SQLAlchemy
+# PEMBETULAN: Menggunakan postgresql+psycopg2 untuk kestabilan SQLAlchemy di Render
 DB_URL = "postgresql+psycopg2://postgres.yyvrjgdzhliodbgijlgb:KUCINGPUTIH10@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
@@ -54,7 +54,7 @@ class RepairLog(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     last_updated = db.Column(db.DateTime, default=datetime.now)
 
-# Inisialisasi Database
+# Inisialisasi Database (Bina table jika belum ada)
 with app.app_context():
     try:
         db.create_all()
@@ -62,8 +62,9 @@ with app.app_context():
     except Exception as e:
         print(f"Initial Connection Error: {e}")
 
-# --- KEKALKAN SEMUA ROUTES ASAL ANDA ---
-# (Saya tidak mengubah logik /login, /admin, /incoming dsb.)
+# ==========================================
+# LALUAN (ROUTES) SISTEM
+# ==========================================
 
 @app.route('/')
 def index():
@@ -73,6 +74,7 @@ def index():
 def login():
     next_page = request.args.get('next')
     if request.method == 'POST':
+        # Nota: Password statik anda
         if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
             session['admin'] = True
             target = request.form.get('next_target')
@@ -98,6 +100,7 @@ def admin():
             "READY TO DELIVERED WARRANTY", "READY TO QUOTE", "READY TO DELIVERED"
         ]
 
+        # Ambil status unik dari DB untuk statistik
         db_statuses = db.session.query(RepairLog.status_type).distinct().all()
         for s in db_statuses:
             if s[0]:
@@ -105,6 +108,7 @@ def admin():
                 if up_s not in status_list:
                     status_list.append(up_s)
 
+        # Proses statistik tahunan
         years = sorted(list(set([l.date_in.year for l in logs if l.date_in])))
         if not years:
             years = [datetime.now().year]
@@ -157,22 +161,21 @@ def incoming():
     if request.method == 'GET':
         return render_template('incoming.html')
     try:
-        peralatan = request.form.get('peralatan', '').upper()
-        pn = request.form.get('pn', '').upper()
-        sn = request.form.get('sn', '').upper()
-        drn = request.form.get('drn', '').upper()
-        date_in_val = request.form.get('date_in')
-        d_in = datetime.strptime(date_in_val, '%Y-%m-%d').date() if date_in_val else datetime.now().date()
-        date_out_val = request.form.get('date_out')
-        d_out = datetime.strptime(date_out_val, '%Y-%m-%d').date() if date_out_val else None
-        defect = request.form.get('defect', 'N/A').upper()
-        status = request.form.get('status_type', request.form.get('status', 'ACTIVE')).upper()
-        pic = request.form.get('pic', 'N/A').upper()
-
+        # Menangani input status yang mungkin dinamakan 'status' atau 'status_type' dalam HTML
+        status_val = request.form.get('status_type') or request.form.get('status') or "ACTIVE"
+        
+        d_in_val = request.form.get('date_in')
+        d_in = datetime.strptime(d_in_val, '%Y-%m-%d').date() if d_in_val else datetime.now().date()
+        
         new_log = RepairLog(
-            drn=drn, peralatan=peralatan, pn=pn, sn=sn,
-            date_in=d_in, date_out=d_out,
-            defect=defect, status_type=status, pic=pic
+            drn=request.form.get('drn', '').upper(),
+            peralatan=request.form.get('peralatan', '').upper(),
+            pn=request.form.get('pn', '').upper(),
+            sn=request.form.get('sn', '').upper(),
+            date_in=d_in,
+            defect=request.form.get('defect', 'N/A').upper(),
+            status_type=status_val.upper().strip(),
+            pic=request.form.get('pic', 'N/A').upper()
         )
         db.session.add(new_log)
         db.session.commit()
@@ -287,13 +290,18 @@ def edit(id):
         l.sn = request.form.get('sn', '').upper()
         l.drn = request.form.get('drn', '').upper()
         l.pic = request.form.get('pic', '').upper()
+        
         d_in_str = request.form.get('date_in')
-        if d_in_str: l.date_in = datetime.strptime(d_in_str, '%Y-%m-%d').date()
+        if d_in_str: 
+            l.date_in = datetime.strptime(d_in_str, '%Y-%m-%d').date()
+            
         d_out_str = request.form.get('date_out')
         l.date_out = datetime.strptime(d_out_str, '%Y-%m-%d').date() if d_out_str else None
+            
         l.defect = request.form.get('defect', '').upper()
-        l.status_type = request.form.get('status_type', '').upper()
+        l.status_type = (request.form.get('status_type') or request.form.get('status', 'ACTIVE')).upper()
         l.last_updated = datetime.now()
+        
         db.session.commit()
         return redirect(url_for('admin'))
     return render_template('edit.html', item=l, source=source)
@@ -322,5 +330,6 @@ def logout():
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
+    # Gunakan PORT dari environment (penting untuk Render)
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
