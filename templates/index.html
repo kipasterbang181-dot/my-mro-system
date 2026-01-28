@@ -219,19 +219,29 @@
             }
         });
 
+        // --- FUNGSI PARSE YANG DIBETULKAN ---
         function parseExcelDate(val) {
-            if (!val || val === "0" || val === "" || val === 0) return "";
+            if (!val || val === "0" || val === "" || val === 0 || String(val).toUpperCase() === "N/A") return "";
+            
+            // Jika ia nombor siri Excel (contoh: 45678)
             if (typeof val === 'number') {
                 const date = new Date(Math.round((val - 25569) * 86400 * 1000));
                 return date.toISOString().split('T')[0];
             }
+            
+            // Jika ia memang objek Date
             if (val instanceof Date) {
                 if (isNaN(val.getTime())) return "";
                 return val.toISOString().split('T')[0];
             }
+            
+            // Jika ia String (contoh: "2025-01-21")
             let d = new Date(val);
-            if (isNaN(d.getTime())) return "";
-            return d.toISOString().split('T')[0];
+            if (!isNaN(d.getTime())) {
+                return d.toISOString().split('T')[0];
+            }
+
+            return ""; 
         }
 
         function uploadExcel() {
@@ -269,6 +279,11 @@
                             return foundKey ? row[foundKey] : "";
                         };
 
+                        // --- PEMBAIKAN TARIKH DI SINI ---
+                        // Kita buang "|| new Date()" supaya dia tak paksa tahun 2026
+                        let rawDateValue = getVal(["DATE IN", "DATE_IN", "INCOMING", "TARIKH MASUK"]);
+                        let finalDate = parseExcelDate(rawDateValue);
+
                         return {
                             drn: "-",
                             peralatan: String(getVal(["DESCRIPTION", "COMPONENT", "EQUIPMENT", "PERALATAN", "ITEM"])).toUpperCase(),
@@ -278,10 +293,9 @@
                             status: String(getVal(["STATUS"]) || "SERVICEABLE").toUpperCase(),
                             status_type: 'REPAIR',
                             defect: String(getVal(["DEFECT", "REMARKS", "KEROSAKAN", "CATATAN"]) || "N/A").toUpperCase(),
-                            date_in: parseExcelDate(getVal(["DATE IN", "DATE_IN", "INCOMING", "TARIKH MASUK"])) || new Date().toISOString().split('T')[0]
+                            date_in: finalDate // Jika kosong, database akan terima tarikh kosong/default, bukan 2026
                         };
                     }).filter(item => {
-                        // --- TAPISAN PADU (ANTI-N/A & KOSONG) ---
                         const sn = String(item.sn).toUpperCase().trim();
                         const pn = String(item.pn).toUpperCase().trim();
                         
@@ -300,7 +314,7 @@
                     if (formattedData.length > 0) {
                         processImport(formattedData);
                     } else {
-                        alert("Tiada data sah dijumpai dalam fail tersebut (Data N/A atau Kosong diabaikan).");
+                        alert("Tiada data sah dijumpai dalam fail tersebut.");
                     }
                 } catch (err) {
                     console.error(err);
