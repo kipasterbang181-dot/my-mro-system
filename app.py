@@ -24,7 +24,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 # ==========================================
 # KONFIGURASI SESI (PELINDUNG LOGOUT)
 # ==========================================
-# Tambahan: Menetapkan jangka hayat sesi supaya tidak terus ke login (logout paksa)
+# Menetapkan jangka hayat sesi supaya tidak terus ke login (logout paksa)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
@@ -81,7 +81,7 @@ def login():
     next_page = request.args.get('next')
     if request.method == 'POST':
         if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
-            session.permanent = True # Mengaktifkan jangka hayat sesi 8 jam
+            session.permanent = True 
             session['admin'] = True
             target = request.form.get('next_target')
             if target and target != 'None' and target != '':
@@ -99,8 +99,6 @@ def admin():
     try:
         logs = RepairLog.query.order_by(RepairLog.id.desc()).all()
 
-        # --- LOGIK PANJANG UNTUK JADUAL RINGKASAN & STATS ---
-        
         # 1. Senarai Status Lengkap
         status_list = [
             "SERVICEABLE", "RETURN SERVICEABLE", "RETURN UNSERVICEABLE",
@@ -117,12 +115,12 @@ def admin():
                 if up_s not in status_list:
                     status_list.append(up_s)
 
-        # 2. Kenalpasti tahun unik dari database
+        # 2. Kenalpasti tahun unik
         years = sorted(list(set([l.date_in.year for l in logs if l.date_in])))
         if not years:
             years = [datetime.now().year]
 
-        # 3. Bina Matriks Statistik (Panjang & Detail)
+        # 3. Bina Matriks Statistik
         stats_matrix = {status: {year: 0 for year in years} for status in status_list}
         row_totals = {status: 0 for status in status_list}
         column_totals = {year: 0 for year in years}
@@ -188,10 +186,8 @@ def incoming():
         d_out = datetime.strptime(date_out_val, '%Y-%m-%d').date() if date_out_val else None
         defect = request.form.get('defect', 'N/A').upper()
         
-        # Penambahbaikan: Pastikan status ditangkap dengan betul dan dibersihkan
         status_raw = request.form.get('status_type', request.form.get('status', 'ACTIVE'))
         status = status_raw.upper().strip()
-        
         pic = request.form.get('pic', 'N/A').upper()
 
         new_log = RepairLog(
@@ -201,12 +197,19 @@ def incoming():
         )
         db.session.add(new_log)
         db.session.commit()
+
+        # [UPDATE] Notifikasi Berjaya
+        flash(f"Data {sn} berjaya disimpan!", "success")
+
+        # [UPDATE] Kekal di halaman Incoming (Stay on page)
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return "OK", 200
-        return redirect(url_for('admin'))
+        return redirect(url_for('incoming'))
+
     except Exception as e:
         db.session.rollback()
-        return f"Database Error: {str(e)}", 500
+        flash(f"Database Error: {str(e)}", "error")
+        return redirect(url_for('incoming'))
 
 @app.route('/download_report')
 def download_report():
@@ -267,19 +270,15 @@ def import_excel():
         logs_to_add = []
         
         for _, row in df.iterrows():
-            # Logik tarikh yang lebih selamat
             try:
                 raw_in = row.get('DATE IN')
                 d_in = pd.to_datetime(raw_in).date() if pd.notnull(raw_in) else datetime.now().date()
-                
                 raw_out = row.get('DATE OUT')
                 d_out = pd.to_datetime(raw_out).date() if pd.notnull(raw_out) else None
             except:
                 d_in = datetime.now().date()
                 d_out = None
 
-            # Penambahbaikan: Ambil status dan pastikan SERVICEABLE tidak bertukar
-            # Semak kedua-dua column 'STATUS' atau 'STATUS_TYPE'
             status_val = str(row.get('STATUS', row.get('STATUS_TYPE', 'ACTIVE'))).upper().strip()
 
             new_log = RepairLog(
@@ -287,16 +286,13 @@ def import_excel():
                 peralatan=str(row.get('PERALATAN', 'N/A')).upper(),
                 pn=str(row.get('P/N', row.get('PART NUMBER', 'N/A'))).upper(),
                 sn=str(row.get('S/N', row.get('SERIAL NUMBER', 'N/A'))).upper(),
-                date_in=d_in,
-                date_out=d_out,
+                date_in=d_in, date_out=d_out,
                 status_type=status_val,
                 pic=str(row.get('PIC', 'N/A')).upper(),
                 defect=str(row.get('DEFECT', 'N/A')).upper()
             )
             logs_to_add.append(new_log)
         
-        # Teknik CHUNKING: Selesaikan masalah terhenti pada 80%
-        # Kita pecahkan data kepada 20 baris setiap batch supaya server tak timeout
         if logs_to_add:
             chunk_size = 20 
             for i in range(0, len(logs_to_add), chunk_size):
@@ -329,7 +325,6 @@ def download_qr(id):
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
     if not session.get('admin'): 
-        # Jika sesi tamat, hantar ke login dengan return path
         return redirect(url_for('login', next=request.full_path))
         
     l = RepairLog.query.get_or_404(id)
@@ -355,26 +350,24 @@ def edit(id):
                 
             l.defect = request.form.get('defect', '').upper()
             
-            # Penambahbaikan: Kemaskini status_type dengan pembersihan string (Space)
-            # Ini memastikan "SERVICEABLE " menjadi "SERVICEABLE"
-            # Kita semak juga nama input 'status' jika 'status_type' tiada
             status_input = request.form.get('status_type', request.form.get('status', ''))
             status_cleaned = status_input.upper().strip()
             if status_cleaned:
                 l.status_type = status_cleaned
                 
             l.last_updated = datetime.now()
-            
             db.session.commit()
             
-            # Mengekalkan logik redirect asal anda
+            flash("Kemaskini berjaya!", "success")
+
             origin = request.form.get('origin_source')
             if origin == 'view_tag':
                 return redirect(url_for('view_tag', id=l.id))
             return redirect(url_for('admin'))
         except Exception as e:
             db.session.rollback()
-            return f"Update Error: {str(e)}"
+            flash(f"Update Error: {str(e)}", "error")
+            return redirect(url_for('edit', id=id))
             
     return render_template('edit.html', item=l, source=source)
 
@@ -384,6 +377,7 @@ def delete(id):
     l = RepairLog.query.get_or_404(id)
     db.session.delete(l)
     db.session.commit()
+    flash("Rekod berjaya dipadam.", "info")
     return redirect(url_for('admin'))
 
 @app.route('/delete_bulk', methods=['POST'])
@@ -394,6 +388,7 @@ def delete_bulk():
         ids_to_delete = [int(i) for i in selected_ids]
         RepairLog.query.filter(RepairLog.id.in_(ids_to_delete)).delete(synchronize_session=False)
         db.session.commit()
+        flash(f"{len(ids_to_delete)} rekod berjaya dipadam.", "info")
     return redirect(url_for('admin'))
 
 @app.route('/logout')
