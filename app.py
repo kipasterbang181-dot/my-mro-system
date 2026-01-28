@@ -21,8 +21,11 @@ app = Flask(__name__)
 # Kunci rahsia untuk sesi login dan keselamatan Flash message
 app.secret_key = os.environ.get("SECRET_KEY", "g7_aerospace_key_2026")
 
-# --- PENAMBAHBAIKAN SESI (Supaya tak terus pergi login) ---
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1) # Sesi tahan 24 jam
+# ==========================================
+# KONFIGURASI SESI (PELINDUNG LOGOUT)
+# ==========================================
+# Tambahan: Menetapkan jangka hayat sesi supaya tidak terus ke login (logout paksa)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
 # ==========================================
@@ -78,7 +81,7 @@ def login():
     next_page = request.args.get('next')
     if request.method == 'POST':
         if request.form.get('u') == 'admin' and request.form.get('p') == 'password123':
-            session.permanent = True # Sesi kekal aktif
+            session.permanent = True # Mengaktifkan jangka hayat sesi 8 jam
             session['admin'] = True
             target = request.form.get('next_target')
             if target and target != 'None' and target != '':
