@@ -222,7 +222,7 @@
          * Memastikan tarikh 2025 dalam Excel tidak menjadi 2026.
          */
         function parseExcelDate(val) {
-            if (!val || val === "0" || val === "" || val === 0 || String(val).toUpperCase() === "N/A") return "";
+            if (!val || val === "0" || val === "" || val === 0 || String(val).toUpperCase() === "N/A" || val === "-") return "";
             
             let date;
 
@@ -240,8 +240,8 @@
                 // Tukar format DD-MM-YY atau DD/MM/YY ke format yang boleh dibaca Date()
                 let parts = str.split(/[-/]/);
                 if (parts.length === 3) {
-                    let d = parts[0];
-                    let m = parts[1];
+                    let d = parts[0].padStart(2, '0');
+                    let m = parts[1].padStart(2, '0');
                     let y = parts[2];
                     // Jika tahun cuma 2 digit (25), jadikan 2025
                     if (y.length === 2) y = "20" + y;
@@ -299,9 +299,9 @@
                             return foundKey ? row[foundKey] : "";
                         };
 
-                        // Ambil tarikh dari Excel secara spesifik
-                        let rawDateValue = getVal(["DATE IN", "DATE_IN", "INCOMING", "TARIKH MASUK"]);
-                        let finalDate = parseExcelDate(rawDateValue);
+                        // PEMBAIKAN: Ambil nilai Date In DAN Date Out daripada Excel
+                        let rawDateIn = getVal(["DATE IN", "DATE_IN", "INCOMING", "TARIKH MASUK"]);
+                        let rawDateOut = getVal(["DATE OUT", "DATE_OUT", "OUTGOING", "TARIKH KELUAR"]);
 
                         return {
                             drn: "-",
@@ -312,7 +312,9 @@
                             status: String(getVal(["STATUS"]) || "SERVICEABLE").toUpperCase(),
                             status_type: 'REPAIR',
                             defect: String(getVal(["DEFECT", "REMARKS", "KEROSAKAN", "CATATAN"]) || "N/A").toUpperCase(),
-                            date_in: finalDate // Ini akan menghantar tarikh 2025/2024 dari Excel
+                            // Tarikh diproses supaya tidak jadi 2026
+                            date_in: parseExcelDate(rawDateIn),
+                            date_out: parseExcelDate(rawDateOut) 
                         };
                     }).filter(item => {
                         const sn = String(item.sn).toUpperCase().trim();
