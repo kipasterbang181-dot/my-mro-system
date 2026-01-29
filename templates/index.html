@@ -299,7 +299,7 @@
                             return foundKey ? row[foundKey] : "";
                         };
 
-                        // PEMBAIKAN: Ambil nilai Date In DAN Date Out daripada Excel
+                        // AMBIL DATE IN DAN DATE OUT
                         let rawDateIn = getVal(["DATE IN", "DATE_IN", "INCOMING", "TARIKH MASUK"]);
                         let rawDateOut = getVal(["DATE OUT", "DATE_OUT", "OUTGOING", "TARIKH KELUAR"]);
 
@@ -312,7 +312,6 @@
                             status: String(getVal(["STATUS"]) || "SERVICEABLE").toUpperCase(),
                             status_type: 'REPAIR',
                             defect: String(getVal(["DEFECT", "REMARKS", "KEROSAKAN", "CATATAN"]) || "N/A").toUpperCase(),
-                            // Tarikh diproses supaya tidak jadi 2026
                             date_in: parseExcelDate(rawDateIn),
                             date_out: parseExcelDate(rawDateOut) 
                         };
@@ -345,13 +344,20 @@
 
             for (let i = 0; i < total; i += chunkSize) {
                 const chunk = dataList.slice(i, i + chunkSize);
-                const requests = chunk.map(item => 
-                    fetch('/incoming', {
+                const requests = chunk.map(item => {
+                    // PASTIKAN SEMUA FIELD TERMASUK DATE_OUT DIHANTAR
+                    const params = new URLSearchParams();
+                    for (const key in item) {
+                        params.append(key, item[key]);
+                    }
+
+                    return fetch('/incoming', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: new URLSearchParams(item)
+                        body: params
                     }).then(res => { if(res.ok) successCount++; })
-                );
+                });
+                
                 await Promise.all(requests);
                 const currentProgress = Math.min(i + chunkSize, total);
                 const percentage = Math.round((currentProgress / total) * 100);
@@ -359,7 +365,7 @@
                 progressText.innerText = `${dictionary[lang].textImporting}: ${percentage}% (${currentProgress}/${total})`;
             }
             setTimeout(() => {
-                alert(`Selesai! ${successCount} rekod berjaya diimport dengan tarikh asal.`);
+                alert(`Selesai! ${successCount} rekod berjaya diimport dengan tarikh masuk dan keluar.`);
                 window.location.reload();
             }, 800);
         }
