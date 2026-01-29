@@ -199,7 +199,6 @@
         const savedLang = localStorage.getItem('g7_lang') || 'ms';
         changeLanguage(savedLang);
 
-        // UI Logic
         const excelInput = document.getElementById('excelInput');
         const fileNameDisplay = document.getElementById('fileName');
         const uploadBtn = document.getElementById('uploadBtn');
@@ -217,9 +216,6 @@
             }
         });
 
-        /**
-         * FUNGSI UTAMA: Menukar sebarang input tarikh Excel kepada YYYY-MM-DD
-         */
         function parseExcelDate(val) {
             if (!val || val === "0" || val === "" || val === 0 || String(val).toUpperCase() === "N/A" || val === "-") return "";
             
@@ -288,20 +284,22 @@
                             return foundKey ? row[foundKey] : "";
                         };
 
-                        // PEMBAIKAN LOGIK STATUS & DATE OUT
-                        let rawStatus = String(getVal(["STATUS", "CONDITION", "WARRANTY"]) || "").toUpperCase();
+                        // 1. LOGIK STATUS & DEFECT (Membezakan maklumat)
+                        let rawRemark = String(getVal(["DEFECT", "REMARKS", "KEROSAKAN", "CATATAN", "WARRANTY"]) || "N/A").toUpperCase();
                         let finalStatus = "SERVICEABLE";
-                        
-                        // Jika dalam kolum Status atau kolum Remarks ada perkataan 'WARRANTY'
-                        if (rawStatus.includes("WARRANTY")) {
+                        let finalDefect = rawRemark;
+
+                        // Jika dalam catatan ada perkataan "WARRANTY"
+                        if (rawRemark.includes("WARRANTY")) {
                             finalStatus = "WARRANTY REPAIR";
+                            // Jika hanya tulis "WARRANTY G7", kita letak kerosakan sebagai N/A melainkan ada info lain
+                            if (rawRemark === "WARRANTY G7" || rawRemark === "WARRANTY") {
+                                finalDefect = "N/A";
+                            }
                         }
 
-                        let rawDefect = String(getVal(["DEFECT", "REMARKS", "KEROSAKAN", "CATATAN"]) || "N/A").toUpperCase();
-                        // Jika kerosakan cuma tulis 'WARRANTY', kita kekalkan N/A atau biarkan, tapi status dah set kat atas
-                        if (rawDefect.includes("WARRANTY G7") || rawDefect === "WARRANTY") {
-                            // finalStatus = "WARRANTY REPAIR"; // Boleh aktifkan ini juga kalau nak double check
-                        }
+                        // 2. LOGIK DATE OUT (Pastikan dikesan)
+                        let dateOutVal = getVal(["DATE OUT", "DATE_OUT", "OUTGOING", "TARIKH KELUAR", "D_OUT"]);
 
                         return {
                             drn: "-",
@@ -311,10 +309,9 @@
                             pic: String(getVal(["PIC", "VENDOR", "JKTEK", "JTP"]) || "N/A").toUpperCase(),
                             status: finalStatus,
                             status_type: 'REPAIR',
-                            defect: rawDefect,
+                            defect: finalDefect,
                             date_in: parseExcelDate(getVal(["DATE IN", "DATE_IN", "INCOMING", "TARIKH MASUK"])),
-                            // PEMBAIKAN: Strict mapping untuk Date Out
-                            date_out: parseExcelDate(getVal(["DATE OUT", "DATE_OUT", "OUTGOING", "TARIKH KELUAR"])) 
+                            date_out: parseExcelDate(dateOutVal) 
                         };
                     }).filter(item => {
                         const sn = String(item.sn).toUpperCase().trim();
