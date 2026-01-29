@@ -219,47 +219,37 @@
 
         /**
          * FUNGSI UTAMA: Menukar sebarang input tarikh Excel kepada YYYY-MM-DD
-         * Memastikan tarikh 2025 dalam Excel tidak menjadi 2026.
          */
         function parseExcelDate(val) {
             if (!val || val === "0" || val === "" || val === 0 || String(val).toUpperCase() === "N/A" || val === "-") return "";
             
             let date;
-
-            // 1. Jika ia adalah nombor siri Excel (e.g. 45678)
             if (typeof val === 'number') {
                 date = new Date(Math.round((val - 25569) * 86400 * 1000));
             } 
-            // 2. Jika ia sudah menjadi objek Date JS
             else if (val instanceof Date) {
                 date = val;
             } 
-            // 3. Jika ia adalah String (e.g. "21-01-25")
             else {
                 let str = String(val).trim();
-                // Tukar format DD-MM-YY atau DD/MM/YY ke format yang boleh dibaca Date()
                 let parts = str.split(/[-/]/);
                 if (parts.length === 3) {
                     let d = parts[0].padStart(2, '0');
                     let m = parts[1].padStart(2, '0');
                     let y = parts[2];
-                    // Jika tahun cuma 2 digit (25), jadikan 2025
                     if (y.length === 2) y = "20" + y;
-                    // Format baru: YYYY-MM-DD
                     date = new Date(`${y}-${m}-${d}`);
                 } else {
                     date = new Date(str);
                 }
             }
 
-            // Validasi tarikh hasil parsing
             if (date && !isNaN(date.getTime())) {
                 let year = date.getFullYear();
                 let month = String(date.getMonth() + 1).padStart(2, '0');
                 let day = String(date.getDate()).padStart(2, '0');
                 return `${year}-${month}-${day}`;
             }
-
             return ""; 
         }
 
@@ -270,7 +260,6 @@
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    // cellDates: true amat penting untuk SheetJS memproses tarikh dengan betul
                     const workbook = XLSX.read(data, {type: 'array', cellDates: true});
                     const firstSheetName = workbook.SheetNames[0];
                     const firstSheet = workbook.Sheets[firstSheetName];
@@ -287,7 +276,7 @@
                     }
 
                     if (headerIndex === -1) {
-                        alert("Gagal cari tajuk kolum. Pastikan kolum 'PART NO', 'DESCRIPTION', 'SERIAL NO', dan 'DATE IN' wujud.");
+                        alert("Gagal cari tajuk kolum.");
                         return;
                     }
 
@@ -299,10 +288,7 @@
                             return foundKey ? row[foundKey] : "";
                         };
 
-                        // AMBIL DATE IN DAN DATE OUT
-                        let rawDateIn = getVal(["DATE IN", "DATE_IN", "INCOMING", "TARIKH MASUK"]);
-                        let rawDateOut = getVal(["DATE OUT", "DATE_OUT", "OUTGOING", "TARIKH KELUAR"]);
-
+                        // PEMBAIKAN: Mapping yang lebih spesifik supaya tidak tertukar dengan kolum lain
                         return {
                             drn: "-",
                             peralatan: String(getVal(["DESCRIPTION", "COMPONENT", "EQUIPMENT", "PERALATAN", "ITEM"])).toUpperCase(),
@@ -311,9 +297,11 @@
                             pic: String(getVal(["PIC", "VENDOR", "JKTEK", "JTP"]) || "N/A").toUpperCase(),
                             status: String(getVal(["STATUS"]) || "SERVICEABLE").toUpperCase(),
                             status_type: 'REPAIR',
+                            // Cari kolum DEFECT atau REMARKS dahulu sebelum ambil nilai default
                             defect: String(getVal(["DEFECT", "REMARKS", "KEROSAKAN", "CATATAN"]) || "N/A").toUpperCase(),
-                            date_in: parseExcelDate(rawDateIn),
-                            date_out: parseExcelDate(rawDateOut) 
+                            date_in: parseExcelDate(getVal(["DATE IN", "DATE_IN", "INCOMING", "TARIKH MASUK"])),
+                            // PEMBAIKAN: Pastikan sistem cari kolum DATE OUT
+                            date_out: parseExcelDate(getVal(["DATE OUT", "DATE_OUT", "OUTGOING", "TARIKH KELUAR"])) 
                         };
                     }).filter(item => {
                         const sn = String(item.sn).toUpperCase().trim();
@@ -327,7 +315,6 @@
                         alert("Tiada data sah dijumpai.");
                     }
                 } catch (err) {
-                    console.error(err);
                     alert("Ralat memproses fail: " + err.message);
                 }
             };
@@ -345,7 +332,6 @@
             for (let i = 0; i < total; i += chunkSize) {
                 const chunk = dataList.slice(i, i + chunkSize);
                 const requests = chunk.map(item => {
-                    // PASTIKAN SEMUA FIELD TERMASUK DATE_OUT DIHANTAR
                     const params = new URLSearchParams();
                     for (const key in item) {
                         params.append(key, item[key]);
@@ -365,7 +351,7 @@
                 progressText.innerText = `${dictionary[lang].textImporting}: ${percentage}% (${currentProgress}/${total})`;
             }
             setTimeout(() => {
-                alert(`Selesai! ${successCount} rekod berjaya diimport dengan tarikh masuk dan keluar.`);
+                alert(`Selesai! ${successCount} rekod berjaya diimport.`);
                 window.location.reload();
             }, 800);
         }
