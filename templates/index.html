@@ -288,19 +288,32 @@
                             return foundKey ? row[foundKey] : "";
                         };
 
-                        // PEMBAIKAN: Mapping yang lebih spesifik supaya tidak tertukar dengan kolum lain
+                        // PEMBAIKAN LOGIK STATUS & DATE OUT
+                        let rawStatus = String(getVal(["STATUS", "CONDITION", "WARRANTY"]) || "").toUpperCase();
+                        let finalStatus = "SERVICEABLE";
+                        
+                        // Jika dalam kolum Status atau kolum Remarks ada perkataan 'WARRANTY'
+                        if (rawStatus.includes("WARRANTY")) {
+                            finalStatus = "WARRANTY REPAIR";
+                        }
+
+                        let rawDefect = String(getVal(["DEFECT", "REMARKS", "KEROSAKAN", "CATATAN"]) || "N/A").toUpperCase();
+                        // Jika kerosakan cuma tulis 'WARRANTY', kita kekalkan N/A atau biarkan, tapi status dah set kat atas
+                        if (rawDefect.includes("WARRANTY G7") || rawDefect === "WARRANTY") {
+                            // finalStatus = "WARRANTY REPAIR"; // Boleh aktifkan ini juga kalau nak double check
+                        }
+
                         return {
                             drn: "-",
                             peralatan: String(getVal(["DESCRIPTION", "COMPONENT", "EQUIPMENT", "PERALATAN", "ITEM"])).toUpperCase(),
                             pn: String(getVal(["PART NO", "PART NO.", "PART NUMBER", "P/N"])).toUpperCase(),
                             sn: String(getVal(["SERIAL NO", "SERIAL NO.", "SERIAL NUMBER", "S/N"])).toUpperCase(),
                             pic: String(getVal(["PIC", "VENDOR", "JKTEK", "JTP"]) || "N/A").toUpperCase(),
-                            status: String(getVal(["STATUS"]) || "SERVICEABLE").toUpperCase(),
+                            status: finalStatus,
                             status_type: 'REPAIR',
-                            // Cari kolum DEFECT atau REMARKS dahulu sebelum ambil nilai default
-                            defect: String(getVal(["DEFECT", "REMARKS", "KEROSAKAN", "CATATAN"]) || "N/A").toUpperCase(),
+                            defect: rawDefect,
                             date_in: parseExcelDate(getVal(["DATE IN", "DATE_IN", "INCOMING", "TARIKH MASUK"])),
-                            // PEMBAIKAN: Pastikan sistem cari kolum DATE OUT
+                            // PEMBAIKAN: Strict mapping untuk Date Out
                             date_out: parseExcelDate(getVal(["DATE OUT", "DATE_OUT", "OUTGOING", "TARIKH KELUAR"])) 
                         };
                     }).filter(item => {
