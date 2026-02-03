@@ -426,6 +426,11 @@
                 <button onclick="cleanupDuplicates()" class="mt-4 bg-red-100 text-red-800 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-red-200 transition-all shadow-md transform active:scale-95">
                     🧹 Remove Duplicates
                 </button>
+
+                <!-- Delete All Records Button -->
+                <button onclick="deleteAllRecords()" class="mt-2 bg-red-700 text-white py-3 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-red-800 transition-all shadow-md transform active:scale-95">
+                    🗑️ Delete All Records
+                </button>
             </div>
         </div>
 
@@ -452,6 +457,28 @@
                         <input type="text" id="searchInput" onkeyup="filterTable()" 
                                class="bg-white border border-slate-200 text-slate-700 text-xs rounded-3xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 block w-full pl-10 p-4 font-bold tracking-wide transition-all shadow-sm outline-none" 
                                placeholder="Cari S/N atau P/N...">
+                    </div>
+
+                    <!-- Status Filter Dropdown -->
+                    <div class="relative">
+                        <select id="statusFilter" onchange="filterByStatus()" class="bg-white border border-slate-200 text-slate-700 text-xs rounded-3xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 block pl-4 pr-8 p-4 font-bold tracking-wide transition-all shadow-sm outline-none appearance-none cursor-pointer min-w-[160px]">
+                            <option value="ALL">📋 All Status</option>
+                            <option value="SERVICEABLE">✅ Serviceable</option>
+                            <option value="WARRANTY REPAIR">🔧 Warranty Repair</option>
+                            <option value="OV TDI">⏳ OV TDI</option>
+                            <option value="OV REPAIR">🔨 OV Repair</option>
+                            <option value="TDI ON PROGRESS">🔄 TDI On Progress</option>
+                            <option value="READY TO QUOTE">💰 Ready to Quote</option>
+                            <option value="ISOLATED">🚨 Isolated</option>
+                            {% for status in status_list %}
+                                {% if status not in ['SERVICEABLE','WARRANTY REPAIR','OV TDI','OV REPAIR','TDI ON PROGRESS','READY TO QUOTE','ISOLATED'] %}
+                                <option value="{{ status }}">{{ status }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
                     </div>
 
                     <div class="bg-white px-8 py-4 rounded-3xl border border-slate-200 shadow-sm flex flex-col items-center min-w-[120px]">
@@ -482,7 +509,7 @@
                         
                         <tbody class="divide-y divide-slate-100">
                             {% for log in logs %}
-                            <tr class="table-row-hover group">
+                            <tr class="table-row-hover group" data-status="{{ log.status_type }}">
                                 
                                 <td class="px-10 py-8 no-print">
                                     <input type="checkbox" name="ids" value="{{ log.id }}" class="item-checkbox w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
@@ -514,18 +541,32 @@
                                     <div class="text-xs text-slate-700 font-bold leading-relaxed max-w-sm uppercase bg-amber-50/50 p-3 rounded-xl border-l-4 border-amber-400 filter-target shadow-sm">
                                         "{{ log.defect or 'TIADA REKOD KEROSAKAN' }}"
                                     </div>
-                                    <div class="mt-2">
+                                    <div class="mt-2 space-y-0.5">
+                                        <!-- Split pic into JTP and REMARKS lines -->
+                                        {% set pic_parts = (log.pic or '').split(' ') %}
+                                        {% set has_jtp = log.pic and 'JTP' in log.pic.upper() %}
+                                        {% if has_jtp %}
+                                        <p class="text-[10px] text-slate-500 font-medium">
+                                            <span class="font-black text-slate-400 uppercase">JTP:</span> {{ log.pic }}
+                                        </p>
+                                        {% else %}
                                         <p class="text-[10px] text-slate-500 font-medium">
                                             <span class="font-black text-slate-400 uppercase">Remarks:</span> {{ log.pic or '-' }}
                                         </p>
+                                        {% endif %}
                                     </div>
                                 </td>
                                 
                                 <td class="px-6 py-8 align-top">
                                     <div class="mb-3">
                                         <span class="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border
-                                            {% if log.status_type == 'SERVICEABLE' %} bg-emerald-100 text-emerald-700 border-emerald-200
-                                            {% elif 'TDI' in log.status_type %} bg-amber-100 text-amber-700 border-amber-200
+                                            {% if log.status_type == "SERVICEABLE" %} bg-emerald-100 text-emerald-700 border-emerald-200
+                                            {% elif log.status_type == "ISOLATED" %} bg-red-100 text-red-700 border-red-200
+                                            {% elif "WARRANTY" in log.status_type %} bg-orange-100 text-orange-700 border-orange-200
+                                            {% elif log.status_type == "OV TDI" %} bg-yellow-100 text-yellow-800 border-yellow-300
+                                            {% elif log.status_type == "OV REPAIR" %} bg-pink-100 text-pink-700 border-pink-200
+                                            {% elif "TDI" in log.status_type %} bg-amber-100 text-amber-700 border-amber-200
+                                            {% elif log.status_type == "READY TO QUOTE" %} bg-purple-100 text-purple-700 border-purple-200
                                             {% else %} bg-blue-100 text-blue-700 border-blue-200 {% endif %}">
                                             {{ log.status_type }}
                                         </span>
@@ -573,8 +614,13 @@
                                         <a href="{{ url_for('edit', id=log.id) }}" class="p-2 text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors tooltip" title="Edit">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                         </a>
-                                        
-                                        <!-- ✅ BUG FIX #1: Changed log_id=log.id to id=log.id -->
+
+                                        <!-- Isolate Button -->
+                                        <button type="button" onclick="if(confirm('Isolate rekod ini? Status akan ditukar kepada ISOLATED.')) window.location.href='{{ url_for('isolate_log', id=log.id) }}'" class="p-2 text-amber-700 bg-amber-50 rounded-xl hover:bg-amber-100 transition-colors tooltip" title="Isolate">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                        </button>
+
+                                        <!-- Delete Button -->
                                         <button type="button" onclick="if(confirm('Adakah anda pasti mahu memadam rekod ini secara kekal?')) window.location.href='{{ url_for('delete_log', id=log.id) }}'" class="p-2 text-rose-600 bg-rose-50 rounded-xl hover:bg-rose-100 transition-colors tooltip" title="Delete">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                         </button>
@@ -779,6 +825,25 @@
                 }
             } catch(e) { alert("❌ Network error: " + e.message); }
         }
+
+        /**
+         * FUNGSI: DELETE ALL RECORDS
+         * Calls /delete_all endpoint — wipe DB clean before reimport
+         */
+        async function deleteAllRecords() {
+            if (!confirm("⚠️ THIS WILL DELETE ALL " + document.querySelector(".font-black.text-[3rem]")?.textContent?.trim() + " RECORDS!\n\nYou should reimport your Excel files after this.\n\nAre you SURE?")) return;
+            try {
+                const res = await fetch("/clear_all", { method: "POST", headers: { "Content-Type": "application/json" } });
+                const result = await res.json();
+                if (res.ok) {
+                    alert("✅ Done! All records deleted. Now reimport your Excel files.");
+                    location.reload();
+                } else {
+                    alert("❌ Error: " + (result.error || "Unknown error"));
+                }
+            } catch(e) { alert("❌ Network error: " + e.message); }
+        }
+
 
          * FUNGSI 2: EXPORT DATABASE TO EXCEL
          * Memuat turun jadual yang dipaparkan ke fail .xlsx
@@ -995,36 +1060,53 @@
             }
         }
 
-        // ✅ BUG FIX #2: Changed getElementById("logTable") to getElementById("mainTable")
-        // Handler Carian Jadual
-        function filterTable() {
-            const input = document.getElementById("searchInput");
-            const filter = input.value.toUpperCase();
-            const table = document.getElementById("mainTable");
-            const tr = table.getElementsByTagName("tr");
+        // ✅ Combined filter: text search + status dropdown
+        function filterByStatus() {
+            filterTable(); // status filter triggers same combined function
+        }
 
-            // Loop melalui baris jadual
+        function filterTable() {
+            const searchVal  = document.getElementById("searchInput").value.toUpperCase();
+            const statusVal  = document.getElementById("statusFilter").value;
+            const table      = document.getElementById("mainTable");
+            const tr         = table.getElementsByTagName("tr");
+            let visibleCount = 0;
+
             for (let i = 0; i < tr.length; i++) {
-                // Abaikan header
                 if (tr[i].getElementsByTagName("th").length > 0) continue;
 
-                // Cari dalam kelas 'filter-target'
-                const tds = tr[i].getElementsByClassName("filter-target");
-                let found = false;
+                // ── Status filter ──
+                const rowStatus = (tr[i].getAttribute("data-status") || "").toUpperCase();
+                let statusMatch = (statusVal === "ALL" || rowStatus === statusVal);
 
-                for (let j = 0; j < tds.length; j++) {
-                    if (tds[j].textContent.toUpperCase().indexOf(filter) > -1) {
-                        found = true;
-                        break;
+                // ── Text search filter ──
+                let textMatch = true;
+                if (searchVal !== "") {
+                    textMatch = false;
+                    const tds = tr[i].getElementsByClassName("filter-target");
+                    for (let j = 0; j < tds.length; j++) {
+                        if (tds[j].textContent.toUpperCase().indexOf(searchVal) > -1) {
+                            textMatch = true;
+                            break;
+                        }
                     }
                 }
 
-                // Tunjuk atau sembunyikan baris
-                if (found) {
+                // Show only if BOTH match
+                if (statusMatch && textMatch) {
                     tr[i].style.display = "";
+                    visibleCount++;
                 } else {
                     tr[i].style.display = "none";
                 }
+            }
+
+            // Update visible count badge
+            const countEl = document.querySelector(".text-2xl.font-black.text-slate-900");
+            if (countEl && (statusVal !== "ALL" || searchVal !== "")) {
+                countEl.textContent = visibleCount;
+            } else if (countEl) {
+                countEl.textContent = tr.length - 1; // minus header row
             }
         }
 

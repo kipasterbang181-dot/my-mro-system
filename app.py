@@ -545,6 +545,48 @@ def isolate_log(id):
     return redirect(url_for('admin'))
 
 
+@app.route('/isolate/<int:id>')
+def isolate_log(id):
+    """
+    Isolate a record — set status to ISOLATED.
+    Berguna untuk tandai rekod yang ada masalah atau perlu diasingkan.
+    """
+    if not session.get('admin'):
+        return redirect(url_for('login', next=request.path))
+
+    try:
+        l = RepairLog.query.get_or_404(id)
+        l.status_type = 'ISOLATED'
+        l.last_updated = datetime.now()
+        db.session.commit()
+        flash("Rekod telah diasingkan (ISOLATED).", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("Gagal mengasingkan rekod.", "error")
+
+    return redirect(url_for('admin'))
+
+
+@app.route('/clear_all', methods=['POST'])
+def clear_all():
+    """
+    Padam SEMUA rekod dari database.
+    Admin only. Guna untuk fresh reimport.
+    """
+    if not session.get('admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    try:
+        RepairLog.query.delete()
+        db.session.commit()
+        logger.info("All records cleared by admin")
+        return jsonify({"status": "success", "message": "All records deleted"}), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Clear All Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/delete/<int:id>')
 def delete_log(id):
     """
