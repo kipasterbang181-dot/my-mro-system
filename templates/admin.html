@@ -21,14 +21,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     
     <style>
-        /* * IMPORT FONTS
-         * Menggunakan font 'Inter' dari Google Fonts untuk rupa korporat & moden.
-         */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         
-        /* * ROOT VARIABLES
-         * Definisi warna utama untuk konsistensi (walaupun Tailwind digunakan).
-         */
         :root {
             --primary-dark: #0f172a;
             --accent-blue: #3b82f6;
@@ -37,8 +31,6 @@
             --bg-light: #f0f4f8;
         }
 
-        /* * BASE BODY STYLES
-         */
         body { 
             font-family: 'Inter', sans-serif; 
             letter-spacing: -0.01em; 
@@ -51,9 +43,6 @@
             -moz-osx-font-smoothing: grayscale;
         }
 
-        /* * TABLE ROW HOVER EFFECT
-         * Memberi respons visual apabila tetikus melintas baris jadual.
-         */
         .table-row-hover {
             transition-property: background-color, transform;
             transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
@@ -61,15 +50,12 @@
         }
         
         .table-row-hover:hover { 
-            background-color: #f8fafc; /* Slate-50 */
+            background-color: #f8fafc;
         }
 
-        /* * SUMMARY TABLE HEADER STYLES
-         * Penggayaan khusus untuk jadual ringkasan di bahagian atas.
-         */
         .summary-table th { 
-            background-color: #1e293b; /* Slate-900 */
-            color: #f8fafc; /* Slate-50 */
+            background-color: #1e293b;
+            color: #f8fafc;
             padding-top: 14px;
             padding-bottom: 14px;
             padding-left: 12px;
@@ -79,22 +65,19 @@
             letter-spacing: 0.05em;
             border-right-width: 1px;
             border-right-style: solid;
-            border-right-color: #334155; /* Slate-700 */
+            border-right-color: #334155;
         }
 
         .summary-table td { 
             padding: 12px; 
             border-width: 1px;
             border-style: solid;
-            border-color: #e2e8f0; /* Slate-200 */
+            border-color: #e2e8f0;
             font-weight: 800; 
             text-align: center;
             font-size: 13px;
         }
 
-        /* * ACTION BUTTON GROUPS (CONTAINER)
-         * Membungkus butang tindakan dalam kapsul yang kemas.
-         */
         .action-group-container {
             display: flex;
             align-items: center;
@@ -103,7 +86,7 @@
             padding-bottom: 4px;
             padding-left: 12px;
             padding-right: 12px;
-            border-radius: 9999px; /* Pill shape */
+            border-radius: 9999px;
             border-width: 2px;
             border-style: solid;
             border-color: #f1f5f9;
@@ -111,8 +94,6 @@
             gap: 4px;
         }
 
-        /* * INDIVIDUAL ACTION BUTTONS
-         */
         .action-btn-item {
             display: flex;
             align-items: center;
@@ -128,17 +109,15 @@
             outline: none;
         }
 
-        /* Skema Warna Butang */
-        .btn-qr-color { color: #2563eb; }    /* Blue-600 */
-        .btn-view-color { color: #059669; }  /* Emerald-600 */
-        .btn-tag-color { color: #f59e0b; }   /* Amber-500 */
+        .btn-qr-color { color: #2563eb; }
+        .btn-view-color { color: #059669; }
+        .btn-tag-color { color: #f59e0b; }
         
         .action-btn-item:hover {
             background-color: #f1f5f9;
             transform: translateY(-1px);
         }
 
-        /* Pemisah Vertikal (Divider) */
         .action-divider {
             width: 1px;
             height: 18px;
@@ -147,9 +126,6 @@
             margin-right: 4px;
         }
 
-        /* * TOOLTIP SYSTEM (CSS ONLY)
-         * Paparan label kecil apabila hover pada ikon.
-         */
         .tooltip {
             position: relative;
             display: inline-block;
@@ -164,19 +140,13 @@
             border-radius: 6px;
             padding-top: 6px;
             padding-bottom: 6px;
-            
-            /* Positioning */
             position: absolute;
             z-index: 50;
             bottom: 130%;
             left: 50%;
             margin-left: -50px;
-            
-            /* Animation state */
             opacity: 0;
             transition: opacity 0.3s;
-            
-            /* Typography */
             font-size: 10px;
             font-weight: bold;
             text-transform: uppercase;
@@ -184,7 +154,6 @@
             pointer-events: none;
         }
 
-        /* Arrow Tooltip */
         .tooltip .tooltiptext::after {
             content: "";
             position: absolute;
@@ -201,23 +170,18 @@
             opacity: 1;
         }
 
-        /* * LANGUAGE SWITCHER ACTIVE STATE
-         */
         .lang-btn.active {
-            background-color: #3b82f6; /* Blue-500 */
+            background-color: #3b82f6;
             color: white;
             box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.4);
             border-color: transparent;
         }
 
-        /* * LOADER ANIMATION
-         * Digunakan semasa proses import Excel berjalan.
-         */
         .loader {
             border-width: 2px;
             border-style: solid;
             border-color: #f3f3f3;
-            border-top-color: #3b82f6; /* Blue-500 */
+            border-top-color: #3b82f6;
             border-radius: 50%;
             width: 16px;
             height: 16px;
@@ -231,9 +195,6 @@
             100% { transform: rotate(360deg); } 
         }
 
-        /* * CUSTOM SCROLLBAR (WEBKIT)
-         * Untuk jadual yang panjang supaya scrollbar tidak nampak buruk.
-         */
         .custom-scrollbar::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -250,10 +211,6 @@
             background: #94a3b8;
         }
 
-        /* * PRINT MEDIA QUERY
-         * Menyembunyikan elemen UI (Navbar, Butang) semasa mencetak.
-         * Hanya memaparkan kandungan modal jika modal aktif.
-         */
         @media print {
             body * { 
                 visibility: hidden; 
@@ -274,7 +231,6 @@
             }
         }
 
-        /* Placeholder Opacity */
         ::placeholder { 
             color: #94a3b8; 
             opacity: 1; 
@@ -383,9 +339,6 @@
             </div>
         </div>
 
-        <!-- Shortcut buttons removed as requested -->
-
-
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12 no-print">
             
             <div class="lg:col-span-2 bg-white p-10 rounded-[3rem] border-2 border-dashed border-blue-200 shadow-2xl shadow-blue-50/50 relative overflow-hidden transition-all hover:border-blue-300">
@@ -421,16 +374,6 @@
                 <button onclick="exportFullDatabase()" class="bg-white text-blue-900 py-5 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-cyan-50 transition-all shadow-xl shadow-blue-900/40 transform active:scale-95">
                     Export Full Excel 📥
                 </button>
-
-                <!-- Cleanup Duplicates Button -->
-                <button onclick="cleanupDuplicates()" class="mt-4 bg-red-100 text-red-800 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-red-200 transition-all shadow-md transform active:scale-95">
-                    🧹 Remove Duplicates
-                </button>
-
-                <!-- Delete All Records Button -->
-                <button onclick="deleteAllRecords()" class="mt-2 bg-red-700 text-white py-3 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-red-800 transition-all shadow-md transform active:scale-95">
-                    🗑️ Delete All Records
-                </button>
             </div>
         </div>
 
@@ -459,21 +402,11 @@
                                placeholder="Cari S/N atau P/N...">
                     </div>
 
-                    <!-- Status Filter Dropdown -->
                     <div class="relative">
-                        <select id="statusFilter" onchange="filterByStatus()" class="bg-white border border-slate-200 text-slate-700 text-xs rounded-3xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 block pl-4 pr-8 p-4 font-bold tracking-wide transition-all shadow-sm outline-none appearance-none cursor-pointer min-w-[160px]">
+                        <select id="statusFilter" onchange="filterTable()" class="bg-white border border-slate-200 text-slate-700 text-xs rounded-3xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 block pl-4 pr-8 p-4 font-bold tracking-wide transition-all shadow-sm outline-none appearance-none cursor-pointer min-w-[160px]">
                             <option value="ALL">📋 All Status</option>
-                            <option value="SERVICEABLE">✅ Serviceable</option>
-                            <option value="WARRANTY REPAIR">🔧 Warranty Repair</option>
-                            <option value="OV TDI">⏳ OV TDI</option>
-                            <option value="OV REPAIR">🔨 OV Repair</option>
-                            <option value="TDI ON PROGRESS">🔄 TDI On Progress</option>
-                            <option value="READY TO QUOTE">💰 Ready to Quote</option>
-                            <option value="ISOLATED">🚨 Isolated</option>
                             {% for status in status_list %}
-                                {% if status not in ['SERVICEABLE','WARRANTY REPAIR','OV TDI','OV REPAIR','TDI ON PROGRESS','READY TO QUOTE','ISOLATED'] %}
-                                <option value="{{ status }}">{{ status }}</option>
-                                {% endif %}
+                            <option value="{{ status }}">{{ status }}</option>
                             {% endfor %}
                         </select>
                         <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
@@ -483,7 +416,7 @@
 
                     <div class="bg-white px-8 py-4 rounded-3xl border border-slate-200 shadow-sm flex flex-col items-center min-w-[120px]">
                         <span id="t-records" class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Records</span>
-                        <span class="text-2xl font-black text-slate-900 tracking-tighter">{{ logs|length }}</span>
+                        <span id="totalCount" class="text-2xl font-black text-slate-900 tracking-tighter">{{ logs|length }}</span>
                     </div>
 
                     <button onclick="confirmBulkDelete()" class="bg-rose-50 text-rose-600 px-8 py-5 rounded-3xl font-black uppercase tracking-widest text-[11px] hover:bg-rose-100 transition-all border border-rose-100 whitespace-nowrap shadow-sm hover:shadow-md">
@@ -509,7 +442,7 @@
                         
                         <tbody class="divide-y divide-slate-100">
                             {% for log in logs %}
-                            <tr class="table-row-hover group" data-status="{{ log.status_type }}">
+                            <tr class="table-row-hover group table-row" data-status="{{ log.status_type|upper }}">
                                 
                                 <td class="px-10 py-8 no-print">
                                     <input type="checkbox" name="ids" value="{{ log.id }}" class="item-checkbox w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
@@ -541,32 +474,18 @@
                                     <div class="text-xs text-slate-700 font-bold leading-relaxed max-w-sm uppercase bg-amber-50/50 p-3 rounded-xl border-l-4 border-amber-400 filter-target shadow-sm">
                                         "{{ log.defect or 'TIADA REKOD KEROSAKAN' }}"
                                     </div>
-                                    <div class="mt-2 space-y-0.5">
-                                        <!-- Split pic into JTP and REMARKS lines -->
-                                        {% set pic_parts = (log.pic or '').split(' ') %}
-                                        {% set has_jtp = log.pic and 'JTP' in log.pic.upper() %}
-                                        {% if has_jtp %}
-                                        <p class="text-[10px] text-slate-500 font-medium">
-                                            <span class="font-black text-slate-400 uppercase">JTP:</span> {{ log.pic }}
-                                        </p>
-                                        {% else %}
+                                    <div class="mt-2">
                                         <p class="text-[10px] text-slate-500 font-medium">
                                             <span class="font-black text-slate-400 uppercase">Remarks:</span> {{ log.pic or '-' }}
                                         </p>
-                                        {% endif %}
                                     </div>
                                 </td>
                                 
                                 <td class="px-6 py-8 align-top">
                                     <div class="mb-3">
                                         <span class="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border
-                                            {% if log.status_type == "SERVICEABLE" %} bg-emerald-100 text-emerald-700 border-emerald-200
-                                            {% elif log.status_type == "ISOLATED" %} bg-red-100 text-red-700 border-red-200
-                                            {% elif "WARRANTY" in log.status_type %} bg-orange-100 text-orange-700 border-orange-200
-                                            {% elif log.status_type == "OV TDI" %} bg-yellow-100 text-yellow-800 border-yellow-300
-                                            {% elif log.status_type == "OV REPAIR" %} bg-pink-100 text-pink-700 border-pink-200
-                                            {% elif "TDI" in log.status_type %} bg-amber-100 text-amber-700 border-amber-200
-                                            {% elif log.status_type == "READY TO QUOTE" %} bg-purple-100 text-purple-700 border-purple-200
+                                            {% if log.status_type == 'SERVICEABLE' %} bg-emerald-100 text-emerald-700 border-emerald-200
+                                            {% elif 'TDI' in log.status_type %} bg-amber-100 text-amber-700 border-amber-200
                                             {% else %} bg-blue-100 text-blue-700 border-blue-200 {% endif %}">
                                             {{ log.status_type }}
                                         </span>
@@ -588,7 +507,6 @@
                                         
                                         <div class="action-group-container">
                                             
-                                            <!-- QR Button - Shows Modal -->
                                             <button type="button" onclick="showQR('{{ log.sn }}', '{{ request.url_root }}view_tag/{{ log.id }}', '{{ log.id }}')" class="action-btn-item btn-qr-color tooltip">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
                                                 <span class="tooltiptext">QR Code</span>
@@ -596,7 +514,6 @@
                                             
                                             <div class="action-divider"></div>
                                             
-                                            <!-- First Eye (Green) - Goes to View Tag -->
                                             <a href="{{ url_for('view_tag', id=log.id) }}" class="action-btn-item btn-view-color tooltip">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                                                 <span class="tooltiptext">View Tag</span>
@@ -604,7 +521,6 @@
                                             
                                             <div class="action-divider"></div>
 
-                                            <!-- Second Eye (Amber) - Goes to View Report -->
                                             <a href="{{ url_for('view_report', id=log.id) }}" class="action-btn-item btn-tag-color tooltip">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                                                 <span class="tooltiptext">View Report</span>
@@ -614,13 +530,7 @@
                                         <a href="{{ url_for('edit', id=log.id) }}" class="p-2 text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors tooltip" title="Edit">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                         </a>
-
-                                        <!-- Isolate Button -->
-                                        <button type="button" onclick="if(confirm('Isolate rekod ini? Status akan ditukar kepada ISOLATED.')) window.location.href='{{ url_for('isolate_log', id=log.id) }}'" class="p-2 text-amber-700 bg-amber-50 rounded-xl hover:bg-amber-100 transition-colors tooltip" title="Isolate">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                                        </button>
-
-                                        <!-- Delete Button -->
+                                        
                                         <button type="button" onclick="if(confirm('Adakah anda pasti mahu memadam rekod ini secara kekal?')) window.location.href='{{ url_for('delete_log', id=log.id) }}'" class="p-2 text-rose-600 bg-rose-50 rounded-xl hover:bg-rose-100 transition-colors tooltip" title="Delete">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                         </button>
@@ -663,12 +573,7 @@
     </div>
 
     <script>
-        /**
-         * -------------------------------------------------------------------------------------
-         * FUNGSI 1: EXCEL PROCESSING & IMPORT
-         * Menguruskan pemilihan fail, pembacaan data, dan penghantaran ke server.
-         * -------------------------------------------------------------------------------------
-         */
+        // ✅ FIXED: Excel Import Function
         async function processExcel() {
             const fileInput = document.getElementById('excelFile');
             const importBtn = document.getElementById('importBtn');
@@ -688,22 +593,18 @@
             reader.onload = async (e) => {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    // ❌ removed cellDates:true — corrupts numeric S/N values into Dates
                     const workbook = XLSX.read(data, { type: 'array', raw: true });
 
-                    // ─── SHEET SELECTION: pick "OS" sheet if multi-sheet file ───
                     let sheetName = workbook.SheetNames[0];
                     if (workbook.SheetNames.length > 1) {
                         const osSheets = workbook.SheetNames.filter(n => n.trim().toUpperCase().startsWith('OS'));
                         if (osSheets.length > 0) {
                             sheetName = osSheets[osSheets.length - 1];
                         }
-                        console.log('📂 Sheets:', workbook.SheetNames, '→ using:', sheetName);
                     }
                     const sheet = workbook.Sheets[sheetName];
                     const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: true });
 
-                    // ─── 1. AUTO-DETECT header row ───
                     let headerIndex = -1;
                     const keywords = ['part no', 'serial no', 'description', 'date in', 'status'];
                     for (let i = 0; i < Math.min(15, rawRows.length); i++) {
@@ -713,9 +614,7 @@
                     }
                     if (headerIndex === -1) headerIndex = 0;
                     const headerRow = rawRows[headerIndex];
-                    console.log('📋 Header at row', headerIndex, '→', headerRow);
 
-                    // ─── 2. MAP columns by exact header name ───
                     const colMap = {};
                     headerRow.forEach((h, idx) => {
                         const key = String(h || '').toLowerCase().trim();
@@ -725,9 +624,9 @@
                         else if (key === 'date in')     colMap.dateIn  = idx;
                         else if (key === 'date out')    colMap.dateOut = idx;
                         else if (key === 'status')      colMap.status  = idx;
-                        else if (key === 'jtp')         colMap.jtp     = idx;     // JTP separate
-                        else if (key === 'remarks')     colMap.remarks = idx;     // REMARKS separate
-                        else if (key === 'defect')      colMap.defect  = idx;     // DEFECT only
+                        else if (key === 'jtp')         colMap.jtp     = idx;
+                        else if (key === 'remarks')     colMap.remarks = idx;
+                        else if (key === 'defect')      colMap.defect  = idx;
                     });
                     colMap.pn      = colMap.pn      ?? 1;
                     colMap.desc    = colMap.desc    ?? 2;
@@ -735,9 +634,7 @@
                     colMap.dateIn  = colMap.dateIn  ?? 4;
                     colMap.dateOut = colMap.dateOut  ?? 5;
                     colMap.status  = colMap.status  ?? 6;
-                    console.log('📊 colMap:', colMap);
 
-                    // ─── 3. PROCESS rows ───
                     const dataRows = rawRows.slice(headerIndex + 1);
                     const payload = [];
 
@@ -745,23 +642,17 @@
                         const pn = String(row[colMap.pn] || '').trim().toUpperCase();
                         const sn = String(row[colMap.sn] || '').trim().toUpperCase();
 
-                        // skip empty / sub-header rows
-                        if (!pn && !sn)                                          return;
-                        if (pn === 'PART NO' || sn === 'SERIAL NO')             return;
-                        if (pn === 'DATE OUT' || pn === 'DATE IN' || pn === 'VENDOR') return;
-                        if (pn === '' || sn === '')                              return;
+                        if (!pn && !sn) return;
+                        if (pn === 'PART NO' || sn === 'SERIAL NO') return;
+                        if (pn === '' || sn === '') return;
 
-                        // PIC = JTP + REMARKS combined
                         const jtpVal     = (colMap.jtp     !== undefined) ? String(row[colMap.jtp]     || '').trim() : '';
                         const remarksVal = (colMap.remarks !== undefined) ? String(row[colMap.remarks] || '').trim() : '';
                         const picParts   = [jtpVal, remarksVal].filter(v => v && v.toLowerCase() !== 'nan');
                         const picFinal   = picParts.join(' ').trim() || 'N/A';
 
-                        // DEFECT
                         const rawDef   = (colMap.defect !== undefined) ? String(row[colMap.defect] || '').trim() : '';
                         const defFinal = (rawDef && rawDef.toLowerCase() !== 'nan') ? rawDef : 'N/A';
-
-                        if (idx < 3) console.log(`Row ${idx+1}: PIC="${picFinal}" DEFECT="${defFinal}"`);
 
                         payload.push({
                             "DRN":        "-",
@@ -776,9 +667,6 @@
                         });
                     });
 
-                    console.log(`📦 Sending ${payload.length} records`);
-
-                    // ─── 4. POST to correct endpoint ───
                     const res = await fetch('/import_bulk', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -807,70 +695,21 @@
             reader.readAsArrayBuffer(file);
         }
 
-        /**
-        /**
-         * FUNGSI: CLEANUP DUPLICATES
-         * Calls /cleanup_duplicates endpoint to remove duplicate records from DB
-         */
-        async function cleanupDuplicates() {
-            if (!confirm("This will remove ALL duplicate records from the database.\nOnly the first occurrence of each record will be kept.\n\nAre you sure?")) return;
-            try {
-                const res = await fetch("/cleanup_duplicates", { method: "POST", headers: { "Content-Type": "application/json" } });
-                const result = await res.json();
-                if (res.ok) {
-                    alert("✅ Cleanup done! " + result.deleted + " duplicate record(s) removed.");
-                    location.reload();
-                } else {
-                    alert("❌ Error: " + (result.error || "Unknown error"));
-                }
-            } catch(e) { alert("❌ Network error: " + e.message); }
-        }
-
-        /**
-         * FUNGSI: DELETE ALL RECORDS
-         * Calls /delete_all endpoint — wipe DB clean before reimport
-         */
-        async function deleteAllRecords() {
-            if (!confirm("⚠️ THIS WILL DELETE ALL " + document.querySelector(".font-black.text-[3rem]")?.textContent?.trim() + " RECORDS!\n\nYou should reimport your Excel files after this.\n\nAre you SURE?")) return;
-            try {
-                const res = await fetch("/clear_all", { method: "POST", headers: { "Content-Type": "application/json" } });
-                const result = await res.json();
-                if (res.ok) {
-                    alert("✅ Done! All records deleted. Now reimport your Excel files.");
-                    location.reload();
-                } else {
-                    alert("❌ Error: " + (result.error || "Unknown error"));
-                }
-            } catch(e) { alert("❌ Network error: " + e.message); }
-        }
-
-
-         * FUNGSI 2: EXPORT DATABASE TO EXCEL
-         * Memuat turun jadual yang dipaparkan ke fail .xlsx
-         */
         function exportFullDatabase() {
             const table = document.getElementById("mainTable");
-            
-            // Clone table to ensure clean data
             const wb = XLSX.utils.table_to_book(table, { 
                 sheet: "G7_Aerospace_Records",
                 raw: true 
             });
-            
             XLSX.writeFile(wb, "G7_Full_Database_Export.xlsx");
         }
 
-        /**
-         * FUNGSI BANTUAN: DATE PARSER
-         * Menukar format tarikh Excel kepada format JS
-         */
         function parseExcelDate(val) {
             if (!val || val === 0 || val === "0" || val === "-" || String(val).toUpperCase() === "N/A") return '';
 
             let date;
 
             if (typeof val === 'number') {
-                // Excel serial dates for 2020+ are ~43800+. Anything < 1000 is an S/N → skip
                 if (val < 1000) return '';
                 date = new Date(Math.round((val - 25569) * 86400 * 1000));
             }
@@ -882,10 +721,8 @@
                 let parts = str.split(/[-/]/);
                 if (parts.length === 3) {
                     if (parts[0].length === 4) {
-                        // YYYY-MM-DD
                         date = new Date(`${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`);
                     } else {
-                        // DD-MM-YYYY
                         let y = parts[2]; if (y.length === 2) y = "20" + y;
                         date = new Date(`${y}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`);
                     }
@@ -903,17 +740,10 @@
             return '';
         }
 
-        /**
-         * -------------------------------------------------------------------------------------
-         * FUNGSI 3: PDF REPORT GENERATION
-         * Menjana laporan ringkasan dalam format PDF menggunakan jsPDF-AutoTable
-         * -------------------------------------------------------------------------------------
-         */
         function exportSummaryPDF() {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('l', 'mm', 'a4'); // Landscape, mm, A4
+            const doc = new jsPDF('l', 'mm', 'a4');
             
-            // PDF Header
             doc.setFontSize(18);
             doc.text("G7 AEROSPACE - UNIT STATUS SUMMARY REPORT", 14, 22);
             
@@ -921,7 +751,6 @@
             doc.setTextColor(100);
             doc.text("Generated Date: " + new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(), 14, 28);
             
-            // Generate Table
             doc.autoTable({
                 html: '#summaryTable',
                 startY: 35,
@@ -931,29 +760,19 @@
                 alternateRowStyles: { fillColor: [248, 250, 252] }
             });
             
-            // Save File
             doc.save("G7_Summary_Report.pdf");
         }
 
-        /**
-         * -------------------------------------------------------------------------------------
-         * FUNGSI 4: QR CODE & MODAL INTERACTION
-         * Menjana QR code dan menguruskan paparan modal
-         * -------------------------------------------------------------------------------------
-         */
         function showQR(sn, link, id) {
             const modal = document.getElementById('qrModal');
             const content = document.getElementById('modalContent');
             const qrcode = document.getElementById('qrcode');
             
-            // Update Teks Modal
             document.getElementById('modalSN').innerText = "S/N: " + sn;
             document.getElementById('downloadLink').href = "/download_qr/" + id;
             
-            // Bersihkan QR lama
             qrcode.innerHTML = "";
             
-            // Jana QR Code Baru - Using the link parameter (which points to view_tag)
             new QRCode(qrcode, {
                 text: link,
                 width: 180,
@@ -963,7 +782,6 @@
                 correctLevel : QRCode.CorrectLevel.H
             });
             
-            // Paparkan Modal dengan Animasi
             modal.classList.remove('hidden');
             setTimeout(() => {
                 content.classList.remove('scale-90', 'opacity-0');
@@ -975,7 +793,6 @@
             const modal = document.getElementById('qrModal');
             const content = document.getElementById('modalContent');
             
-            // Animasi Keluar
             content.classList.add('scale-90', 'opacity-0');
             content.classList.remove('scale-100', 'opacity-100');
             
@@ -984,25 +801,16 @@
             }, 300);
         }
 
-        // Tutup modal jika klik di luar kawasan
         document.getElementById('qrModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeQR();
             }
         });
 
-        /**
-         * -------------------------------------------------------------------------------------
-         * FUNGSI 5: LOCALIZATION (LANGUAGE) SYSTEM
-         * Menguruskan penukaran bahasa UI (Melayu / Inggeris)
-         * -------------------------------------------------------------------------------------
-         */
         function changeLanguage(lang) {
-            // Update status butang aktif
             document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('btn-' + lang).classList.add('active');
             
-            // Kamus Bahasa
             const trans = {
                 'ms': {
                     't-nav-main': 'Log Utama', 
@@ -1024,30 +832,24 @@
                 }
             };
 
-            // Gunakan terjemahan
             const set = trans[lang];
             for (let id in set) {
                 const el = document.getElementById(id);
                 if (el) el.innerText = set[id];
             }
             
-            // Simpan pilihan bahasa
             localStorage.setItem('g7_lang', lang);
         }
 
-        /**
-         * -------------------------------------------------------------------------------------
-         * FUNGSI 6: BULK ACTIONS & SEARCH
-         * Menguruskan carian jadual dan checkbox
-         * -------------------------------------------------------------------------------------
-         */
-        
-        // Handler Select All
+        // ✅ FIXED: Select All Checkbox
         document.getElementById('selectAll').addEventListener('change', function() {
-            document.querySelectorAll('.item-checkbox').forEach(cb => cb.checked = this.checked);
+            const checkboxes = document.querySelectorAll('.item-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = this.checked;
+            });
         });
 
-        // Handler Bulk Delete
+        // ✅ FIXED: Bulk Delete
         function confirmBulkDelete() {
             const count = document.querySelectorAll('.item-checkbox:checked').length;
             
@@ -1060,60 +862,49 @@
             }
         }
 
-        // ✅ Combined filter: text search + status dropdown
-        function filterByStatus() {
-            filterTable(); // status filter triggers same combined function
-        }
-
+        // ✅ FIXED: Filter Table (Combined Search + Status)
         function filterTable() {
-            const searchVal  = document.getElementById("searchInput").value.toUpperCase();
-            const statusVal  = document.getElementById("statusFilter").value;
-            const table      = document.getElementById("mainTable");
-            const tr         = table.getElementsByTagName("tr");
+            const searchVal = document.getElementById("searchInput").value.toUpperCase();
+            const statusVal = document.getElementById("statusFilter").value;
+            const table = document.getElementById("mainTable");
+            const rows = table.querySelectorAll(".table-row");
+            
             let visibleCount = 0;
 
-            for (let i = 0; i < tr.length; i++) {
-                if (tr[i].getElementsByTagName("th").length > 0) continue;
+            rows.forEach(row => {
+                const rowStatus = (row.getAttribute("data-status") || "").toUpperCase();
+                const statusMatch = (statusVal === "ALL" || rowStatus === statusVal);
 
-                // ── Status filter ──
-                const rowStatus = (tr[i].getAttribute("data-status") || "").toUpperCase();
-                let statusMatch = (statusVal === "ALL" || rowStatus === statusVal);
-
-                // ── Text search filter ──
                 let textMatch = true;
                 if (searchVal !== "") {
                     textMatch = false;
-                    const tds = tr[i].getElementsByClassName("filter-target");
-                    for (let j = 0; j < tds.length; j++) {
-                        if (tds[j].textContent.toUpperCase().indexOf(searchVal) > -1) {
+                    const targets = row.querySelectorAll(".filter-target");
+                    for (let target of targets) {
+                        if (target.textContent.toUpperCase().indexOf(searchVal) > -1) {
                             textMatch = true;
                             break;
                         }
                     }
                 }
 
-                // Show only if BOTH match
                 if (statusMatch && textMatch) {
-                    tr[i].style.display = "";
+                    row.style.display = "";
                     visibleCount++;
                 } else {
-                    tr[i].style.display = "none";
+                    row.style.display = "none";
                 }
-            }
+            });
 
-            // Update visible count badge
-            const countEl = document.querySelector(".text-2xl.font-black.text-slate-900");
-            if (countEl && (statusVal !== "ALL" || searchVal !== "")) {
+            // Update count
+            const countEl = document.getElementById("totalCount");
+            if (countEl) {
                 countEl.textContent = visibleCount;
-            } else if (countEl) {
-                countEl.textContent = tr.length - 1; // minus header row
             }
         }
 
-        // Initialize App on Load
         window.onload = () => {
             const savedLang = localStorage.getItem('g7_lang') || 'ms';
-            //changeLanguage(savedLang);
+            changeLanguage(savedLang);
         };
     </script>
 </body>
