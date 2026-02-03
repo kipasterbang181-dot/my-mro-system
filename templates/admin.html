@@ -637,9 +637,20 @@
             reader.onload = async (e) => {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+                    // ❌ removed cellDates:true — corrupts numeric S/N values into Dates
+                    const workbook = XLSX.read(data, { type: 'array', raw: true });
+
+                    // ─── SHEET SELECTION: pick "OS" sheet if multi-sheet file ───
+                    let sheetName = workbook.SheetNames[0];
+                    if (workbook.SheetNames.length > 1) {
+                        const osSheets = workbook.SheetNames.filter(n => n.trim().toUpperCase().startsWith('OS'));
+                        if (osSheets.length > 0) {
+                            sheetName = osSheets[osSheets.length - 1];
+                        }
+                        console.log('📂 Sheets:', workbook.SheetNames, '→ using:', sheetName);
+                    }
+                    const sheet = workbook.Sheets[sheetName];
+                    const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: true });
 
                     // ─── 1. AUTO-DETECT header row ───
                     let headerIndex = -1;
@@ -765,13 +776,42 @@
          * Menukar format tarikh Excel kepada format JS
          */
         function parseExcelDate(val) {
-            if (!val) return '';
-            // Jika sudah string (YYYY-MM-DD)
-            if (typeof val === 'string' && val.includes('-')) return val;
-            
-            // Excel serial date math
-            const d = new Date((val - 25569) * 86400 * 1000);
-            return isNaN(d.getTime()) ? val : d.toISOString().split('T')[0];
+            if (!val || val === 0 || val === "0" || val === "-" || String(val).toUpperCase() === "N/A") return '';
+
+            let date;
+
+            if (typeof val === 'number') {
+                // Excel serial dates for 2020+ are ~43800+. Anything < 1000 is an S/N → skip
+                if (val < 1000) return '';
+                date = new Date(Math.round((val - 25569) * 86400 * 1000));
+            }
+            else if (val instanceof Date) {
+                date = val;
+            }
+            else {
+                let str = String(val).trim().split('T')[0].split(' ')[0];
+                let parts = str.split(/[-/]/);
+                if (parts.length === 3) {
+                    if (parts[0].length === 4) {
+                        // YYYY-MM-DD
+                        date = new Date(`${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`);
+                    } else {
+                        // DD-MM-YYYY
+                        let y = parts[2]; if (y.length === 2) y = "20" + y;
+                        date = new Date(`${y}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`);
+                    }
+                } else {
+                    date = new Date(str);
+                }
+            }
+
+            if (date && !isNaN(date.getTime())) {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+            return '';
         }
 
         /**

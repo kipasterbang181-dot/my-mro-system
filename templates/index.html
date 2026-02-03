@@ -371,6 +371,10 @@
             let date;
             
             if (typeof val === 'number') {
+                // Excel serial dates are typically 40000+ for years 2009+
+                // Anything below 1000 is likely an S/N, not a date — skip it
+                if (val < 1000) return "";
+                // Convert Excel serial → JS Date (Excel epoch = 1899-12-30)
                 date = new Date(Math.round((val - 25569) * 86400 * 1000));
             } 
             else if (val instanceof Date) {
@@ -378,13 +382,24 @@
             } 
             else {
                 let str = String(val).trim();
+                // Remove any time portion
+                str = str.split('T')[0].split(' ')[0];
+                
                 let parts = str.split(/[-/]/);
                 if (parts.length === 3) {
-                    let d = parts[0].padStart(2, '0');
-                    let m = parts[1].padStart(2, '0');
-                    let y = parts[2];
-                    if (y.length === 2) y = "20" + y;
-                    date = new Date(`${y}-${m}-${d}`);
+                    // Detect format: if first part is 4 digits → YYYY-MM-DD
+                    // otherwise assume DD-MM-YYYY or DD/MM/YYYY
+                    if (parts[0].length === 4) {
+                        // YYYY-MM-DD
+                        date = new Date(`${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`);
+                    } else {
+                        // DD-MM-YYYY or DD/MM/YYYY
+                        let d = parts[0].padStart(2, '0');
+                        let m = parts[1].padStart(2, '0');
+                        let y = parts[2];
+                        if (y.length === 2) y = "20" + y;
+                        date = new Date(`${y}-${m}-${d}`);
+                    }
                 } else {
                     date = new Date(str);
                 }
@@ -407,9 +422,22 @@
             reader.onload = async function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array', cellDates: true});
-                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const rawRows = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: ""});
+                    // ❌ removed cellDates:true — it converts numeric S/N like 148 into Date objects
+                    const workbook = XLSX.read(data, {type: 'array', raw: true});
+
+                    // ─── SHEET SELECTION: if multiple sheets, pick the "OS" sheet or let user choose ───
+                    let sheetName = workbook.SheetNames[0]; // default: first sheet
+                    if (workbook.SheetNames.length > 1) {
+                        // Try to find sheet starting with "OS" (e.g. "OS 2024", "OS 2025")
+                        // Pick the LAST one (most recent year)
+                        const osSheets = workbook.SheetNames.filter(n => n.trim().toUpperCase().startsWith('OS'));
+                        if (osSheets.length > 0) {
+                            sheetName = osSheets[osSheets.length - 1]; // last OS sheet = latest year
+                        }
+                        console.log('📂 Sheets available:', workbook.SheetNames, '→ using:', sheetName);
+                    }
+                    const sheet = workbook.Sheets[sheetName];
+                    const rawRows = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: "", raw: true});
 
                     // ─── 1. AUTO-DETECT header row ───
                     let headerIndex = -1;
