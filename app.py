@@ -252,11 +252,14 @@ def admin():
         ]
 
         # Tambah status dinamik dari database jika ada status baru yang tak tersenarai
+        # ─── BLACKLIST: status yang tidak patut paparkan dalam stats ───
+        status_blacklist = {"OV TDI"}
+
         db_statuses = db.session.query(RepairLog.status_type).distinct().all()
         for s in db_statuses:
             if s[0]:
                 up_s = s[0].upper().strip()
-                if up_s not in status_list:
+                if up_s not in status_list and up_s not in status_blacklist:
                     status_list.append(up_s)
 
         # Logik Statistik (Tahun)
@@ -517,6 +520,29 @@ def edit(id):
 
     # Paparkan template edit dengan data sedia ada
     return render_template('edit.html', item=l, source=source)
+
+
+@app.route('/isolate/<int:id>')
+def isolate_log(id):
+    """
+    Isolate a component — sets status to ISOLATED, clears date_out.
+    Admin only.
+    """
+    if not session.get('admin'):
+        return redirect(url_for('login', next=request.path))
+
+    try:
+        l = RepairLog.query.get_or_404(id)
+        l.status_type = "ISOLATED"
+        l.date_out = None
+        l.last_updated = datetime.now()
+        db.session.commit()
+        flash("Rekod telah di-isolate.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("Gagal isolate rekod.", "error")
+
+    return redirect(url_for('admin'))
 
 
 @app.route('/delete/<int:id>')
@@ -823,6 +849,26 @@ def cleanup_duplicates():
     except Exception as e:
         db.session.rollback()
         logger.error(f"Cleanup Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/delete_all', methods=['POST'])
+def delete_all():
+    """
+    Delete ALL records from repair_log table.
+    Admin only. Used before fresh reimport.
+    """
+    if not session.get('admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    try:
+        count = RepairLog.query.delete()
+        db.session.commit()
+        logger.info(f"Delete All: removed {count} records")
+        return jsonify({"status": "success", "deleted": count}), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Delete All Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 # ==============================================================================
