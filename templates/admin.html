@@ -2,196 +2,380 @@
 <html lang="ms">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G7 Dashboard | Management</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Sistem Pengurusan Penyelenggaraan Aset G7 Aerospace">
+    <meta name="author" content="G7 Aerospace">
+    
+    <title>G7 Dashboard | Management Console</title>
     
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
 
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        /* * IMPORT FONTS
+         * Menggunakan font 'Inter' dari Google Fonts untuk rupa korporat & moden.
+         */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        /* * ROOT VARIABLES
+         * Definisi warna utama untuk konsistensi (walaupun Tailwind digunakan).
+         */
+        :root {
+            --primary-dark: #0f172a;
+            --accent-blue: #3b82f6;
+            --success-green: #10b981;
+            --danger-red: #ef4444;
+            --bg-light: #f0f4f8;
+        }
+
+        /* * BASE BODY STYLES
+         */
         body { 
             font-family: 'Inter', sans-serif; 
             letter-spacing: -0.01em; 
-            background-color: #f0f4f8; 
+            background-color: var(--bg-light);
+            color: #1e293b;
+            scroll-behavior: smooth;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
-        .table-row-hover:hover { background-color: #f8fafc; transition: all 0.2s; }
+
+        /* * TABLE ROW HOVER EFFECT
+         * Memberi respons visual apabila tetikus melintas baris jadual.
+         */
+        .table-row-hover {
+            transition-property: background-color, transform;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 200ms;
+        }
         
-        @media print {
-            body * { visibility: hidden; }
-            #modalContent, #modalContent * { visibility: visible; }
-            #modalContent { position: absolute; left: 0; top: 0; width: 100%; border: none; shadow: none; }
-            .no-print { display: none; }
+        .table-row-hover:hover { 
+            background-color: #f8fafc; /* Slate-50 */
         }
 
-        .loader {
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #ffffff;
-            border-radius: 50%;
-            width: 14px;
-            height: 14px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        .lang-btn.active {
-            background-color: #3b82f6;
-            color: white;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        /* * SUMMARY TABLE HEADER STYLES
+         * Penggayaan khusus untuk jadual ringkasan di bahagian atas.
+         */
+        .summary-table th { 
+            background-color: #1e293b; /* Slate-900 */
+            color: #f8fafc; /* Slate-50 */
+            padding-top: 14px;
+            padding-bottom: 14px;
+            padding-left: 12px;
+            padding-right: 12px;
+            font-size: 10px; 
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-right-width: 1px;
+            border-right-style: solid;
+            border-right-color: #334155; /* Slate-700 */
         }
 
-        .rainbow-border {
-            position: relative;
-            z-index: 0;
-            overflow: hidden;
+        .summary-table td { 
+            padding: 12px; 
+            border-width: 1px;
+            border-style: solid;
+            border-color: #e2e8f0; /* Slate-200 */
+            font-weight: 800; 
+            text-align: center;
+            font-size: 13px;
         }
-        .rainbow-border::before {
-            content: '';
-            position: absolute;
-            z-index: -1;
-            left: -50%;
-            top: -50%;
-            width: 200%;
-            height: 200%;
-            background-color: #399953;
-            background-repeat: no-repeat;
-            background-size: 50% 50%, 50% 50%;
-            background-position: 0 0, 100% 0, 100% 100%, 0 100%;
-            background-image: linear-gradient(#399953, #399953), linear-gradient(#fbb300, #fbb300), linear-gradient(#d53e33, #d53e33), linear-gradient(#377af5, #377af5);
-            animation: rotate 4s linear infinite;
-        }
-        @keyframes rotate { 100% { transform: rotate(1turn); } }
 
-        /* Custom Table Styling for Summary */
-        .summary-table th { background-color: #1e293b; color: white; padding: 12px; font-size: 11px; text-transform: uppercase; }
-        .summary-table td { padding: 10px; border: 1px solid #e2e8f0; font-weight: 800; text-align: center; }
-
-        /* G7 ACTION BUTTONS STYLING */
+        /* * ACTION BUTTON GROUPS (CONTAINER)
+         * Membungkus butang tindakan dalam kapsul yang kemas.
+         */
         .action-group-container {
             display: flex;
             align-items: center;
-            background: white;
-            padding: 4px 12px;
-            border-radius: 99px;
-            border: 2px solid #f1f5f9;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            background-color: white;
+            padding-top: 4px;
+            padding-bottom: 4px;
+            padding-left: 12px;
+            padding-right: 12px;
+            border-radius: 9999px; /* Pill shape */
+            border-width: 2px;
+            border-style: solid;
+            border-color: #f1f5f9;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
             gap: 4px;
         }
+
+        /* * INDIVIDUAL ACTION BUTTONS
+         */
         .action-btn-item {
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 38px;
-            height: 38px;
-            border-radius: 12px;
-            transition: all 0.2s ease;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            transition-property: all;
+            transition-duration: 200ms;
+            transition-timing-function: ease;
+            cursor: pointer;
+            border: none;
+            outline: none;
         }
-        .btn-qr-color { color: #2563eb; }
-        .btn-view-color { color: #059669; }
-        .btn-tag-color { color: #d97706; }
+
+        /* Skema Warna Butang */
+        .btn-qr-color { color: #2563eb; }    /* Blue-600 */
+        .btn-view-color { color: #059669; }  /* Emerald-600 */
+        .btn-tag-color { color: #f59e0b; }   /* Amber-500 */
         
         .action-btn-item:hover {
-            background-color: #f8fafc;
+            background-color: #f1f5f9;
             transform: translateY(-1px);
         }
+
+        /* Pemisah Vertikal (Divider) */
         .action-divider {
             width: 1px;
-            height: 20px;
+            height: 18px;
             background-color: #e2e8f0;
-            margin: 0 4px;
+            margin-left: 4px;
+            margin-right: 4px;
         }
-        .edit-btn-style {
-            background-color: #eff6ff;
-            color: #2563eb;
-            width: 42px;
-            height: 42px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 14px;
-            transition: all 0.2s;
+
+        /* * TOOLTIP SYSTEM (CSS ONLY)
+         * Paparan label kecil apabila hover pada ikon.
+         */
+        .tooltip {
+            position: relative;
+            display: inline-block;
         }
-        .delete-btn-style {
-            background-color: #fff1f2;
-            color: #e11d48;
-            width: 42px;
-            height: 42px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 14px;
-            transition: all 0.2s;
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 100px;
+            background-color: #1e293b;
+            color: #ffffff;
+            text-align: center;
+            border-radius: 6px;
+            padding-top: 6px;
+            padding-bottom: 6px;
+            
+            /* Positioning */
+            position: absolute;
+            z-index: 50;
+            bottom: 130%;
+            left: 50%;
+            margin-left: -50px;
+            
+            /* Animation state */
+            opacity: 0;
+            transition: opacity 0.3s;
+            
+            /* Typography */
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            pointer-events: none;
         }
-        .edit-btn-style:hover, .delete-btn-style:hover {
-            transform: scale(1.05);
-            filter: brightness(0.95);
+
+        /* Arrow Tooltip */
+        .tooltip .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #1e293b transparent transparent transparent;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* * LANGUAGE SWITCHER ACTIVE STATE
+         */
+        .lang-btn.active {
+            background-color: #3b82f6; /* Blue-500 */
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.4);
+            border-color: transparent;
+        }
+
+        /* * LOADER ANIMATION
+         * Digunakan semasa proses import Excel berjalan.
+         */
+        .loader {
+            border-width: 2px;
+            border-style: solid;
+            border-color: #f3f3f3;
+            border-top-color: #3b82f6; /* Blue-500 */
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+
+        /* * CUSTOM SCROLLBAR (WEBKIT)
+         * Untuk jadual yang panjang supaya scrollbar tidak nampak buruk.
+         */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* * PRINT MEDIA QUERY
+         * Menyembunyikan elemen UI (Navbar, Butang) semasa mencetak.
+         * Hanya memaparkan kandungan modal jika modal aktif.
+         */
+        @media print {
+            body * { 
+                visibility: hidden; 
+            }
+            #modalContent, #modalContent * { 
+                visibility: visible; 
+            }
+            #modalContent { 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100%; 
+                border: none; 
+                box-shadow: none; 
+            }
+            .no-print { 
+                display: none !important; 
+            }
+        }
+
+        /* Placeholder Opacity */
+        ::placeholder { 
+            color: #94a3b8; 
+            opacity: 1; 
         }
     </style>
 </head>
+
 <body class="min-h-screen">
 
-    <div class="fixed top-24 right-6 flex gap-1 bg-white shadow-xl p-1.5 rounded-full border border-blue-100 z-50 no-print">
-        <button onclick="changeLanguage('ms')" id="btn-ms" class="lang-btn px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all">MS</button>
-        <button onclick="changeLanguage('en')" id="btn-en" class="lang-btn px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all">EN</button>
+    <div class="fixed top-24 right-6 flex gap-1 bg-white shadow-2xl p-1.5 rounded-full border border-blue-100 z-50 no-print transition-all hover:scale-105">
+        <button onclick="changeLanguage('ms')" id="btn-ms" class="lang-btn px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all">
+            MS
+        </button>
+        <button onclick="changeLanguage('en')" id="btn-en" class="lang-btn px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all">
+            EN
+        </button>
     </div>
 
-    <nav class="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-950 text-white sticky top-0 z-50 border-b border-blue-500/30 shadow-2xl">
+    <nav class="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-950 text-white sticky top-0 z-50 border-b border-blue-500/30 shadow-2xl no-print">
         <div class="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-gradient-to-tr from-blue-600 to-cyan-400 rounded-xl flex items-center justify-center font-black text-xl italic shadow-lg shadow-blue-500/40 transform rotate-3">G</div>
-                <h1 class="text-xl font-extrabold tracking-tighter uppercase italic">G7 Aerospace <span class="text-cyan-400">Portal</span></h1>
+            
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-gradient-to-tr from-blue-600 to-cyan-400 rounded-2xl flex items-center justify-center font-black text-2xl italic shadow-xl shadow-blue-500/40 transform rotate-3 hover:rotate-6 transition-transform">
+                    G
+                </div>
+                <div class="flex flex-col">
+                    <h1 class="text-xl font-extrabold tracking-tighter uppercase italic leading-none">G7 Aerospace</h1>
+                    <span class="text-[10px] font-bold text-cyan-400 tracking-[0.3em] uppercase mt-1">Management Portal</span>
+                </div>
             </div>
-            <div class="flex items-center gap-6">
-                <a href="/" id="t-nav-main" class="text-xs font-bold uppercase tracking-widest text-blue-200 hover:text-white no-underline transition-colors">Log Utama</a>
-                <a href="/logout" id="t-nav-logout" class="bg-rose-500/20 hover:bg-rose-500 border border-rose-500/50 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest no-underline transition-all shadow-lg shadow-rose-500/20">Logout</a>
+
+            <div class="flex items-center gap-8">
+                <a href="{{ url_for('index') }}" id="t-nav-main" class="text-xs font-bold uppercase tracking-widest text-blue-200 hover:text-white transition-colors no-underline relative group">
+                    Log Utama
+                    <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-cyan-400 transition-all group-hover:w-full"></span>
+                </a>
+                
+                <a href="{{ url_for('logout') }}" id="t-nav-logout" class="bg-rose-500/20 hover:bg-rose-500 border border-rose-500/50 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-lg shadow-rose-500/20 no-underline flex items-center gap-2 group">
+                    <span>Logout</span>
+                    <svg class="w-3 h-3 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                </a>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-6 py-10">
+    <main class="max-w-7xl mx-auto px-6 py-12">
         
-        <div class="mb-10 bg-white rounded-[2.5rem] shadow-2xl border-4 border-slate-900 overflow-hidden">
-            <div class="bg-slate-900 text-white px-8 py-4 flex justify-between items-center">
-                <h3 class="font-black italic uppercase tracking-widest text-lg">Unit Status Summary Table</h3>
-                <span class="text-xs bg-blue-600 px-3 py-1 rounded-full font-bold">LATEST UPDATE</span>
+        <div id="summaryDashboard" class="mb-12 bg-white rounded-[2.5rem] shadow-2xl border-4 border-slate-900 overflow-hidden relative transition-all hover:shadow-slate-300">
+            
+            <div class="bg-slate-900 text-white px-10 py-5 flex justify-between items-center">
+                <h3 class="font-black italic uppercase tracking-widest text-lg flex items-center gap-2">
+                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z"></path></svg>
+                    Unit Status Summary Table
+                </h3>
+                
+                <div class="flex items-center gap-4 no-print">
+                    <button onclick="exportSummaryPDF()" class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/20 flex items-center gap-2 group">
+                        <svg class="w-4 h-4 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z"></path>
+                            <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"></path>
+                        </svg>
+                        Export Summary PDF
+                    </button>
+                    
+                    <div class="flex items-center gap-2 bg-emerald-900/30 px-3 py-1 rounded-full border border-emerald-500/30">
+                        <span class="w-2 h-2 bg-emerald-400 rounded-full animate-ping"></span>
+                        <span class="text-[10px] font-bold tracking-widest uppercase text-emerald-400">Live Stats</span>
+                    </div>
+                </div>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full summary-table">
+
+            <div class="overflow-x-auto custom-scrollbar">
+                <table id="summaryTable" class="w-full summary-table">
                     <thead>
                         <tr>
-                            <th class="text-left pl-8">STATUS CATEGORY</th>
+                            <th class="text-left pl-10">Status Category</th>
                             {% for year in sorted_years %}
-                            <th>YEAR {{ year }}</th>
+                            <th>Year {{ year }}</th>
                             {% endfor %}
-                            <th class="bg-blue-900">GRAND TOTAL</th>
+                            <th class="bg-blue-900">Grand Total</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr class="bg-emerald-100">
-                            <td class="text-left pl-8 font-black text-slate-900">TOTAL UNITS</td>
+                        <tr class="bg-emerald-50/50">
+                            <td class="text-left pl-10 font-black text-slate-900 uppercase text-xs">Total Units Received</td>
                             {% for year in sorted_years %}
-                            <td class="text-emerald-700">
-                                {# Baiki ralat stats is undefined #}
-                                {{ stats.get(year, 0) if stats else column_totals.get(year, 0) }}
-                            </td>
+                            <td class="text-emerald-700">{{ stats.get(year, 0) if stats else column_totals.get(year, 0) }}</td>
                             {% endfor %}
-                            <td class="bg-emerald-600 text-white">{{ grand_total }}</td>
+                            <td class="bg-emerald-600 text-white font-black">{{ grand_total }}</td>
                         </tr>
 
                         {% for status in status_list %}
                         <tr class="hover:bg-slate-50 transition-colors">
-                            <td class="text-left pl-8 text-slate-700 text-xs font-bold">{{ status }}</td>
-                            {% for year in sorted_years %}
-                            <td class="text-slate-500">
-                                {{ stats_matrix[status][year] if status in stats_matrix else 0 }}
+                            <td class="text-left pl-10 text-slate-700 text-[11px] font-bold uppercase flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                                {{ status }}
                             </td>
+                            {% for year in sorted_years %}
+                            <td class="text-slate-500 font-medium">{{ stats_matrix[status][year] if status in stats_matrix else 0 }}</td>
                             {% endfor %}
-                            <td class="bg-slate-100 text-slate-900">{{ row_totals[status] if status in row_totals else 0 }}</td>
+                            <td class="bg-slate-100 text-slate-900 font-extrabold">{{ row_totals[status] if status in row_totals else 0 }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -199,330 +383,592 @@
             </div>
         </div>
 
-        <div class="mb-10 bg-white p-8 rounded-[2.5rem] border-2 border-dashed border-emerald-200 shadow-xl shadow-emerald-100/50">
-            <h4 class="text-sm font-black uppercase tracking-widest text-emerald-700 mb-5 flex items-center gap-3">
-                <span class="bg-emerald-500 text-white p-2 rounded-xl shadow-lg shadow-emerald-200">📥</span> 
-                <span id="t-import-title">Bulk Import Excel (2022-2025)</span>
-            </h4>
-            <form action="/import_excel" method="POST" enctype="multipart/form-data" class="flex flex-wrap items-center gap-4" onsubmit="showLoading()">
-                <input type="file" name="file_excel" accept=".xlsx, .xls, .csv" required
-                    class="block w-full md:w-auto text-sm text-slate-500 file:mr-4 file:py-3 file:px-6 file:rounded-2xl file:border-0 file:text-xs file:font-bold file:uppercase file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 transition-all cursor-pointer">
-                <button type="submit" id="importBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-200 flex items-center gap-2">
-                    <span id="btnText">Proses & Masuk Database</span>
-                </button>
-            </form>
-        </div>
+        <!-- Shortcut buttons removed as requested -->
 
-        <div class="flex flex-col md:flex-row justify-between items-end gap-6 mb-10">
-            <div>
-                <h2 id="t-console-title" class="text-4xl font-black text-slate-900 tracking-tight italic uppercase bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-blue-700">Management Console</h2>
-                <div class="flex items-center gap-2 mt-3">
-                    <span class="flex h-3 w-3 rounded-full bg-emerald-500 animate-ping"></span>
-                    <p class="text-slate-600 text-[11px] font-black uppercase tracking-[0.25em]"><span id="t-db-live">Supabase Database Live</span> 🚀 ({{ logs|length }} <span id="t-records">Rekod</span>)</p>
-                </div>
-            </div>
-            <div class="flex flex-wrap gap-3">
-                <button onclick="confirmBulkDelete()" id="t-btn-delete" class="bg-rose-600 text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg shadow-rose-200">
-                    Delete Selected 🗑️
-                </button>
-                <a href="{{ url_for('download_report') }}" id="t-btn-pdf" class="bg-indigo-600 text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200 no-underline italic">
-                    Full Report Summary (PDF) 📄
-                </a>
-                <a href="{{ url_for('export_excel_data') }}" id="t-btn-excel" class="bg-amber-500 text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all flex items-center gap-2 shadow-lg shadow-amber-200 no-underline italic">
-                    Export Excel 📗
-                </a>
-            </div>
-        </div>
 
-        <div class="mb-8 flex flex-col md:flex-row gap-4">
-            <div class="relative flex-1 group">
-                <div class="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
-                    <svg class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                </div>
-                <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search Equipment, SN or Defect..." 
-                    class="w-full bg-white border-2 border-slate-100 rounded-[1.5rem] py-5 pl-14 pr-8 text-sm font-bold text-slate-800 focus:border-blue-500 outline-none transition-all shadow-xl shadow-blue-50/50">
-            </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12 no-print">
             
-            <select id="statusFilter" onchange="filterTable()" class="bg-white border-2 border-slate-100 rounded-[1.5rem] px-8 py-5 text-sm font-black text-blue-900 outline-none focus:border-blue-500 transition-all shadow-xl shadow-blue-50/50 uppercase tracking-widest cursor-pointer">
-                <option value="">🌈 ALL STATUS</option>
-                {% for status in status_list %}
-                <option value="{{ status }}">{{ status }}</option>
-                {% endfor %}
-            </select>
+            <div class="lg:col-span-2 bg-white p-10 rounded-[3rem] border-2 border-dashed border-blue-200 shadow-2xl shadow-blue-50/50 relative overflow-hidden transition-all hover:border-blue-300">
+                <div class="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+                    <svg class="w-32 h-32 text-blue-900" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm1.8 18H14l-2-3.4-2 3.4H8.2l2.9-4.5-2.8-4.4H10l1.9 3.4 2-3.4h1.8l-2.9 4.5 3 4.4z"/></svg>
+                </div>
+
+                <h4 class="text-sm font-black uppercase tracking-widest text-blue-800 mb-6 flex items-center gap-4">
+                    <span class="bg-blue-600 text-white p-3 rounded-2xl shadow-lg shadow-blue-200">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                    </span>
+                    <span id="t-import-title">Bulk Import Excel (2022-2026)</span>
+                </h4>
+                
+                <div class="flex flex-col md:flex-row gap-6 relative z-10">
+                    <input type="file" id="excelFile" accept=".xlsx, .xls, .csv" 
+                           class="flex-1 text-sm text-slate-500 file:mr-6 file:py-4 file:px-8 file:rounded-2xl file:border-0 file:text-[11px] file:font-black file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all cursor-pointer bg-slate-50 rounded-2xl border-2 border-slate-100 p-2 hover:border-blue-200 focus:outline-none">
+                    
+                    <button onclick="processExcel()" id="importBtn" 
+                            class="bg-slate-900 hover:bg-black text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-2xl flex items-center justify-center min-w-[240px] hover:shadow-slate-400/50 transform active:scale-95">
+                        <span id="btnText">Proses & Masuk Data</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-br from-blue-600 to-indigo-800 p-10 rounded-[3rem] shadow-2xl shadow-blue-200 flex flex-col justify-center text-white relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                    <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm1.8 18H14l-2-3.4-2 3.4H8.2l2.9-4.5-2.8-4.4H10l1.9 3.4 2-3.4h1.8l-2.9 4.5 3 4.4z"/></svg>
+                </div>
+                <h4 class="text-xs font-black uppercase tracking-[0.2em] mb-4">Database Export</h4>
+                <p class="text-blue-100 text-[11px] font-bold mb-8 leading-relaxed">Muat turun semua rekod pangkalan data dalam format fail Excel (.xlsx) untuk sandaran.</p>
+                
+                <button onclick="exportFullDatabase()" class="bg-white text-blue-900 py-5 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-cyan-50 transition-all shadow-xl shadow-blue-900/40 transform active:scale-95">
+                    Export Full Excel 📥
+                </button>
+            </div>
         </div>
 
-        <div class="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden">
-            <div class="overflow-x-auto">
-                <form id="bulkDeleteForm" action="/delete_bulk" method="POST">
-                    <table class="w-full text-left border-collapse" id="maintenanceTable">
+        <div class="bg-white rounded-[3.5rem] shadow-2xl border border-slate-100 overflow-hidden">
+            
+            <div class="p-10 border-b border-slate-50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-slate-50/30">
+                <div>
+                    <h2 id="t-console-title" class="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Konsol Pengurusan</h2>
+                    <p class="text-slate-500 text-xs font-bold mt-2 uppercase tracking-[0.2em] flex items-center gap-3">
+                        <span class="relative flex h-3 w-3">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                        </span>
+                        <span id="t-db-live">Pangkalan Data Live Aktif</span>
+                    </p>
+                </div>
+                
+                <div class="flex items-center gap-4 no-print flex-wrap lg:flex-nowrap w-full lg:w-auto">
+                    
+                    <div class="relative w-full lg:w-64">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                        <input type="text" id="searchInput" onkeyup="filterTable()" 
+                               class="bg-white border border-slate-200 text-slate-700 text-xs rounded-3xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 block w-full pl-10 p-4 font-bold tracking-wide transition-all shadow-sm outline-none" 
+                               placeholder="Cari S/N atau P/N...">
+                    </div>
+
+                    <div class="bg-white px-8 py-4 rounded-3xl border border-slate-200 shadow-sm flex flex-col items-center min-w-[120px]">
+                        <span id="t-records" class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Records</span>
+                        <span class="text-2xl font-black text-slate-900 tracking-tighter">{{ logs|length }}</span>
+                    </div>
+
+                    <button onclick="confirmBulkDelete()" class="bg-rose-50 text-rose-600 px-8 py-5 rounded-3xl font-black uppercase tracking-widest text-[11px] hover:bg-rose-100 transition-all border border-rose-100 whitespace-nowrap shadow-sm hover:shadow-md">
+                        <span id="t-btn-delete">Padam Terpilih 🗑️</span>
+                    </button>
+                </div>
+            </div>
+
+            <form id="bulkDeleteForm" action="{{ url_for('bulk_delete') }}" method="POST">
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table id="mainTable" class="w-full">
                         <thead>
-                            <tr class="bg-slate-900 text-white">
-                                <th class="px-6 py-6 w-8 text-[10px] font-black uppercase tracking-widest text-center">No</th>
-                                <th class="px-4 py-6 w-10">
-                                    <input type="checkbox" id="selectAll" class="w-5 h-5 rounded-lg cursor-pointer accent-blue-500">
+                            <tr class="bg-slate-50/80 border-b border-slate-200">
+                                <th class="px-10 py-6 text-left w-10 no-print">
+                                    <input type="checkbox" id="selectAll" class="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
                                 </th>
-                                <th id="th-asset" class="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Asset Detail</th>
-                                <th id="th-defect" class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-rose-300">Defect & Remarks</th> 
-                                <th id="th-timeline" class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-center">Timeline</th>
-                                <th id="th-status" class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-center">Status & Remark</th>
-                                <th id="th-actions" class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-right">Actions</th>
+                                <th id="th-asset" class="px-6 py-6 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Butiran Aset</th>
+                                <th id="th-defect" class="px-6 py-6 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Kerosakan & Nota</th>
+                                <th id="th-timeline" class="px-6 py-6 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Garis Masa & Status</th>
+                                <th id="th-action" class="px-10 py-6 text-right text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] no-print">Tindakan</th>
                             </tr>
                         </thead>
+                        
                         <tbody class="divide-y divide-slate-100">
-                            {% for item in logs %}
-                            <tr class="table-row-hover group transition-colors">
-                                <td class="px-6 py-8 text-center text-[12px] font-black text-slate-300 group-hover:text-blue-500">
-                                    {{ loop.index }}
+                            {% for log in logs %}
+                            <tr class="table-row-hover group">
+                                
+                                <td class="px-10 py-8 no-print">
+                                    <input type="checkbox" name="ids" value="{{ log.id }}" class="item-checkbox w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
                                 </td>
-                                <td class="px-4 py-8 text-center">
-                                    <input type="checkbox" name="selected_ids" value="{{ item.id }}" class="item-checkbox w-5 h-5 rounded-lg cursor-pointer accent-blue-600">
-                                </td>
-                                <td class="px-8 py-8">
-                                    <div class="flex flex-col">
-                                        <a href="/history/{{ item.sn }}" class="font-black text-slate-900 uppercase text-lg row-name hover:text-blue-600 transition-colors underline underline-offset-8 decoration-2 decoration-blue-500/30">
-                                            {{ item.peralatan or 'N/A' }}
+                                
+                                <td class="px-6 py-8 align-top">
+                                    <div class="font-black text-slate-900 text-[15px] mb-3 group-hover:text-blue-600 transition-colors tracking-tight filter-target">
+                                        <a href="{{ url_for('history', sn=log.sn) }}" class="hover:underline decoration-blue-400 underline-offset-4" title="Lihat Sejarah Aset">
+                                            {{ log.peralatan or 'N/A' }}
                                         </a>
-                                        <div class="flex gap-4 mt-3">
-                                            <span class="text-[10px] font-black bg-slate-100 text-slate-600 px-2 py-1 rounded-md uppercase">P/N: <span class="text-slate-950">{{ item.pn or 'N/A' }}</span></span>
-                                            <span class="text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-1 rounded-md uppercase">S/N: <span class="font-mono row-sn">{{ item.sn or 'N/A' }}</span></span>
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider w-8">P/N:</span>
+                                            <span class="text-[11px] font-extrabold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg filter-target border border-slate-200">
+                                                {{ log.pn or 'N/A' }}
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider w-8">S/N:</span>
+                                            <span class="text-[11px] font-extrabold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg filter-target border border-blue-100">
+                                                {{ log.sn or 'N/A' }}
+                                            </span>
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-8 py-8"> 
-                                    <div class="max-w-[250px]">
-                                        <p class="text-[11px] font-bold text-slate-600 uppercase italic leading-relaxed row-defect bg-rose-50/50 p-3 rounded-xl border-l-4 border-rose-300">
-                                            {{ item.defect if item.defect else '-' }}
+                                
+                                <td class="px-6 py-8 align-top">
+                                    <div class="text-xs text-slate-700 font-bold leading-relaxed max-w-sm uppercase bg-amber-50/50 p-3 rounded-xl border-l-4 border-amber-400 filter-target shadow-sm">
+                                        "{{ log.defect or 'TIADA REKOD KEROSAKAN' }}"
+                                    </div>
+                                    <div class="mt-2">
+                                        <p class="text-[10px] text-slate-500 font-medium">
+                                            <span class="font-black text-slate-400 uppercase">Remarks:</span> {{ log.pic or '-' }}
                                         </p>
                                     </div>
                                 </td>
-                                <td class="px-8 py-8 text-center">
-                                    <div class="flex flex-col items-center gap-2">
-                                        <div class="flex items-center gap-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
-                                            <span class="text-[9px] font-black text-emerald-700 uppercase">In</span>
-                                            <span class="text-[11px] font-black text-slate-700">{{ (item.date_in|string)[:10] if item.date_in else '-' }}</span>
-                                        </div>
-                                        <div class="flex items-center gap-2 bg-rose-50 px-3 py-1.5 rounded-full border border-rose-100">
-                                            <span class="text-[9px] font-black text-rose-700 uppercase">Out</span>
-                                            <span class="text-[11px] font-black text-slate-700">{{ (item.date_out|string)[:10] if item.date_out else '-' }}</span>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-8 py-8 text-center">
-                                    <div class="inline-flex flex-col items-center">
-                                        <span class="text-[9px] font-black text-slate-400 mb-2 uppercase tracking-widest italic">PIC: {{ item.pic if (item.pic and item.pic != 'nan') else 'N/A' }}</span>
-                                        <span class="status-badge px-4 py-2 rounded-xl text-[10px] font-black uppercase border-2 shadow-sm 
-                                            {% if 'SERVICEABLE' in item.status_type|upper or 'READY TO DELIVERED' in item.status_type|upper %} bg-emerald-500 text-white border-emerald-400 
-                                            {% elif 'TDI' in item.status_type|upper or 'QUOTE' in item.status_type|upper %} bg-amber-400 text-amber-950 border-amber-300
-                                            {% elif 'REPAIR' in item.status_type|upper or 'WARRANTY' in item.status_type|upper %} bg-blue-500 text-white border-blue-400
-                                            {% elif 'WAITING' in item.status_type|upper %} bg-orange-400 text-white border-orange-300
-                                            {% else %} bg-slate-100 text-slate-500 border-slate-200 {% endif %}">
-                                            {{ item.status_type or 'N/A' }}
+                                
+                                <td class="px-6 py-8 align-top">
+                                    <div class="mb-3">
+                                        <span class="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border
+                                            {% if log.status_type == 'SERVICEABLE' %} bg-emerald-100 text-emerald-700 border-emerald-200
+                                            {% elif 'TDI' in log.status_type %} bg-amber-100 text-amber-700 border-amber-200
+                                            {% else %} bg-blue-100 text-blue-700 border-blue-200 {% endif %}">
+                                            {{ log.status_type }}
                                         </span>
                                     </div>
+                                    <div class="space-y-1">
+                                        <div class="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-2">
+                                            <span class="w-8 text-right">IN:</span> 
+                                            <span class="text-slate-700 bg-slate-50 px-2 py-0.5 rounded">{{ log.date_in or '-' }}</span>
+                                        </div>
+                                        <div class="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-2">
+                                            <span class="w-8 text-right">OUT:</span> 
+                                            <span class="text-slate-700 bg-slate-50 px-2 py-0.5 rounded">{{ log.date_out or '-' }}</span>
+                                        </div>
+                                    </div>
                                 </td>
-                                <td class="px-8 py-8">
+                                
+                                <td class="px-10 py-8 no-print align-middle">
                                     <div class="flex justify-end items-center gap-3">
-                                        <div class="action-group-container">
-                                            <button type="button" onclick="showQR('{{ item.sn }}', '{{ request.url_root }}view_tag/{{ item.id }}', '{{ item.id }}')" 
-                                                class="action-btn-item btn-qr-color" title="QR Code">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                                                </svg>
-                                            </button>
-                                            
-                                            <div class="action-divider"></div>
-                                            
-                                            <a href="/view_report/{{ item.id }}" class="action-btn-item btn-view-color" title="View Report">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                </svg>
-                                            </a>
-                                            
-                                            <div class="action-divider"></div>
-                                            
-                                            <a href="/view_tag/{{ item.id }}" class="action-btn-item btn-tag-color" title="Digital Tag">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                                                </svg>
-                                            </a>
-                                        </div>
                                         
-                                        <div class="flex gap-2">
-                                            <a href="/edit/{{ item.id }}" class="edit-btn-style shadow-sm" title="Edit">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                </svg>
-                                            </a>
-                                            <button type="button" onclick="confirmSingleDelete('{{ item.id }}')" class="delete-btn-style shadow-sm" title="Delete">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
+                                        <div class="action-group-container">
+                                            
+                                            <!-- QR Button - Shows Modal -->
+                                            <button type="button" onclick="showQR('{{ log.sn }}', '{{ request.url_root }}view_tag/{{ log.id }}', '{{ log.id }}')" class="action-btn-item btn-qr-color tooltip">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                                                <span class="tooltiptext">QR Code</span>
                                             </button>
+                                            
+                                            <div class="action-divider"></div>
+                                            
+                                            <!-- First Eye (Green) - Goes to View Tag -->
+                                            <a href="{{ url_for('view_tag', id=log.id) }}" class="action-btn-item btn-view-color tooltip">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                                <span class="tooltiptext">View Tag</span>
+                                            </a>
+                                            
+                                            <div class="action-divider"></div>
+
+                                            <!-- Second Eye (Amber) - Goes to View Report -->
+                                            <a href="{{ url_for('view_report', id=log.id) }}" class="action-btn-item btn-tag-color tooltip">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                                <span class="tooltiptext">View Report</span>
+                                            </a>
                                         </div>
+
+                                        <a href="{{ url_for('edit', id=log.id) }}" class="p-2 text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors tooltip" title="Edit">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                        </a>
+                                        
+                                        <!-- ✅ BUG FIX #1: Changed log_id=log.id to id=log.id -->
+                                        <button type="button" onclick="if(confirm('Adakah anda pasti mahu memadam rekod ini secara kekal?')) window.location.href='{{ url_for('delete_log', id=log.id) }}'" class="p-2 text-rose-600 bg-rose-50 rounded-xl hover:bg-rose-100 transition-colors tooltip" title="Delete">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
     </main>
 
-    <div id="qrModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-[3rem] w-[95%] max-w-md overflow-hidden transform transition-all scale-95 opacity-0 border-4 border-blue-600" id="modalContent">
-            <div class="p-10 text-center">
-                <h3 id="t-modal-title" class="text-blue-900 font-black italic uppercase tracking-tighter text-3xl mb-2">QR Digital Tag</h3>
-                <p class="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-8">Asset Serial Number: <span id="modalSN" class="text-blue-600">---</span></p>
-                <div class="bg-gradient-to-br from-blue-50 to-white p-6 rounded-[2.5rem] border-2 border-blue-100 inline-block mb-10 shadow-inner">
-                    <div id="qrcode" class="flex justify-center p-3 bg-white rounded-2xl"></div>
+    <div id="qrModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden flex items-center justify-center z-[100] no-print">
+        <div id="modalContent" class="bg-white p-12 rounded-[4rem] shadow-2xl max-w-sm w-full mx-4 transform scale-90 opacity-0 transition-all duration-300 border-[6px] border-slate-900 relative">
+            
+            <div class="text-center">
+                <div class="w-20 h-20 bg-blue-600 rounded-3xl mx-auto mb-6 flex items-center justify-center text-white shadow-xl transform rotate-3">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
                 </div>
-                <a id="downloadLink" href="#" class="no-print w-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-black py-5 rounded-2xl flex items-center justify-center no-underline">Cetakan QR Tag</a>
-                <button onclick="closeQR()" class="no-print text-slate-400 hover:text-rose-500 font-black uppercase tracking-widest text-[11px] mt-4">✖ Tutup Paparan</button>
+                
+                <h3 class="text-2xl font-black text-slate-900 mb-1 uppercase italic">Equipment Tag</h3>
+                <p id="modalSN" class="text-blue-600 font-black text-xs tracking-widest uppercase mb-8"></p>
+                
+                <div id="qrcode" class="bg-white p-4 rounded-2xl inline-block border-2 border-slate-100 shadow-inner mb-4"></div>
+                
+                <div class="mt-8 flex flex-col gap-3">
+                    <a id="downloadLink" href="#" class="bg-slate-900 text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-black transition-all shadow-lg flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Download PNG
+                    </a>
+                    
+                    <button onclick="closeQR()" class="text-slate-400 py-2 font-bold text-[10px] uppercase hover:text-rose-500 transition-colors cursor-pointer">
+                        Dismiss / Tutup
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // TRANSLATIONS SYSTEM (Asal Kekal)
-        const translations = {
-            ms: {
-                navMain: "Log Utama",
-                navLogout: "Keluar",
-                importTitle: "Bulk Import Excel (2022-2025)",
-                btnProcess: "Proses & Masuk Database",
-                consoleTitle: "Management Console",
-                dbLive: "Supabase Database Live",
-                records: "Rekod",
-                btnDelete: "Padam Pilihan 🗑️",
-                btnPdf: "Ringkasan Laporan (PDF) 📄",
-                btnExcel: "Eksport Excel 📗",
-                searchPlaceholder: "Cari Peralatan, SN atau Kerosakan...",
-                thAsset: "Butiran Aset",
-                thDefect: "Kerosakan & Catatan",
-                thTimeline: "Garis Masa",
-                thStatus: "Status & Remark",
-                thActions: "Tindakan",
-                modalTitle: "Tag Digital QR",
-                modalPrint: "Cetakan QR Tag",
-                modalClose: "✖ Tutup Paparan"
-            },
-            en: {
-                navMain: "Main Log",
-                navLogout: "Logout",
-                importTitle: "Bulk Import Excel (2022-2025)",
-                btnProcess: "Process & Import Database",
-                consoleTitle: "Management Console",
-                dbLive: "Supabase Database Live",
-                records: "Records",
-                btnDelete: "Delete Selected 🗑️",
-                btnPdf: "Full Report Summary (PDF) 📄",
-                btnExcel: "Export Excel 📗",
-                searchPlaceholder: "Search Equipment, SN or Defect...",
-                thAsset: "Asset Detail",
-                thDefect: "Defect & Remarks",
-                thTimeline: "Timeline",
-                thStatus: "Status & Remark",
-                thActions: "Actions",
-                modalTitle: "QR Digital Tag",
-                modalPrint: "Print QR Tag",
-                modalClose: "✖ Close Preview"
+        /**
+         * -------------------------------------------------------------------------------------
+         * FUNGSI 1: EXCEL PROCESSING & IMPORT
+         * Menguruskan pemilihan fail, pembacaan data, dan penghantaran ke server.
+         * -------------------------------------------------------------------------------------
+         */
+        async function processExcel() {
+            const fileInput = document.getElementById('excelFile');
+            const importBtn = document.getElementById('importBtn');
+            const btnText = document.getElementById('btnText');
+
+            if (!fileInput.files[0]) {
+                alert("Sila pilih fail Excel untuk dimuat naik!");
+                return;
             }
-        };
 
-        function changeLanguage(lang) {
-            localStorage.setItem('g7_lang', lang);
-            const t = translations[lang];
-            
-            document.getElementById('t-nav-main').innerText = t.navMain;
-            document.getElementById('t-nav-logout').innerText = t.navLogout;
-            document.getElementById('t-import-title').innerText = t.importTitle;
-            document.getElementById('btnText').innerText = t.btnProcess;
-            document.getElementById('t-console-title').innerText = t.consoleTitle;
-            document.getElementById('t-db-live').innerText = t.dbLive;
-            document.getElementById('t-records').innerText = t.records;
-            document.getElementById('t-btn-delete').innerText = t.btnDelete;
-            document.getElementById('t-btn-pdf').innerText = t.btnPdf;
-            document.getElementById('t-btn-excel').innerText = t.btnExcel;
-            document.getElementById('th-asset').innerText = t.thAsset;
-            document.getElementById('th-defect').innerText = t.thDefect;
-            document.getElementById('th-timeline').innerText = t.thTimeline;
-            document.getElementById('th-status').innerText = t.thStatus;
-            document.getElementById('th-actions').innerText = t.thActions;
-            document.getElementById('t-modal-title').innerText = t.modalTitle;
-            document.getElementById('downloadLink').innerText = t.modalPrint;
-            document.getElementById('searchInput').placeholder = t.searchPlaceholder;
+            importBtn.disabled = true;
+            btnText.innerHTML = `<span class="loader"></span> ANALYZING...`;
 
-            document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('btn-' + lang).classList.add('active');
-        }
+            const file = fileInput.files[0];
+            const reader = new FileReader();
 
-        // Initialize language
-        const savedLang = localStorage.getItem('g7_lang') || 'ms';
-        changeLanguage(savedLang);
+            reader.onload = async (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
 
-        function filterTable() {
-            let searchInput = document.getElementById("searchInput").value.toUpperCase();
-            let statusInput = document.getElementById("statusFilter").value.toUpperCase();
-            let tr = document.getElementById("maintenanceTable").getElementsByTagName("tr");
-
-            for (let i = 1; i < tr.length; i++) {
-                let name = tr[i].getElementsByClassName("row-name")[0];
-                let sn = tr[i].getElementsByClassName("row-sn")[0];
-                let badge = tr[i].getElementsByClassName("status-badge")[0];
-
-                if (name || sn || badge) {
-                    let txt = (name.innerText + (sn ? sn.innerText : "")).toUpperCase();
-                    let st = (badge ? badge.innerText : "").toUpperCase();
-                    
-                    if (txt.indexOf(searchInput) > -1 && (statusInput === "" || st.indexOf(statusInput) > -1)) {
-                        tr[i].style.display = "";
-                    } else {
-                        tr[i].style.display = "none";
+                    // ─── 1. AUTO-DETECT header row ───
+                    let headerIndex = -1;
+                    const keywords = ['part no', 'serial no', 'description', 'date in', 'status'];
+                    for (let i = 0; i < Math.min(15, rawRows.length); i++) {
+                        const rowLower = rawRows[i].map(c => String(c || '').toLowerCase());
+                        const hits = keywords.filter(kw => rowLower.includes(kw)).length;
+                        if (hits >= 3) { headerIndex = i; break; }
                     }
+                    if (headerIndex === -1) headerIndex = 0;
+                    const headerRow = rawRows[headerIndex];
+                    console.log('📋 Header at row', headerIndex, '→', headerRow);
+
+                    // ─── 2. MAP columns by exact header name ───
+                    const colMap = {};
+                    headerRow.forEach((h, idx) => {
+                        const key = String(h || '').toLowerCase().trim();
+                        if (key === 'part no')          colMap.pn      = idx;
+                        else if (key === 'description') colMap.desc    = idx;
+                        else if (key === 'serial no')   colMap.sn      = idx;
+                        else if (key === 'date in')     colMap.dateIn  = idx;
+                        else if (key === 'date out')    colMap.dateOut = idx;
+                        else if (key === 'status')      colMap.status  = idx;
+                        else if (key === 'jtp')         colMap.jtp     = idx;     // JTP separate
+                        else if (key === 'remarks')     colMap.remarks = idx;     // REMARKS separate
+                        else if (key === 'defect')      colMap.defect  = idx;     // DEFECT only
+                    });
+                    colMap.pn      = colMap.pn      ?? 1;
+                    colMap.desc    = colMap.desc    ?? 2;
+                    colMap.sn      = colMap.sn      ?? 3;
+                    colMap.dateIn  = colMap.dateIn  ?? 4;
+                    colMap.dateOut = colMap.dateOut  ?? 5;
+                    colMap.status  = colMap.status  ?? 6;
+                    console.log('📊 colMap:', colMap);
+
+                    // ─── 3. PROCESS rows ───
+                    const dataRows = rawRows.slice(headerIndex + 1);
+                    const payload = [];
+
+                    dataRows.forEach((row, idx) => {
+                        const pn = String(row[colMap.pn] || '').trim().toUpperCase();
+                        const sn = String(row[colMap.sn] || '').trim().toUpperCase();
+
+                        // skip empty / sub-header rows
+                        if (!pn && !sn)                                          return;
+                        if (pn === 'PART NO' || sn === 'SERIAL NO')             return;
+                        if (pn === 'DATE OUT' || pn === 'DATE IN' || pn === 'VENDOR') return;
+                        if (pn === '' || sn === '')                              return;
+
+                        // PIC = JTP + REMARKS combined
+                        const jtpVal     = (colMap.jtp     !== undefined) ? String(row[colMap.jtp]     || '').trim() : '';
+                        const remarksVal = (colMap.remarks !== undefined) ? String(row[colMap.remarks] || '').trim() : '';
+                        const picParts   = [jtpVal, remarksVal].filter(v => v && v.toLowerCase() !== 'nan');
+                        const picFinal   = picParts.join(' ').trim() || 'N/A';
+
+                        // DEFECT
+                        const rawDef   = (colMap.defect !== undefined) ? String(row[colMap.defect] || '').trim() : '';
+                        const defFinal = (rawDef && rawDef.toLowerCase() !== 'nan') ? rawDef : 'N/A';
+
+                        if (idx < 3) console.log(`Row ${idx+1}: PIC="${picFinal}" DEFECT="${defFinal}"`);
+
+                        payload.push({
+                            "DRN":        "-",
+                            "PERALATAN":  String(row[colMap.desc]  || 'N/A').trim().toUpperCase(),
+                            "P/N":        pn,
+                            "S/N":        sn,
+                            "DATE IN":    parseExcelDate(row[colMap.dateIn]),
+                            "DATE OUT":   parseExcelDate(row[colMap.dateOut]),
+                            "STATUS":     String(row[colMap.status] || 'UNDER REPAIR').trim().toUpperCase(),
+                            "PIC":        picFinal.toUpperCase(),
+                            "DEFECT":     defFinal.toUpperCase()
+                        });
+                    });
+
+                    console.log(`📦 Sending ${payload.length} records`);
+
+                    // ─── 4. POST to correct endpoint ───
+                    const res = await fetch('/import_bulk', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ data: payload })
+                    });
+
+                    if (res.ok) {
+                        const result = await res.json();
+                        alert(`✅ Berjaya import ${result.count} rekod!`);
+                        location.reload();
+                    } else {
+                        const err = await res.text();
+                        throw new Error("Server error: " + err);
+                    }
+
+                } catch (err) {
+                    console.error(err);
+                    alert("Ralat Pemprosesan: " + err.message);
+                } finally {
+                    importBtn.disabled = false;
+                    btnText.innerHTML = "Proses & Masuk Data";
                 }
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        /**
+         * FUNGSI 2: EXPORT DATABASE TO EXCEL
+         * Memuat turun jadual yang dipaparkan ke fail .xlsx
+         */
+        function exportFullDatabase() {
+            const table = document.getElementById("mainTable");
+            
+            // Clone table to ensure clean data
+            const wb = XLSX.utils.table_to_book(table, { 
+                sheet: "G7_Aerospace_Records",
+                raw: true 
+            });
+            
+            XLSX.writeFile(wb, "G7_Full_Database_Export.xlsx");
+        }
+
+        /**
+         * FUNGSI BANTUAN: DATE PARSER
+         * Menukar format tarikh Excel kepada format JS
+         */
+        function parseExcelDate(val) {
+            if (!val) return '';
+            // Jika sudah string (YYYY-MM-DD)
+            if (typeof val === 'string' && val.includes('-')) return val;
+            
+            // Excel serial date math
+            const d = new Date((val - 25569) * 86400 * 1000);
+            return isNaN(d.getTime()) ? val : d.toISOString().split('T')[0];
+        }
+
+        /**
+         * -------------------------------------------------------------------------------------
+         * FUNGSI 3: PDF REPORT GENERATION
+         * Menjana laporan ringkasan dalam format PDF menggunakan jsPDF-AutoTable
+         * -------------------------------------------------------------------------------------
+         */
+        function exportSummaryPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4'); // Landscape, mm, A4
+            
+            // PDF Header
+            doc.setFontSize(18);
+            doc.text("G7 AEROSPACE - UNIT STATUS SUMMARY REPORT", 14, 22);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text("Generated Date: " + new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(), 14, 28);
+            
+            // Generate Table
+            doc.autoTable({
+                html: '#summaryTable',
+                startY: 35,
+                theme: 'grid',
+                styles: { fontSize: 8, font: 'helvetica', cellPadding: 2 },
+                headStyles: { fillStyle: 'f', fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [248, 250, 252] }
+            });
+            
+            // Save File
+            doc.save("G7_Summary_Report.pdf");
+        }
+
+        /**
+         * -------------------------------------------------------------------------------------
+         * FUNGSI 4: QR CODE & MODAL INTERACTION
+         * Menjana QR code dan menguruskan paparan modal
+         * -------------------------------------------------------------------------------------
+         */
+        function showQR(sn, link, id) {
+            const modal = document.getElementById('qrModal');
+            const content = document.getElementById('modalContent');
+            const qrcode = document.getElementById('qrcode');
+            
+            // Update Teks Modal
+            document.getElementById('modalSN').innerText = "S/N: " + sn;
+            document.getElementById('downloadLink').href = "/download_qr/" + id;
+            
+            // Bersihkan QR lama
+            qrcode.innerHTML = "";
+            
+            // Jana QR Code Baru - Using the link parameter (which points to view_tag)
+            new QRCode(qrcode, {
+                text: link,
+                width: 180,
+                height: 180,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+            
+            // Paparkan Modal dengan Animasi
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                content.classList.remove('scale-90', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 50);
+        }
+
+        function closeQR() {
+            const modal = document.getElementById('qrModal');
+            const content = document.getElementById('modalContent');
+            
+            // Animasi Keluar
+            content.classList.add('scale-90', 'opacity-0');
+            content.classList.remove('scale-100', 'opacity-100');
+            
+            setTimeout(() => { 
+                modal.classList.add('hidden'); 
+            }, 300);
+        }
+
+        // Tutup modal jika klik di luar kawasan
+        document.getElementById('qrModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeQR();
             }
-        }
+        });
 
-        function confirmSingleDelete(id) {
-            if (confirm("Adakah anda pasti mahu memadam rekod ini?")) {
-                window.location.href = "/delete/" + id;
+        /**
+         * -------------------------------------------------------------------------------------
+         * FUNGSI 5: LOCALIZATION (LANGUAGE) SYSTEM
+         * Menguruskan penukaran bahasa UI (Melayu / Inggeris)
+         * -------------------------------------------------------------------------------------
+         */
+        function changeLanguage(lang) {
+            // Update status butang aktif
+            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-' + lang).classList.add('active');
+            
+            // Kamus Bahasa
+            const trans = {
+                'ms': {
+                    't-nav-main': 'Log Utama', 
+                    't-import-title': 'Import Pukal Excel (2022-2026)',
+                    't-console-title': 'Konsol Pengurusan', 
+                    't-records': 'Jumlah Rekod',
+                    'th-asset': 'Butiran Aset', 
+                    'th-defect': 'Kerosakan & Nota', 
+                    'th-action': 'Tindakan'
+                },
+                'en': {
+                    't-nav-main': 'Main Log', 
+                    't-import-title': 'Bulk Excel Import (2022-2026)',
+                    't-console-title': 'Management Console', 
+                    't-records': 'Total Records',
+                    'th-asset': 'Asset Details', 
+                    'th-defect': 'Defects & Notes', 
+                    'th-action': 'Actions'
+                }
+            };
+
+            // Gunakan terjemahan
+            const set = trans[lang];
+            for (let id in set) {
+                const el = document.getElementById(id);
+                if (el) el.innerText = set[id];
             }
+            
+            // Simpan pilihan bahasa
+            localStorage.setItem('g7_lang', lang);
         }
 
-        function showLoading() {
-            const btn = document.getElementById('importBtn');
-            btn.disabled = true;
-            document.getElementById('btnText').innerHTML = `<span class="loader"></span> Processing...`;
-        }
-
+        /**
+         * -------------------------------------------------------------------------------------
+         * FUNGSI 6: BULK ACTIONS & SEARCH
+         * Menguruskan carian jadual dan checkbox
+         * -------------------------------------------------------------------------------------
+         */
+        
+        // Handler Select All
         document.getElementById('selectAll').addEventListener('change', function() {
             document.querySelectorAll('.item-checkbox').forEach(cb => cb.checked = this.checked);
         });
 
+        // Handler Bulk Delete
         function confirmBulkDelete() {
-            const sel = document.querySelectorAll('.item-checkbox:checked');
-            if (sel.length === 0) return alert("Sila pilih rekod!");
-            if (confirm(`Padam ${sel.length} rekod?`)) document.getElementById('bulkDeleteForm').submit();
+            const count = document.querySelectorAll('.item-checkbox:checked').length;
+            
+            if (count === 0) {
+                return alert("Sila pilih sekurang-kurangnya satu rekod untuk dipadam.");
+            }
+            
+            if (confirm(`AMARAN: Adakah anda pasti mahu memadam ${count} rekod ini secara kekal?`)) {
+                document.getElementById('bulkDeleteForm').submit();
+            }
         }
 
-        function showQR(sn, link, id) {
-            document.getElementById('modalSN').innerText = sn;
-            document.getElementById('downloadLink').href = "/download_qr/" + id;
-            const q = document.getElementById('qrcode'); q.innerHTML = "";
-            new QRCode(q, { text: link, width: 200, height: 200 });
-            document.getElementById('qrModal').classList.remove('hidden');
-            setTimeout(() => { document.getElementById('modalContent').classList.add('scale-100', 'opacity-100'); }, 10);
+        // ✅ BUG FIX #2: Changed getElementById("logTable") to getElementById("mainTable")
+        // Handler Carian Jadual
+        function filterTable() {
+            const input = document.getElementById("searchInput");
+            const filter = input.value.toUpperCase();
+            const table = document.getElementById("mainTable");
+            const tr = table.getElementsByTagName("tr");
+
+            // Loop melalui baris jadual
+            for (let i = 0; i < tr.length; i++) {
+                // Abaikan header
+                if (tr[i].getElementsByTagName("th").length > 0) continue;
+
+                // Cari dalam kelas 'filter-target'
+                const tds = tr[i].getElementsByClassName("filter-target");
+                let found = false;
+
+                for (let j = 0; j < tds.length; j++) {
+                    if (tds[j].textContent.toUpperCase().indexOf(filter) > -1) {
+                        found = true;
+                        break;
+                    }
+                }
+
+                // Tunjuk atau sembunyikan baris
+                if (found) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
         }
 
-        function closeQR() {
-            document.getElementById('modalContent').classList.remove('scale-100', 'opacity-100');
-            setTimeout(() => { document.getElementById('qrModal').classList.add('hidden'); }, 200);
-        }
+        // Initialize App on Load
+        window.onload = () => {
+            const savedLang = localStorage.getItem('g7_lang') || 'ms';
+            //changeLanguage(savedLang);
+        };
     </script>
 </body>
 </html>

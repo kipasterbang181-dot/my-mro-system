@@ -2,133 +2,589 @@
 <html lang="ms">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Record | G7 Aerospace</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="description" content="Edit Maintenance Record for G7 Aerospace Asset Tracking System">
+
+    <title>Edit Record | G7 Aerospace Management System</title>
     
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='logo.png') }}">
 
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Space+Grotesk:wght@500;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        /* FONT IMPORT: Inter & Space Grotesk */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;700&display=swap');
+
+        /* ROOT VARIABLES */
+        :root {
+            --color-bg-primary: #0f172a;
+            --color-card-bg: #ffffff;
+            --color-text-main: #1e293b;
+            --color-accent-blue: #1e3a8a;
+            --transition-speed: 0.3s;
+        }
+
+        /* BASE RESET */
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--color-bg-primary);
+            color: var(--color-text-main);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden; /* Prevent horizontal scroll on mobile */
+        }
+
+        /* * FORM ELEMENT STYLING
+         */
         
-        /* Style tambahan untuk dropdown arrow */
+        /* Custom Select Arrow - Menggantikan arrow default browser */
         select {
             appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%231e3a8a'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-position: right 1rem center;
             background-size: 1.5em;
+            cursor: pointer;
         }
 
-        /* Animasi untuk Flash Message */
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
+        /* Focus States - Memberi visual feedback apabila input ditekan */
+        input:focus, 
+        select:focus, 
+        textarea:focus {
+            outline: none;
+            border-color: var(--color-accent-blue);
+            box-shadow: 0 0 0 4px rgba(30, 58, 138, 0.1);
+            transform: translateY(-1px);
+        }
+
+        /* Input Transitions */
+        input, select, textarea {
+            transition: all var(--transition-speed) ease-in-out;
+        }
+
+        /* * ANIMATIONS (KEYFRAMES)
+         */
+
+        /* Animation: Slide In (Untuk Notifikasi Flash) */
+        @keyframes slideInRight {
+            from { transform: translateX(120%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
-        .animate-slide-in { animation: slideIn 0.5s ease-out; }
+        .animate-slide-in { 
+            animation: slideInRight 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; 
+        }
+
+        /* Animation: Fade Up (Untuk Card Borang) */
+        @keyframes fadeUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-fade-up {
+            animation: fadeUp 0.8s ease-out forwards;
+        }
+
+        /* Animation: Shake (Untuk Ralat Validasi) */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+            20%, 40%, 60%, 80% { transform: translateX(4px); }
+        }
+        .validation-error {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+            border-color: #ef4444 !important; /* Tailwind Red-500 */
+            background-color: #fef2f2 !important; /* Tailwind Red-50 */
+        }
+
+        /* Animation: Pulse (Untuk Butang Save) */
+        @keyframes subtlePulse {
+            0% { box-shadow: 0 0 0 0 rgba(30, 58, 138, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(30, 58, 138, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(30, 58, 138, 0); }
+        }
+        .btn-pulse:hover {
+            animation: subtlePulse 2s infinite;
+        }
+
+        /* * UTILITY CLASSES
+         */
+        
+        /* Marker untuk field wajib diisi */
+        .required-mark::after {
+            content: '*';
+            color: #ef4444;
+            margin-left: 3px;
+            font-size: 1.2em;
+            line-height: 0;
+        }
+
+        /* Scrollbar Customization (Webkit) */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        /* * PRINT MEDIA QUERY
+         * Memastikan paparan bersih jika pengguna cuba mencetak halaman ini
+         */
+        @media print {
+            body { 
+                background: white; 
+                color: black; 
+            }
+            .no-print, button[type="submit"], #notification { 
+                display: none !important; 
+            }
+            .shadow-2xl {
+                box-shadow: none !important;
+            }
+            input, select, textarea {
+                border: 1px solid #ccc !important;
+                background: transparent !important;
+            }
+        }
     </style>
 </head>
+
 <body class="bg-slate-900 min-h-screen p-4 flex items-center justify-center">
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-          <div id="notification" class="fixed top-5 right-5 bg-emerald-500 text-white px-8 py-4 rounded-2xl shadow-2xl z-[100] font-black uppercase tracking-widest text-[11px] flex items-center gap-3 animate-slide-in border-b-4 border-emerald-700">
+          <div id="notification-{{ loop.index }}" 
+               class="fixed top-5 right-5 bg-emerald-500 text-white px-8 py-4 rounded-2xl shadow-2xl z-[100] font-black uppercase tracking-widest text-[11px] flex items-center gap-3 animate-slide-in border-b-4 border-emerald-700 cursor-pointer hover:bg-emerald-600 transition-colors"
+               onclick="dismissNotification('notification-{{ loop.index }}')">
+            
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
             </svg>
-            {{ message }}
+            
+            <span>{{ message }}</span>
           </div>
+
           <script>
             setTimeout(() => { 
-                const notify = document.getElementById('notification');
-                if(notify) notify.style.display = 'none';
-            }, 4000);
+                dismissNotification('notification-{{ loop.index }}');
+            }, 5000); // Hilang selepas 5 saat
           </script>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
-    <div class="max-w-2xl w-full bg-white p-6 md:p-10 rounded-[2.5rem] md:rounded-[3rem] shadow-2xl border-t-8 border-blue-900 my-10">
+
+    <div class="max-w-2xl w-full bg-white p-6 md:p-10 rounded-[2.5rem] md:rounded-[3rem] shadow-2xl border-t-8 border-blue-900 my-10 animate-fade-up relative overflow-hidden">
         
-        <div class="mb-8 text-center">
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="G7 Logo" class="h-16 md:h-20 mx-auto mb-4" onerror="this.src='https://via.placeholder.com/200x80?text=G7+AEROSPACE'">
-            <div class="inline-block px-4 py-1 bg-blue-50 rounded-full">
+        <div class="absolute -right-10 -top-10 text-slate-100 opacity-50 pointer-events-none">
+            <svg class="w-48 h-48" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20.71 5.63l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-3.12 3.12-1.93-1.91-1.41 1.41 1.42 1.42L3 16.25V21h4.75l8.92-8.92 1.42 1.42 1.41-1.41-1.92-1.92 3.12-3.12c.4-.4.4-1.03.01-1.42zM5.25 19H5v-.25l8.92-8.92.25.25L5.25 19z"/>
+            </svg>
+        </div>
+
+        <div class="mb-8 text-center relative z-10">
+            <img src="{{ url_for('static', filename='logo.png') }}" 
+                 alt="G7 Logo" 
+                 class="h-16 md:h-20 mx-auto mb-4 hover:scale-105 transition-transform duration-300 ease-out" 
+                 onerror="this.style.display='none'">
+            
+            <div class="inline-block px-6 py-2 bg-blue-50 rounded-full border border-blue-100 shadow-sm">
                 <p class="text-[10px] font-black text-blue-900 uppercase tracking-[0.4em]">Update Tag & Report Information</p>
+            </div>
+            
+            <div class="mt-2 text-[9px] text-slate-400 font-mono">
+                RECORD ID: #{{ item.id }}
             </div>
         </div>
 
-        <form action="/edit/{{ item.id }}" method="POST" class="space-y-5">
-            <input type="hidden" name="origin_source" value="{{ source }}">
+        <form action="{{ url_for('edit', id=item.id) }}" method="POST" class="space-y-5" id="editForm" onsubmit="return validateForm()">
             
-            <div>
-                <label class="text-[9px] font-black uppercase text-slate-400 ml-4 mb-1 block tracking-widest">Equipment Name</label>
-                <input type="text" name="peralatan" value="{{ item.peralatan }}" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all" required>
+            <input type="hidden" name="origin_source" value="{{ source }}">
+            <input type="hidden" id="client_timestamp" name="client_timestamp">
+
+            <div class="group">
+                <label class="text-[9px] font-black uppercase text-slate-400 ml-4 mb-1 block tracking-widest required-mark group-focus-within:text-blue-900 transition-colors">
+                    Equipment Name
+                </label>
+                <div class="relative">
+                    <input type="text" 
+                           name="peralatan" 
+                           id="peralatan"
+                           value="{{ item.peralatan }}" 
+                           class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all placeholder-slate-300" 
+                           placeholder="ENTER EQUIPMENT NAME"
+                           autocomplete="off"
+                           required
+                           oninput="forceUppercase(this)">
+                    </div>
+                <p class="hidden text-[9px] text-rose-500 ml-4 mt-1 font-bold" id="error-peralatan">Equipment Name is required.</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="text-[9px] font-black uppercase text-slate-400 ml-4 mb-1 block tracking-widest">Part Number (P/N)</label>
-                    <input type="text" name="pn" value="{{ item.pn }}" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all" required>
+                
+                <div class="group">
+                    <label class="text-[9px] font-black uppercase text-slate-400 ml-4 mb-1 block tracking-widest required-mark group-focus-within:text-blue-900">
+                        Part Number (P/N)
+                    </label>
+                    <input type="text" 
+                           name="pn" 
+                           id="pn"
+                           value="{{ item.pn }}" 
+                           class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all" 
+                           placeholder="P/N..."
+                           required
+                           oninput="forceUppercase(this)">
                 </div>
-                <div>
-                    <label class="text-[9px] font-black uppercase text-slate-400 ml-4 mb-1 block tracking-widest">Serial Number (S/N)</label>
-                    <input type="text" name="sn" value="{{ item.sn }}" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-mono font-black text-blue-600 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all" required>
+
+                <div class="group">
+                    <label class="text-[9px] font-black uppercase text-slate-400 ml-4 mb-1 block tracking-widest required-mark group-focus-within:text-blue-900">
+                        Serial Number (S/N)
+                    </label>
+                    <input type="text" 
+                           name="sn" 
+                           id="sn"
+                           value="{{ item.sn }}" 
+                           class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-mono font-black text-blue-600 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all" 
+                           placeholder="S/N..."
+                           required
+                           oninput="forceUppercase(this)">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="text-[9px] font-black uppercase text-emerald-600 ml-4 mb-1 block tracking-widest">Date In</label>
-                    <input type="date" name="date_in" value="{{ item.date_in }}" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 focus:border-blue-900 focus:bg-white outline-none transition-all">
+                
+                <div class="group">
+                    <label class="text-[9px] font-black uppercase text-emerald-600 ml-4 mb-1 block tracking-widest group-focus-within:text-emerald-800">
+                        Date In
+                    </label>
+                    <input type="date" 
+                           name="date_in" 
+                           id="date_in"
+                           value="{{ item.date_in.strftime('%Y-%m-%d') if item.date_in else '' }}" 
+                           class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 focus:border-emerald-600 focus:bg-white outline-none transition-all cursor-pointer"
+                           onchange="validateDateLogic()">
                 </div>
-                <div>
-                    <label class="text-[9px] font-black uppercase text-rose-600 ml-4 mb-1 block tracking-widest">Date Out</label>
-                    <input type="date" name="date_out" value="{{ item.date_out }}" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 focus:border-blue-900 focus:bg-white outline-none transition-all">
+                
+                <div class="group">
+                    <label class="text-[9px] font-black uppercase text-rose-600 ml-4 mb-1 block tracking-widest group-focus-within:text-rose-800">
+                        Date Out
+                    </label>
+                    <input type="date" 
+                           name="date_out" 
+                           id="date_out"
+                           value="{{ item.date_out.strftime('%Y-%m-%d') if item.date_out else '' }}" 
+                           class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 focus:border-rose-600 focus:bg-white outline-none transition-all cursor-pointer"
+                           onchange="validateDateLogic()">
                 </div>
             </div>
 
-            <div>
-                <label class="text-[9px] font-black uppercase text-slate-400 ml-4 mb-1 block tracking-widest">Authorized PIC / JTP</label>
-                <input type="text" name="pic" value="{{ item.pic }}" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all" required>
+            <div id="date-error" class="hidden bg-rose-50 border-l-4 border-rose-500 p-3 rounded-r-lg">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-4 w-4 text-rose-500" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-[10px] text-rose-700 font-bold uppercase">Error: Date Out cannot be earlier than Date In.</p>
+                    </div>
+                </div>
             </div>
 
-            <div>
-                <label class="text-[9px] font-black uppercase text-slate-400 ml-4 mb-1 block tracking-widest">Authorization Status</label>
-                <select name="status_type" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all appearance-none">
-                    <option value="SERVICEABLE" {% if item.status_type == 'SERVICEABLE' %}selected{% endif %}>SERVICEABLE</option>
-                    <option value="READY TO QUOTE" {% if item.status_type == 'READY TO QUOTE' %}selected{% endif %}>READY TO QUOTE</option>
-                    <option value="READY TO DELIVERED" {% if item.status_type == 'READY TO DELIVERED' %}selected{% endif %}>READY TO DELIVERED</option>
-                    <option value="RETURN TO AEROTREE" {% if item.status_type == 'RETURN TO AEROTREE' %}selected{% endif %}>RETURN TO AEROTREE</option>
-                    <option value="WARRANTY REPAIR" {% if item.status_type == 'WARRANTY REPAIR' %}selected{% endif %}>WARRANTY REPAIR</option>
-                    <option value="TDI ON PROGRESS" {% if item.status_type == 'TDI ON PROGRESS' %}selected{% endif %}>TDI ON PROGRESS</option>
-                    <option value="OV TDI" {% if item.status_type == 'OV TDI' %}selected{% endif %}>OV TDI</option>
-                </select>
+            <div class="group">
+                <label class="text-[9px] font-black uppercase text-slate-400 ml-4 mb-1 block tracking-widest required-mark group-focus-within:text-blue-900">
+                    Authorized PIC / JTP
+                </label>
+                <input type="text" 
+                       name="pic" 
+                       id="pic"
+                       value="{{ item.pic }}" 
+                       class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all" 
+                       placeholder="ENTER NAME"
+                       required
+                       oninput="forceUppercase(this)">
             </div>
 
-            <div>
-                <label class="text-[9px] font-black uppercase text-slate-400 ml-4 mb-1 block tracking-widest">Defect / Remarks</label>
-                <textarea name="defect" rows="3" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all">{{ item.defect }}</textarea>
+            <div class="group">
+                <label class="text-[9px] font-black uppercase text-slate-400 ml-4 mb-1 block tracking-widest group-focus-within:text-blue-900">
+                    Authorization Status
+                </label>
+                <div class="relative">
+                    <select name="status_type" 
+                            id="status_type"
+                            class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all appearance-none"
+                            onchange="updateStatusColor(this)">
+                        <option value="SERVICEABLE" class="text-emerald-600" {% if item.status_type == 'SERVICEABLE' %}selected{% endif %}>SERVICEABLE</option>
+                        <option value="READY TO QUOTE" class="text-blue-600" {% if item.status_type == 'READY TO QUOTE' %}selected{% endif %}>READY TO QUOTE</option>
+                        <option value="READY TO DELIVERED" class="text-blue-600" {% if item.status_type == 'READY TO DELIVERED' %}selected{% endif %}>READY TO DELIVERED</option>
+                        <option value="RETURN TO AEROTREE" class="text-amber-600" {% if item.status_type == 'RETURN TO AEROTREE' %}selected{% endif %}>RETURN TO AEROTREE</option>
+                        <option value="WARRANTY REPAIR" class="text-purple-600" {% if item.status_type == 'WARRANTY REPAIR' %}selected{% endif %}>WARRANTY REPAIR</option>
+                        <option value="TDI ON PROGRESS" class="text-indigo-600" {% if item.status_type == 'TDI ON PROGRESS' %}selected{% endif %}>TDI ON PROGRESS</option>
+                        <option value="OV TDI" class="text-indigo-600" {% if item.status_type == 'OV TDI' %}selected{% endif %}>OV TDI</option>
+                        <option value="UNDER REPAIR" class="text-rose-600" {% if item.status_type == 'UNDER REPAIR' %}selected{% endif %}>UNDER REPAIR</option>
+                    </select>
+                </div>
             </div>
 
-            <div class="flex flex-col md:flex-row gap-4 pt-4">
+            <div class="group">
+                <div class="flex justify-between items-center mb-1 ml-4">
+                    <label class="text-[9px] font-black uppercase text-slate-400 block tracking-widest group-focus-within:text-blue-900">
+                        Defect / Remarks
+                    </label>
+                    <span id="charCount" class="text-[8px] text-slate-300 font-mono tracking-wider mr-2">0/1000 CHARS</span>
+                </div>
+                
+                <textarea name="defect" 
+                          id="defect"
+                          rows="4" 
+                          class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 uppercase focus:border-blue-900 focus:bg-white outline-none transition-all resize-none"
+                          placeholder="DESCRIBE ISSUES OR REMARKS HERE..."
+                          oninput="handleTextareaInput(this)">{{ item.defect }}</textarea>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-4 pt-6 mt-4 border-t border-slate-50">
+                
                 {% if source == 'view_tag' %}
-                <a href="/view_tag/{{ item.id }}" class="w-full md:w-1/3 bg-slate-100 text-slate-400 text-center font-black py-5 rounded-[2rem] hover:bg-slate-200 transition-colors uppercase tracking-widest text-[10px] flex items-center justify-center no-underline">
-                    Back to QR
+                <a href="{{ url_for('view_tag', id=item.id) }}" 
+                   class="w-full md:w-1/3 bg-slate-100 text-slate-400 text-center font-black py-5 rounded-[2rem] hover:bg-slate-200 hover:text-slate-600 transition-colors uppercase tracking-widest text-[10px] flex items-center justify-center no-underline group">
+                    <span class="mr-2 group-hover:-translate-x-1 transition-transform">←</span> Back to QR
                 </a>
                 {% else %}
-                <a href="/admin" class="w-full md:w-1/3 bg-slate-100 text-slate-400 text-center font-black py-5 rounded-[2rem] hover:bg-slate-200 transition-colors uppercase tracking-widest text-[10px] flex items-center justify-center no-underline">
-                    Back to Admin
+                <a href="{{ url_for('admin') }}" 
+                   class="w-full md:w-1/3 bg-slate-100 text-slate-400 text-center font-black py-5 rounded-[2rem] hover:bg-slate-200 hover:text-slate-600 transition-colors uppercase tracking-widest text-[10px] flex items-center justify-center no-underline group">
+                    <span class="mr-2 group-hover:-translate-x-1 transition-transform">←</span> Back to Admin
                 </a>
                 {% endif %}
                 
-                <button type="submit" class="w-full md:w-2/3 bg-blue-900 text-white font-black py-5 rounded-[2rem] hover:bg-black shadow-xl transition-all uppercase tracking-widest text-[10px] italic">
-                    Save Changes
+                <button type="submit" 
+                        id="saveBtn"
+                        class="w-full md:w-2/3 bg-blue-900 text-white font-black py-5 rounded-[2rem] hover:bg-black shadow-xl hover:shadow-2xl transition-all uppercase tracking-widest text-[10px] italic btn-pulse flex items-center justify-center gap-2">
+                    <span id="btnText">Save Changes</span>
+                    <svg id="btnSpinner" class="animate-spin -ml-1 mr-3 h-4 w-4 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
                 </button>
+            </div>
+
+            <div class="text-center mt-4">
+                 <p class="text-[8px] text-slate-300 font-mono">
+                    System Ver 2.5 | Last Sync: {{ item.last_updated.strftime('%Y-%m-%d %H:%M') if item.last_updated else 'N/A' }}
+                 </p>
             </div>
         </form>
     </div>
 
+    <script>
+        /**
+         * GLOBAL CONFIGURATION
+         */
+        const CONFIG = {
+            maxChars: 1000,
+            formDirty: false // Tracks if user has made unsaved changes
+        };
+
+        /**
+         * EVENT LISTENER: DOMContentLoaded
+         * Dijalankan sebaik sahaja halaman siap dimuatkan.
+         */
+        document.addEventListener("DOMContentLoaded", function() {
+            console.log("G7 System: Edit Module Loaded");
+            
+            // 1. Initialize Status Color
+            const statusSelect = document.getElementById('status_type');
+            if(statusSelect) updateStatusColor(statusSelect);
+
+            // 2. Initialize Character Count
+            const defectTextarea = document.getElementById('defect');
+            if(defectTextarea) handleTextareaInput(defectTextarea);
+
+            // 3. Set Client Timestamp
+            document.getElementById('client_timestamp').value = new Date().toISOString();
+
+            // 4. Attach Dirty Form Listeners (Prevent Accidental Exit)
+            attachDirtyCheck();
+        });
+
+        /**
+         * FUNCTION: Force Uppercase
+         * Memastikan input sentiasa huruf besar (Aviation Standard).
+         * @param {HTMLInputElement} input - Element input yang sedang ditaip
+         */
+        function forceUppercase(input) {
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+            input.value = input.value.toUpperCase();
+            input.setSelectionRange(start, end);
+            CONFIG.formDirty = true;
+        }
+
+        /**
+         * FUNCTION: Handle Textarea Input
+         * Menguruskan uppercase dan character counting serentak.
+         * @param {HTMLTextAreaElement} textarea
+         */
+        function handleTextareaInput(textarea) {
+            // Force Uppercase
+            forceUppercase(textarea);
+
+            // Update Char Counter
+            const currentLength = textarea.value.length;
+            const counterEl = document.getElementById('charCount');
+            
+            if(counterEl) {
+                counterEl.textContent = `${currentLength}/${CONFIG.maxChars} CHARS`;
+                
+                // Visual feedback bila menghampiri had
+                if(currentLength >= CONFIG.maxChars) {
+                    counterEl.classList.remove('text-slate-300');
+                    counterEl.classList.add('text-rose-600', 'font-bold');
+                } else if (currentLength > (CONFIG.maxChars * 0.9)) {
+                    counterEl.classList.remove('text-slate-300');
+                    counterEl.classList.add('text-amber-500');
+                } else {
+                    counterEl.classList.remove('text-rose-600', 'text-amber-500', 'font-bold');
+                    counterEl.classList.add('text-slate-300');
+                }
+            }
+        }
+
+        /**
+         * FUNCTION: Update Status Color
+         * Menukar warna teks dropdown berdasarkan status yang dipilih.
+         * @param {HTMLSelectElement} select
+         */
+        function updateStatusColor(select) {
+            const val = select.value;
+            select.className = select.className.replace(/text-\w+-\d+/g, ''); // Remove old color class
+            
+            // Add specific classes
+            select.classList.add('font-black', 'uppercase'); 
+
+            if (val === 'SERVICEABLE') select.classList.add('text-emerald-600');
+            else if (['UNDER REPAIR', 'WARRANTY REPAIR'].includes(val)) select.classList.add('text-rose-600');
+            else if (val === 'RETURN TO AEROTREE') select.classList.add('text-amber-600');
+            else if (val.includes('TDI')) select.classList.add('text-indigo-600');
+            else select.classList.add('text-blue-600'); // Default
+
+            CONFIG.formDirty = true;
+        }
+
+        /**
+         * FUNCTION: Validate Date Logic
+         * Memastikan Date Out tidak berlaku sebelum Date In.
+         */
+        function validateDateLogic() {
+            const dateIn = document.getElementById('date_in').value;
+            const dateOut = document.getElementById('date_out').value;
+            const errorBox = document.getElementById('date-error');
+
+            if (dateIn && dateOut) {
+                if (new Date(dateOut) < new Date(dateIn)) {
+                    // Show Error
+                    errorBox.classList.remove('hidden');
+                    document.getElementById('date_out').classList.add('border-rose-500', 'bg-rose-50');
+                    return false;
+                }
+            }
+            
+            // Clear Error
+            errorBox.classList.add('hidden');
+            document.getElementById('date_out').classList.remove('border-rose-500', 'bg-rose-50');
+            CONFIG.formDirty = true;
+            return true;
+        }
+
+        /**
+         * FUNCTION: Validate Form on Submit
+         * Melakukan pemeriksaan terakhir sebelum data dihantar ke server.
+         */
+        function validateForm() {
+            let isValid = true;
+            
+            // 1. Check Logic Date
+            if (!validateDateLogic()) isValid = false;
+
+            // 2. Check Required Fields (Double check)
+            const requiredIds = ['peralatan', 'pn', 'sn', 'pic'];
+            requiredIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el.value.trim()) {
+                    el.classList.add('validation-error'); // Trigger shake animation
+                    setTimeout(() => el.classList.remove('validation-error'), 500);
+                    isValid = false;
+                }
+            });
+
+            if (!isValid) {
+                // Scroll to top or vibrate mobile
+                if(navigator.vibrate) navigator.vibrate(200);
+                return false;
+            }
+
+            // Success - Show Loading State
+            showLoadingState();
+            
+            // Disable Dirty Check so we can submit
+            CONFIG.formDirty = false;
+            
+            return true;
+        }
+
+        /**
+         * FUNCTION: Show Loading State
+         * Mengunci butang save dan memaparkan spinner.
+         */
+        function showLoadingState() {
+            const btn = document.getElementById('saveBtn');
+            const txt = document.getElementById('btnText');
+            const spin = document.getElementById('btnSpinner');
+
+            btn.disabled = true;
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+            txt.innerText = "SAVING...";
+            spin.classList.remove('hidden');
+        }
+
+        /**
+         * FUNCTION: Dismiss Notification
+         * Menghilangkan mesej flash secara manual dengan animasi.
+         */
+        function dismissNotification(id) {
+            const el = document.getElementById(id);
+            if(el) {
+                el.style.transform = 'translateY(-20px)';
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 300);
+            }
+        }
+
+        /**
+         * FUNCTION: Attach Dirty Check
+         * Memberi amaran jika pengguna cuba keluar tanpa save.
+         */
+        function attachDirtyCheck() {
+            window.addEventListener('beforeunload', function (e) {
+                if (CONFIG.formDirty) {
+                    // Custom message not supported in modern browsers, but ensures the dialog appears
+                    e.preventDefault();
+                    e.returnValue = ''; 
+                }
+            });
+        }
+
+    </script>
 </body>
 </html>

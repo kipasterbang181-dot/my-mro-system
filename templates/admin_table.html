@@ -2,261 +2,521 @@
 <html lang="ms">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G7 Executive Dashboard | Premium Management</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Sistem Pengurusan Penyelenggaraan Aset G7 Aerospace">
+    <meta name="author" content="G7 Aerospace">
+    
+    <title>G7 Dashboard | Management Console</title>
+    
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
-        
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
         body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: #f8fafc;
+            font-family: 'Inter', sans-serif; 
+            background-color: #f8fafc;
+            color: #1e293b;
         }
 
-        .glass-header {
-            background: rgba(15, 23, 42, 0.9);
-            backdrop-filter: blur(10px);
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .table-row-hover:hover { background-color: #f1f5f9; transition: all 0.2s; }
+        
+        .action-group-container {
+            display: flex;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 4px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
 
-        .card-shadow {
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+        .action-btn-item {
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .btn-qr-color { color: #4f46e5; }
+        .btn-qr-color:hover { background-color: #eef2ff; }
+        .btn-view-color { color: #0891b2; }
+        .btn-view-color:hover { background-color: #ecfeff; }
+        .btn-tag-color { color: #059669; }
+        .btn-tag-color:hover { background-color: #ecfdf5; }
 
-        .table-sticky-first td:first-child, 
-        .table-sticky-first th:first-child {
-            position: sticky;
-            left: 0;
-            background-color: inherit;
-            z-index: 10;
+        .action-divider { width: 1px; background: #e2e8f0; margin: 4px 8px; }
+
+        /* Tooltip Style */
+        .tooltip { position: relative; }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 80px;
+            background-color: #1e293b;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 0;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -40px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 10px;
+            font-weight: bold;
         }
+        .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+
+        .loader {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #FFF;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
-<body class="antialiased">
+<body class="bg-slate-50 min-h-screen">
 
-    <nav class="glass-header text-white sticky top-0 z-50 border-b border-white/10">
-        <div class="max-w-[1700px] mx-auto px-6 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="bg-blue-600 p-2 rounded-lg shadow-lg shadow-blue-500/20">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-                    </svg>
+    <nav class="bg-slate-900 text-white px-8 py-6 no-print shadow-2xl">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex items-center gap-4">
+                <div class="bg-blue-600 p-3 rounded-2xl shadow-lg shadow-blue-500/20">
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="w-8 h-8 object-contain brightness-0 invert">
                 </div>
                 <div>
-                    <h1 class="text-xl font-extrabold tracking-tighter leading-none">G7 AEROSPACE</h1>
-                    <p class="text-[10px] text-blue-400 font-bold uppercase tracking-widest">Admin Executive Suite</p>
+                    <h1 class="text-xl font-black tracking-tighter uppercase italic">G7 Aerospace</h1>
+                    <p id="t-nav-main" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Management Console</p>
                 </div>
             </div>
-            <div class="flex gap-4">
-                <a href="/" class="bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-xl text-xs font-bold transition-all no-underline text-white">
-                    BACK TO MAIN LOG
-                </a>
-                <button onclick="window.location.reload()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-500/20">
-                    REFRESH DATA
-                </button>
+
+            <div class="flex items-center gap-3 bg-slate-800 p-1.5 rounded-2xl border border-slate-700">
+                <button onclick="changeLanguage('ms')" id="btn-ms" class="lang-btn px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all">MY</button>
+                <button onclick="changeLanguage('en')" id="btn-en" class="lang-btn px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all">EN</button>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-[1700px] mx-auto p-6 lg:p-10">
-        
-        <div class="mb-10">
-            <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight italic uppercase">Executive Dashboard</h2>
-            <div class="flex items-center gap-2 mt-1">
-                <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-                <p class="text-slate-500 font-medium text-sm uppercase tracking-wider">Laporan Status Komponen Bersepadu (2022 - 2026)</p>
+    <main class="max-w-7xl mx-auto px-6 py-12">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+            <div class="lg:col-span-2 bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100 no-print">
+                <h2 id="t-import-title" class="text-2xl font-black text-slate-900 mb-2 uppercase italic tracking-tight">Import Pukal Excel (2022-2026)</h2>
+                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-8">Sila pastikan format kolum mengikut templat sistem.</p>
+                
+                <div class="flex flex-col md:flex-row gap-4">
+                    <input type="file" id="excelFile" accept=".xlsx, .xls" class="flex-1 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl px-6 py-4 text-xs font-bold text-slate-500 file:hidden cursor-pointer hover:border-blue-400 transition-colors">
+                    <button onclick="processExcel()" id="importBtn" class="bg-blue-600 text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-3">
+                        <span id="btnText">Proses & Masuk Data</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl">
+                <div class="relative z-10">
+                    <p id="t-records" class="text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Jumlah Rekod Tersimpan</p>
+                    <h3 class="text-6xl font-black italic tracking-tighter">{{ logs|length }}</h3>
+                    <div class="mt-8 flex gap-2">
+                        <button onclick="exportFullDatabase()" class="bg-white/10 hover:bg-white/20 p-3 rounded-xl transition-all tooltip">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            <span class="tooltiptext">Export Excel</span>
+                        </button>
+                        <button onclick="exportSummaryPDF()" class="bg-white/10 hover:bg-white/20 p-3 rounded-xl transition-all tooltip">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                            <span class="tooltiptext">Export PDF</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="absolute -right-10 -bottom-10 opacity-10">
+                    <svg class="w-64 h-64" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
-            
-            <div class="lg:col-span-5 bg-white rounded-3xl card-shadow border border-slate-200 overflow-hidden flex flex-col">
-                <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest italic">Status Breakdown</h3>
-                    <span class="bg-blue-100 text-blue-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-tighter">Live Database</span>
+        <div class="bg-white rounded-[3rem] shadow-sm border border-slate-100 overflow-hidden">
+            <div class="p-8 border-b border-slate-50 flex flex-col md:flex-row justify-between items-center gap-6 no-print">
+                <div class="relative w-full md:w-96">
+                    <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Cari S/N, P/N atau Deskripsi..." class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-12 py-4 text-sm font-bold focus:bg-white focus:border-blue-500 outline-none transition-all uppercase placeholder:text-slate-300">
+                    <svg class="w-5 h-5 text-slate-300 absolute left-4 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
-                
-                <div class="overflow-x-auto flex-grow p-4">
-                    <table class="w-full text-left border-separate border-spacing-y-2 table-sticky-first">
+                <div class="flex gap-3 w-full md:w-auto">
+                    <button onclick="confirmBulkDelete()" class="w-full md:w-auto bg-rose-50 text-rose-600 px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-100 transition-colors flex items-center justify-center gap-2">
+                        Padam Pilihan
+                    </button>
+                </div>
+            </div>
+
+            <form id="bulkDeleteForm" action="{{ url_for('delete_bulk') }}" method="POST">
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table id="mainTable" class="w-full">
                         <thead>
-                            <tr class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                                <th class="px-4 py-2 bg-white">Category Status</th>
-                                {% for year in sorted_years %}
-                                <th class="px-4 py-2 text-center bg-slate-100/50 rounded-t-lg">CY {{ year }}</th>
-                                {% endfor %}
+                            <tr class="bg-slate-50/80 border-b border-slate-200">
+                                <th class="px-10 py-6 text-left w-10 no-print">
+                                    <input type="checkbox" id="selectAll" class="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+                                </th>
+                                <th id="th-asset" class="px-6 py-6 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Butiran Aset</th>
+                                <th id="th-defect" class="px-6 py-6 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Kerosakan & Nota</th>
+                                <th id="th-timeline" class="px-6 py-6 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Garis Masa & Status</th>
+                                <th id="th-action" class="px-10 py-6 text-right text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] no-print">Tindakan</th>
                             </tr>
                         </thead>
-                        <tbody class="text-xs">
-                            {% for status in status_list %}
-                            <tr class="group hover:bg-blue-50/50 transition-all">
-                                <td class="px-4 py-3 font-bold text-slate-700 border-l-4 border-transparent group-hover:border-blue-500 transition-all rounded-r-lg bg-white group-hover:bg-blue-50/50">
-                                    {{ status }}
+                        <tbody class="divide-y divide-slate-100">
+                            {% for log in logs %}
+                            <tr class="table-row-hover group">
+                                <td class="px-10 py-8 no-print">
+                                    <input type="checkbox" name="selected_ids" value="{{ log.id }}" class="item-checkbox w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
                                 </td>
-                                {% for year in sorted_years %}
-                                <td class="px-4 py-3 text-center font-mono font-bold text-slate-600">
-                                    {{ summary_data.get(status, {}).get(year, 0) if summary_data.get(status, {}).get(year, 0) > 0 else '-' }}
+                                
+                                <td class="px-6 py-8 align-top">
+                                    <div class="font-black text-slate-900 text-[15px] mb-2 group-hover:text-blue-600 transition-colors uppercase tracking-tight filter-target">
+                                        <a href="{{ url_for('history', sn=log.serial_no) }}" class="hover:underline decoration-blue-400 underline-offset-4" title="Lihat Sejarah Aset">
+                                            {{ log.description or 'TIADA DESKRIPSI' }}
+                                        </a>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        <div class="flex flex-col md:flex-row gap-4 mb-8 no-print">
+    <div class="relative flex-grow group">
+        </div>
+    </div>
+
+<div class="mb-8 grid grid-cols-1 md:grid-cols-3 gap-6 no-print">
+    <div class="bg-white p-6 rounded-[2rem] border-2 border-emerald-100 shadow-sm flex items-center gap-5">
+        <div class="w-14 h-14 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        <div>
+            <p class="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em]">Serviceable</p>
+            <h3 class="text-3xl font-black text-slate-900 leading-none">
+                {{ logs|selectattr('status', 'equalto', 'SERVICEABLE')|list|length }}
+            </h3>
+        </div>
+    </div>
+    
+    </div>
+
+<div class="bg-white rounded-[3rem] shadow-2xl border-4 border-slate-900 overflow-hidden relative min-h-[500px]">
+    <form id="bulkDeleteForm" action="{{ url_for('delete_bulk') }}" method="POST">
+        ```
+
+---
+
+### Kenapa letak di situ?
+1.  **Hierarchy Data:** Secara psikologi, pengguna akan melihat *Ringkasan Status* (Total) terlebih dahulu sebelum meneliti *Data Terperinci* di dalam jadual.
+2.  **Kemas:** Ia memisahkan antara bahagian kawalan (butang/carian) dengan bahagian data (jadual).
+3.  **Responsive:** Susunan `grid-cols-1 md:grid-cols-3` memastikan pada telefon pintar, kad tersebut akan tersusun ke bawah, manakala di laptop ia akan tersusun secara melintang.
+
+**Nota Penting:** Pastikan anda tidak meletakkan kod ini di dalam tag `<form>`, supaya ia tidak mengganggu fungsi *Bulk Delete* anda.
+
+Adakah anda mahu saya tolong buatkan **Auto-Refresh** pada angka tersebut supaya ia sentiasa dikemaskini setiap kali anda membuat carian?
+                                        <span class="text-[10px] font-extrabold bg-slate-100 text-slate-600 px-3 py-1 rounded-lg uppercase filter-target border border-slate-200">
+                                            P/N: {{ log.part_no or 'N/A' }}
+                                        </span>
+                                        <span class="text-[10px] font-extrabold bg-blue-50 text-blue-700 px-3 py-1 rounded-lg uppercase filter-target border border-blue-100">
+                                            S/N: {{ log.serial_no or 'N/A' }}
+                                        </span>
+                                    </div>
                                 </td>
-                                {% endfor %}
+                                
+                                <td class="px-6 py-8 align-top">
+                                    <div class="text-xs text-slate-700 font-bold leading-relaxed max-w-sm uppercase bg-amber-50/50 p-3 rounded-xl border-l-4 border-amber-400 filter-target shadow-sm">
+                                        "{{ log.defect or 'TIADA REKOD KEROSAKAN' }}"
+                                    </div>
+                                    {% if log.remarks %}
+                                    <div class="mt-2 flex items-start gap-2">
+                                        <svg class="w-3 h-3 text-slate-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                        <p class="text-[10px] text-slate-500 italic font-medium uppercase">{{ log.remarks }}</p>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                
+                                <td class="px-6 py-8 align-top">
+                                    <div class="mb-3">
+                                        <span class="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border
+                                            {% if log.status == 'SERVICEABLE' or log.status == 'BERFUNGSI' %} bg-emerald-100 text-emerald-700 border-emerald-200
+                                            {% elif 'TDI' in log.status or 'BERMASALAH' in log.status %} bg-rose-100 text-rose-700 border-rose-200
+                                            {% else %} bg-amber-100 text-amber-700 border-amber-200 {% endif %}">
+                                            {{ log.status or 'PENDING' }}
+                                        </span>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <div class="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-2">
+                                            <span class="w-8 text-right">MASUK:</span> 
+                                            <span class="text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{{ log.date_in or '-' }}</span>
+                                        </div>
+                                        <div class="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-2">
+                                            <span class="w-8 text-right">KELUAR:</span> 
+                                            <span class="text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{{ log.date_out or '-' }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                
+                                <td class="px-10 py-8 no-print align-middle">
+                                    <div class="flex justify-end items-center gap-3">
+                                        
+                                        <div class="action-group-container">
+                                            <button type="button" onclick="showQR('{{ log.serial_no }}', '{{ request.url_root }}track/{{ log.id }}', '{{ log.id }}')" class="action-btn-item btn-qr-color tooltip">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                                                <span class="tooltiptext">Lihat Tag</span>
+                                            </button>
+                                            
+                                            <div class="action-divider"></div>
+                                            
+                                            <a href="{{ url_for('view_report', id=log.id) }}" class="action-btn-item btn-view-color tooltip">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                                <span class="tooltiptext">Laporan</span>
+                                            </a>
+                                            
+                                            <div class="action-divider"></div>
+
+                                            <a href="{{ url_for('view_tag', id=log.id) }}" class="action-btn-item btn-tag-color tooltip">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
+                                                <span class="tooltiptext">Asset Tag</span>
+                                            </a>
+                                        </div>
+
+                                        <a href="{{ url_for('edit', id=log.id) }}" class="p-2 text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors tooltip">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                            <span class="tooltiptext">Kemaskini</span>
+                                        </a>
+                                        
+                                        <button type="button" onclick="if(confirm('AMARAN: Padam rekod ini secara kekal?')) window.location.href='/delete/{{ log.id }}'" class="p-2 text-rose-600 bg-rose-50 rounded-xl hover:bg-rose-100 transition-colors tooltip">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                            <span class="tooltiptext">Padam</span>
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
                             {% endfor %}
-                        </tbody>
-                        <tfoot>
-                            <tr class="bg-slate-900 text-white">
-                                <td class="px-4 py-4 font-black rounded-l-2xl uppercase italic text-[10px] tracking-widest">Annual Total</td>
-                                {% set grand_total = namespace(value=0) %}
-                                {% for year in sorted_years %}
-                                    <td class="px-4 py-4 text-center font-black text-blue-400">
-                                        {% set total_year = namespace(value=0) %}
-                                        {% for s in status_list %}
-                                            {% set count = summary_data.get(s, {}).get(year, 0) %}
-                                            {% set total_year.value = total_year.value + count %}
-                                        {% endfor %}
-                                        {% set grand_total.value = grand_total.value + total_year.value %}
-                                        {{ total_year.value }}
-                                    </td>
-                                {% endfor %}
-                            </tr>
-                            <tr class="bg-blue-600 text-white">
-                                <td class="px-4 py-3 font-black rounded-bl-2xl uppercase italic text-[10px]">Grand Total</td>
-                                <td colspan="{{ sorted_years|length }}" class="px-4 py-3 text-right font-black text-lg pr-8 rounded-br-2xl tracking-tighter italic">
-                                    {{ grand_total.value }} <span class="text-xs font-normal opacity-80 uppercase ml-1">Units Managed</span>
+
+                            {% if not logs %}
+                            <tr>
+                                <td colspan="5" class="px-6 py-20 text-center">
+                                    <div class="flex flex-col items-center">
+                                        <div class="bg-slate-50 p-6 rounded-full mb-4">
+                                            <svg class="w-12 h-12 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                                        </div>
+                                        <p class="text-slate-400 font-bold uppercase tracking-widest text-xs">Tiada rekod ditemui dalam pangkalan data.</p>
+                                    </div>
                                 </td>
                             </tr>
-                        </tfoot>
+                            {% endif %}
+                        </tbody>
                     </table>
                 </div>
-            </div>
-
-            <div class="lg:col-span-7 bg-white rounded-3xl card-shadow border border-slate-200 p-8 flex flex-col">
-                <div class="flex flex-col mb-8">
-                    <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest italic">Performance Visualization</h3>
-                    <p class="text-xs text-slate-400 mt-1 uppercase font-bold tracking-tight">Perbandingan Volumetri Status Mengikut Kitaran Tahun</p>
-                </div>
-                <div class="relative flex-grow min-h-[400px]">
-                    <canvas id="statusChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-slate-900 rounded-3xl p-8 text-white flex flex-col md:flex-row justify-between items-center shadow-2xl shadow-blue-900/20 border border-white/5">
-            <div class="mb-4 md:mb-0 text-center md:text-left">
-                <h4 class="text-xl font-black italic tracking-tighter uppercase">Master Data Logs Repository</h4>
-                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Audit trail dan butiran teknikal penuh peralatan</p>
-            </div>
-            <button onclick="document.getElementById('master-section').scrollIntoView({behavior: 'smooth'})" class="group bg-blue-600 hover:bg-white hover:text-blue-600 px-8 py-4 rounded-2xl font-black text-xs tracking-[0.2em] transition-all flex items-center gap-3">
-                VIEW FULL DATABASE
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 group-hover:translate-y-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
-                </svg>
-            </button>
-        </div>
-
-        <div id="master-section" class="mt-10 min-h-[400px] bg-white rounded-3xl card-shadow border border-slate-200 overflow-hidden">
-            <div class="p-4">
-                {% include 'admin_table_content.html' %} 
-            </div>
+            </form>
         </div>
     </main>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const ctx = document.getElementById('statusChart').getContext('2d');
+    <div id="qrModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden flex items-center justify-center z-[100] no-print px-4">
+        <div id="modalContent" class="bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl max-w-sm w-full transform scale-90 opacity-0 transition-all duration-300 border-[6px] border-slate-900 relative">
             
-            const createGradient = (color1, color2) => {
-                const g = ctx.createLinearGradient(0, 0, 0, 400);
-                g.addColorStop(0, color1);
-                g.addColorStop(1, color2);
-                return g;
-            };
+            <div class="text-center">
+                <div class="w-16 h-16 bg-blue-600 rounded-2xl mx-auto mb-6 flex items-center justify-center text-white shadow-xl rotate-3">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                </div>
+                
+                <h3 class="text-xl font-black text-slate-900 mb-1 uppercase italic tracking-tighter">Equipment Tag</h3>
+                <p id="modalSN" class="text-blue-600 font-black text-[10px] tracking-[0.2em] uppercase mb-8"></p>
+                
+                <div id="qrcode" class="bg-white p-4 rounded-3xl inline-block border-2 border-slate-100 shadow-inner mb-2"></div>
+                
+                <p class="text-[9px] text-slate-400 font-bold uppercase mb-8 tracking-widest">Imbas untuk melihat sejarah aset</p>
 
-            const colors = [
-                { main: '#3b82f6', light: '#60a5fa' }, // Blue
-                { main: '#10b981', light: '#34d399' }, // Green
-                { main: '#f59e0b', light: '#fbbf24' }, // Orange
-                { main: '#6366f1', light: '#818cf8' }, // Indigo
-                { main: '#f43f5e', light: '#fb7185' }  // Rose
-            ];
+                <div class="flex flex-col gap-3">
+                    <a id="downloadLink" href="#" class="bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-black transition-all shadow-lg flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Download PNG Tag
+                    </a>
+                    
+                    <button onclick="closeQR()" class="text-slate-400 py-2 font-bold text-[10px] uppercase hover:text-rose-500 transition-colors cursor-pointer">
+                        Dismiss / Tutup
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // 1. PENGURUSAN QR CODE
+        let qrcodeInstance = null;
 
-            const labels = {{ status_list|tojson }};
-            const years = {{ sorted_years|tojson }};
-            const summaryData = {{ summary_data|tojson }};
+        function showQR(sn, url, id) {
+            const modal = document.getElementById('qrModal');
+            const content = document.getElementById('modalContent');
+            const qrContainer = document.getElementById('qrcode');
+            const snLabel = document.getElementById('modalSN');
+            const downloadBtn = document.getElementById('downloadLink');
 
-            const datasets = years.map((year, index) => {
-                const colorSet = colors[index % colors.length];
-                return {
-                    label: 'CY ' + year,
-                    data: labels.map(s => (summaryData[s] && summaryData[s][year]) ? summaryData[s][year] : 0),
-                    backgroundColor: createGradient(colorSet.main, colorSet.light),
-                    hoverBackgroundColor: colorSet.main,
-                    borderRadius: 6,
-                    barThickness: 'flex',
-                    maxBarThickness: 30,
-                    categoryPercentage: 0.8,
-                    barPercentage: 0.9
-                }
+            // Set Label S/N
+            snLabel.innerText = "S/N: " + sn;
+            qrContainer.innerHTML = ""; // Bersihkan QR lama
+
+            // Janakan QR Code Baru
+            qrcodeInstance = new QRCode(qrContainer, {
+                text: url,
+                width: 180,
+                height: 180,
+                colorDark: "#0f172a",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
             });
 
-            new Chart(ctx, {
-                type: 'bar',
-                data: { labels: labels, datasets: datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            align: 'end',
-                            labels: {
-                                usePointStyle: true,
-                                pointStyle: 'circle',
-                                font: { size: 10, weight: '800', family: 'Plus Jakarta Sans' },
-                                padding: 25,
-                                color: '#64748b'
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: '#0f172a',
-                            padding: 15,
-                            cornerRadius: 12,
-                            titleFont: { size: 14, weight: '800' },
-                            bodyFont: { size: 12 },
-                            usePointStyle: true,
-                            callbacks: {
-                                label: (context) => ` ${context.dataset.label}: ${context.raw} Units`
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: '#f1f5f9', drawBorder: false },
-                            ticks: { 
-                                font: { weight: '700', size: 11 }, 
-                                color: '#94a3b8',
-                                padding: 10
-                            }
-                        },
-                        x: {
-                            grid: { display: false },
-                            ticks: { 
-                                font: { weight: '800', size: 9 }, 
-                                color: '#475569',
-                                autoSkip: false,
-                                maxRotation: 45,
-                                minRotation: 45
-                            }
-                        }
+            // Sediakan Link Muat Turun (PNG)
+            setTimeout(() => {
+                const img = qrContainer.querySelector('img');
+                if (img) {
+                    downloadBtn.href = img.src;
+                    downloadBtn.download = `G7_TAG_${sn}.png`;
+                }
+            }, 500);
+
+            // Tunjukkan Modal dengan Animasi
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                content.classList.remove('scale-90', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeQR() {
+            const modal = document.getElementById('qrModal');
+            const content = document.getElementById('modalContent');
+            
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-90', 'opacity-0');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // 2. SISTEM CARIAN (REAL-TIME FILTER)
+        function filterTable() {
+            const input = document.getElementById("searchInput");
+            const filter = input.value.toUpperCase();
+            const rows = document.querySelectorAll("#mainTable tbody tr.table-row-hover");
+
+            rows.forEach(row => {
+                const targets = row.querySelectorAll(".filter-target");
+                let match = false;
+                
+                targets.forEach(target => {
+                    if (target.textContent.toUpperCase().includes(filter)) {
+                        match = true;
                     }
-                }
+                });
+                
+                row.style.display = match ? "" : "none";
             });
+        }
+
+        // 3. SELEKSI PUKAL (BULK SELECTION)
+        function toggleSelectAll() {
+            const mainCheckbox = document.getElementById('selectAll');
+            const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+            itemCheckboxes.forEach(cb => cb.checked = mainCheckbox.checked);
+            updateBulkUI();
+        }
+
+        function updateBulkUI() {
+            const checkedCount = document.querySelectorAll('.item-checkbox:checked').length;
+            const bulkBtn = document.getElementById('bulkDeleteBtn');
+            
+            if (checkedCount > 0) {
+                bulkBtn.classList.remove('hidden');
+                bulkBtn.innerHTML = `
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    Padam Terpilih (${checkedCount})
+                `;
+            } else {
+                bulkBtn.classList.add('hidden');
+            }
+        }
+
+        // Event listener untuk setiap checkbox individu
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('item-checkbox')) {
+                updateBulkUI();
+            }
         });
+
+        // 4. SISTEM TERJEMAHAN (LANGUAGE SWITCHER)
+        const translations = {
+            ms: {
+                dashboard: "Papan Pemuka Admin",
+                searchPlaceholder: "Cari S/N, P/N, atau Nama Aset...",
+                logout: "Log Keluar",
+                tableAsset: "Butiran Aset",
+                tableDefect: "Kerosakan",
+                tableStatus: "Status & Garis Masa",
+                tableAction: "Tindakan"
+            },
+            en: {
+                dashboard: "Admin Dashboard",
+                searchPlaceholder: "Search S/N, P/N, or Asset Name...",
+                logout: "Sign Out",
+                tableAsset: "Asset Details",
+                tableDefect: "Defect / Job Scope",
+                tableStatus: "Status & Timeline",
+                tableAction: "Actions"
+            }
+        };
+
+        function changeLanguage(lang) {
+            localStorage.setItem('g7_lang', lang);
+            const t = translations[lang];
+
+            // Kemaskini UI Teks
+            document.getElementById('t-dashboard').innerText = t.dashboard;
+            document.getElementById('searchInput').placeholder = t.searchPlaceholder;
+            document.getElementById('t-logout').innerText = t.logout;
+            document.getElementById('t-th-asset').innerText = t.tableAsset;
+            document.getElementById('t-th-defect').innerText = t.tableDefect;
+            document.getElementById('t-th-status').innerText = t.tableStatus;
+            document.getElementById('t-th-action').innerText = t.tableAction;
+
+            // Update Gaya Butang Bahasa
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('bg-slate-900', 'text-white');
+                btn.classList.add('text-slate-400');
+            });
+            const activeBtn = document.getElementById('btn-' + lang);
+            activeBtn.classList.remove('text-slate-400');
+            activeBtn.classList.add('bg-slate-900', 'text-white');
+        }
+
+        // 5. INITIALIZATION
+        window.onload = () => {
+            const savedLang = localStorage.getItem('g7_lang') || 'ms';
+            changeLanguage(savedLang);
+        };
+
+        // Close modal if user clicks outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('qrModal');
+            if (event.target == modal) {
+                closeQR();
+            }
+        }
     </script>
 </body>
 </html>

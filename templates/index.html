@@ -3,35 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G7 Aerospace | Service Log</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="G7 Aerospace Authorized Maintenance Log System">
+    
+    <title>G7 Aerospace | Service Log & Data Entry</title>
+    
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #0f172a;
+            color: #1e293b;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
         select {
             appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%231e3a8a'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-position: right 1rem center;
             background-size: 1.5em;
         }
 
+        .lang-btn {
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .lang-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
         .lang-btn.active {
             background-color: #1e3a8a;
-            color: white;
+            color: #ffffff;
             border-color: #1e3a8a;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #1e3a8a;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+        }
+
+        .progress-wrapper {
+            transition: all 0.3s ease-in-out;
+        }
+        
+        #progressBar {
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569; 
         }
     </style>
 </head>
-<body class="bg-slate-900 min-h-screen p-4 flex flex-col items-center justify-center">
 
-    <div class="fixed top-6 right-6 flex gap-2 bg-white/10 p-1 rounded-full backdrop-blur-md border border-white/20 z-50">
-        <button onclick="changeLanguage('ms')" id="btn-ms" class="lang-btn px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all text-slate-400 hover:text-white">
+<body class="min-h-screen p-4 flex flex-col items-center justify-center">
+
+    <div class="fixed top-6 right-6 flex gap-2 bg-white/10 p-1 rounded-full backdrop-blur-md border border-white/20 z-50 shadow-xl">
+        <button onclick="changeLanguage('ms')" id="btn-ms" class="lang-btn px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest cursor-pointer text-slate-400">
             Melayu
         </button>
-        <button onclick="changeLanguage('en')" id="btn-en" class="lang-btn px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all text-slate-400 hover:text-white">
+        <button onclick="changeLanguage('en')" id="btn-en" class="lang-btn px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest cursor-pointer text-slate-400">
             English
         </button>
     </div>
@@ -39,93 +95,164 @@
     <div class="max-w-2xl w-full bg-white p-10 rounded-[3rem] shadow-2xl border-t-8 border-blue-900 relative my-10">
         
         <div class="text-center mb-10">
-            <h1 class="text-4xl font-black text-blue-900 uppercase italic leading-none tracking-tighter">
+            <h1 class="text-4xl font-black text-blue-900 uppercase italic leading-none tracking-tighter hover:scale-105 transition-transform cursor-default">
                 G7 <span class="text-slate-400">Aerospace</span>
             </h1>
-            <p id="t-subtitle" class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mt-3">Authorized Maintenance Log</p>
+            <p id="t-subtitle" class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mt-3 border-b border-slate-100 pb-4 inline-block">
+                Authorized Maintenance Log
+            </p>
         </div>
 
-        <form action="/incoming" method="POST" class="space-y-6">
-            <div>
-                <label id="t-label-equip" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Name Equipment</label>
-                <input type="text" name="peralatan" id="p-equip" placeholder="ENTER EQUIPMENT TYPE" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
+        <form action="/incoming" method="POST" id="mainForm" class="space-y-6">
+            
+            <div class="form-group">
+                <label id="t-label-equip" for="p-equip" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">
+                    Name Equipment
+                </label>
+                <input type="text" name="peralatan" id="p-equip" placeholder="ENTER EQUIPMENT TYPE" 
+                    class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-800 uppercase focus:border-blue-900 outline-none transition-all shadow-sm placeholder-slate-300" 
+                    required autocomplete="off">
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label id="t-label-pn" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Part Number (P/N)</label>
-                    <input type="text" name="pn" id="p-pn" placeholder="ENTER P/N" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                <div class="form-group">
+                    <label id="t-label-pn" for="p-pn" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">
+                        Part Number (P/N)
+                    </label>
+                    <input type="text" name="pn" id="p-pn" placeholder="ENTER P/N" 
+                        class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm placeholder-slate-300" 
+                        required>
                 </div>
-                <div>
-                    <label id="t-label-sn" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Serial Number (S/N)</label>
-                    <input type="text" name="sn" id="p-sn" placeholder="ENTER S/N" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-mono font-black text-blue-600 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
+
+                <div class="form-group">
+                    <label id="t-label-sn" for="p-sn" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">
+                        Serial Number (S/N)
+                    </label>
+                    <input type="text" name="sn" id="p-sn" placeholder="ENTER S/N" 
+                        class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-mono font-black text-blue-600 uppercase focus:border-blue-900 outline-none transition-all shadow-sm placeholder-slate-300" 
+                        required>
                 </div>
             </div>
 
-            <div>
-                <label id="t-label-defect" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Defect / Remarks</label>
-                <textarea name="defect" id="p-defect" placeholder="DESCRIBE THE DEFECT" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" rows="2"></textarea>
+            <div class="form-group">
+                <label id="t-label-defect" for="p-defect" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">
+                    Defect / Remarks
+                </label>
+                <textarea name="defect" id="p-defect" placeholder="DESCRIBE THE DEFECT" rows="2"
+                    class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm placeholder-slate-300 resize-none"></textarea>
             </div>
 
-            <div>
-                <label id="t-label-status" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">Authorization Status</label>
-                <select name="status" id="s-status" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm" required>
-                    <option value="" id="t-opt-status" disabled selected>CHOOSE STATUS</option>
-                    <option value="SERVICEABLE">SERVICEABLE</option>
-                    <option value="READY TO QUOTE">READY TO QUOTE</option>
-                    <option value="READY TO DELIVERED">READY TO DELIVERED</option>
-                    <option value="RETURN TO AEROTREE">RETURN TO AEROTREE</option>
-                    <option value="WARRANTY REPAIR">WARRANTY REPAIR</option>
-                    <option value="TDI ON PROGRESS">TDI ON PROGRESS</option>
-                    <option value="OV TDI">OV TDI</option>
-                </select>
+            <div class="form-group">
+                <label id="t-label-pic" for="p-pic" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">
+                    PIC / Remarks
+                </label>
+                <input type="text" name="pic" id="p-pic" placeholder="ENTER PIC OR REMARKS" 
+                    class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm placeholder-slate-300">
+            </div>
+
+            <div class="form-group">
+                <label id="t-label-status" for="s-status" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-1 block tracking-widest">
+                    Authorization Status
+                </label>
+                <div class="relative">
+                    <select name="status" id="s-status" 
+                        class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-700 uppercase focus:border-blue-900 outline-none transition-all shadow-sm cursor-pointer" 
+                        required>
+                        <option value="" id="t-opt-status" disabled selected>CHOOSE STATUS</option>
+                        <option value="SERVICEABLE">SERVICEABLE</option>
+                        <option value="READY TO QUOTE">READY TO QUOTE</option>
+                        <option value="READY TO DELIVERED">READY TO DELIVERED</option>
+                        <option value="RETURN TO AEROTREE">RETURN TO AEROTREE</option>
+                        <option value="WARRANTY REPAIR">WARRANTY REPAIR</option>
+                        <option value="TDI ON PROGRESS">TDI ON PROGRESS</option>
+                        <option value="OV TDI">OV TDI</option>
+                        <option value="UNDER REPAIR">UNDER REPAIR</option>
+                    </select>
+                </div>
             </div>
 
             <input type="hidden" name="drn" value="-">
-            <input type="hidden" name="status_type" value="REPAIR">
-            <input type="hidden" name="pic" value="N/A"> 
-            
             <input type="hidden" name="date_in" id="current_date" value="">
 
-            <div class="flex flex-col gap-4 pt-2">
-                <button type="submit" id="t-btn-save" class="w-full bg-blue-900 text-white font-black py-6 rounded-[2rem] hover:bg-black transition-all shadow-xl uppercase tracking-widest text-sm italic">
-                    Confirm & Save Log
+            <div class="flex flex-col gap-4 pt-4 border-t border-slate-50 mt-6">
+                <button type="submit" id="t-btn-save" 
+                    class="w-full bg-blue-900 text-white font-black py-6 rounded-[2rem] hover:bg-black hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 shadow-xl uppercase tracking-widest text-sm italic relative overflow-hidden group">
+                    <span class="relative z-10">Confirm & Save Log</span>
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-800 to-indigo-900 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </button>
-                <a href="/login" id="t-btn-admin" class="w-full bg-slate-100 text-slate-500 text-center font-black py-4 rounded-[2rem] hover:bg-slate-200 transition-all uppercase tracking-[0.3em] text-[10px] no-underline">
+                
+                <a href="/login" id="t-btn-admin" 
+                    class="w-full bg-slate-100 text-slate-500 text-center font-black py-4 rounded-[2rem] hover:bg-slate-200 hover:text-slate-800 transition-all uppercase tracking-[0.3em] text-[10px] no-underline border border-transparent hover:border-slate-300">
                     Admin Access Portal
                 </a>
             </div>
         </form>
 
-        <div class="mt-10 pt-8 border-t-2 border-slate-50">
-            <label id="t-label-bulk" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-3 block tracking-widest">Bulk Import (Excel)</label>
+        <div class="mt-12 pt-10 border-t-2 border-slate-50 relative">
+            <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white px-4 text-slate-300 text-[10px] font-black uppercase tracking-widest">
+                OR
+            </div>
+
+            <label id="t-label-bulk" class="text-[10px] font-black uppercase text-blue-900/40 ml-4 mb-3 block tracking-widest">
+                Bulk Import (Excel / CSV)
+            </label>
+            
             <div class="relative group">
                 <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden">
-                <label for="excelInput" class="w-full flex items-center justify-between p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-blue-900 transition-all group">
-                    <span id="fileName" class="text-xs font-bold text-slate-400 uppercase">Pilih fail Excel (P/N, S/N, DESCRIPTION)...</span>
-                    <span id="t-btn-browse" class="bg-slate-200 text-slate-600 text-[10px] font-black px-4 py-2 rounded-xl uppercase group-hover:bg-blue-900 group-hover:text-white transition-colors">Browse</span>
+                <label for="excelInput" 
+                    class="w-full flex items-center justify-between p-5 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-blue-900 hover:bg-blue-50/30 transition-all group duration-300">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-slate-200 p-2 rounded-lg text-slate-500 group-hover:bg-blue-200 group-hover:text-blue-800 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        </div>
+                        <span id="fileName" class="text-xs font-bold text-slate-400 uppercase truncate max-w-[200px] sm:max-w-xs">
+                            Pilih fail Excel...
+                        </span>
+                    </div>
+                    <span id="t-btn-browse" class="bg-slate-200 text-slate-600 text-[10px] font-black px-4 py-2 rounded-xl uppercase group-hover:bg-blue-900 group-hover:text-white transition-colors shadow-sm">
+                        Browse
+                    </span>
                 </label>
             </div>
 
-            <div id="progressContainer" class="mt-4 hidden">
-                <div class="w-full bg-slate-100 rounded-full h-4 overflow-hidden border border-slate-200">
-                    <div id="progressBar" class="bg-emerald-500 h-full w-0 transition-all duration-300"></div>
+            <div id="progressContainer" class="mt-6 hidden transition-all">
+                <div class="flex justify-between items-end mb-1">
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Uploading Status</span>
+                    <span id="percentageText" class="text-[9px] font-black text-emerald-600">0%</span>
                 </div>
-                <p id="progressText" class="text-[10px] font-black text-emerald-600 uppercase mt-2 text-center tracking-widest">Sedia untuk import...</p>
+                <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden border border-slate-200">
+                    <div id="progressBar" class="bg-gradient-to-r from-emerald-400 to-emerald-600 h-full w-0 transition-all duration-300 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                </div>
+                <p id="progressText" class="text-[10px] font-black text-emerald-600 uppercase mt-2 text-center tracking-widest">
+                    Sedia untuk import...
+                </p>
             </div>
 
-            <button onclick="uploadExcel()" id="uploadBtn" class="w-full mt-4 bg-emerald-600 text-white font-black py-4 rounded-[2rem] hover:bg-black transition-all shadow-lg uppercase tracking-widest text-[10px] hidden">
-                🚀 <span id="t-btn-import">Start Import Data</span>
+            <button onclick="uploadExcel()" id="uploadBtn" 
+                class="w-full mt-4 bg-emerald-600 text-white font-black py-4 rounded-[2rem] hover:bg-black hover:shadow-lg transition-all shadow-md uppercase tracking-widest text-[10px] hidden flex items-center justify-center gap-2 transform active:scale-95">
+                <span>🚀</span> <span id="t-btn-import">Start Import Data</span>
             </button>
         </div>
 
-        <div class="mt-8 text-center">
-            <p class="text-[8px] font-bold text-slate-300 uppercase tracking-widest">© 2024 G7 Aerospace Digital System</p>
+        <div class="mt-12 text-center border-t border-slate-50 pt-6">
+            <p class="text-[8px] font-bold text-slate-300 uppercase tracking-widest hover:text-blue-300 transition-colors cursor-default">
+                © 2024-2026 G7 Aerospace Digital System v4.5
+            </p>
         </div>
     </div>
 
     <script>
-        // --- SISTEM BAHASA ---
+        // Auto Date Generator
+        document.getElementById('mainForm').addEventListener('submit', function() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            document.getElementById('current_date').value = `${year}-${month}-${day}`;
+        });
+
+        // Language Dictionary
         const dictionary = {
             ms: {
                 subtitle: "Log Penyelenggaraan Sah",
@@ -137,16 +264,18 @@
                 phSn: "MASUKKAN S/N",
                 labelDefect: "Kerosakan / Catatan",
                 phDefect: "JELASKAN KEROSAKAN",
+                labelPic: "PIC / Catatan",
+                phPic: "MASUKKAN PIC ATAU CATATAN",
                 labelStatus: "Status Kebenaran",
                 optStatus: "PILIH STATUS",
                 btnSave: "Sahkan & Simpan Log",
                 btnAdmin: "Portal Akses Admin",
                 labelBulk: "Import Pukal (Excel)",
-                phFile: "Pilih fail Excel (P/N, S/N, DESCRIPTION)...",
+                phFile: "Pilih fail Excel...",
                 btnBrowse: "Cari",
                 btnImport: "Mulakan Import Data",
                 textReady: "Sedia untuk import...",
-                textImporting: "IMPORTING"
+                textImporting: "SEDANG IMPORT"
             },
             en: {
                 subtitle: "Authorized Maintenance Log",
@@ -158,12 +287,14 @@
                 phSn: "ENTER S/N",
                 labelDefect: "Defect / Remarks",
                 phDefect: "DESCRIBE THE DEFECT",
+                labelPic: "PIC / Remarks",
+                phPic: "ENTER PIC OR REMARKS",
                 labelStatus: "Authorization Status",
                 optStatus: "CHOOSE STATUS",
                 btnSave: "Confirm & Save Log",
                 btnAdmin: "Admin Access Portal",
                 labelBulk: "Bulk Import (Excel)",
-                phFile: "Choose Excel file (P/N, S/N, DESCRIPTION)...",
+                phFile: "Choose Excel file...",
                 btnBrowse: "Browse",
                 btnImport: "Start Import Data",
                 textReady: "Ready to import...",
@@ -174,24 +305,36 @@
         function changeLanguage(lang) {
             localStorage.setItem('g7_lang', lang);
             const t = dictionary[lang];
-            document.getElementById('t-subtitle').innerText = t.subtitle;
-            document.getElementById('t-label-equip').innerText = t.labelEquip;
+
+            const elements = {
+                't-subtitle': t.subtitle,
+                't-label-equip': t.labelEquip,
+                't-label-pn': t.labelPn,
+                't-label-sn': t.labelSn,
+                't-label-defect': t.labelDefect,
+                't-label-pic': t.labelPic,
+                't-label-status': t.labelStatus,
+                't-opt-status': t.optStatus,
+                't-btn-save': t.btnSave,
+                't-btn-admin': t.btnAdmin,
+                't-label-bulk': t.labelBulk,
+                'fileName': t.phFile,
+                't-btn-browse': t.btnBrowse,
+                't-btn-import': t.btnImport,
+                'progressText': t.textReady
+            };
+
+            for (const [id, text] of Object.entries(elements)) {
+                const el = document.getElementById(id);
+                if (el) el.innerText = text;
+            }
+
             document.getElementById('p-equip').placeholder = t.phEquip;
-            document.getElementById('t-label-pn').innerText = t.labelPn;
             document.getElementById('p-pn').placeholder = t.phPn;
-            document.getElementById('t-label-sn').innerText = t.labelSn;
             document.getElementById('p-sn').placeholder = t.phSn;
-            document.getElementById('t-label-defect').innerText = t.labelDefect;
             document.getElementById('p-defect').placeholder = t.phDefect;
-            document.getElementById('t-label-status').innerText = t.labelStatus;
-            document.getElementById('t-opt-status').innerText = t.optStatus;
-            document.getElementById('t-btn-save').innerText = t.btnSave;
-            document.getElementById('t-btn-admin').innerText = t.btnAdmin;
-            document.getElementById('t-label-bulk').innerText = t.labelBulk;
-            document.getElementById('fileName').innerText = t.phFile;
-            document.getElementById('t-btn-browse').innerText = t.btnBrowse;
-            document.getElementById('t-btn-import').innerText = t.btnImport;
-            document.getElementById('progressText').innerText = t.textReady;
+            document.getElementById('p-pic').placeholder = t.phPic;
+
             document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('btn-' + lang).classList.add('active');
         }
@@ -199,27 +342,34 @@
         const savedLang = localStorage.getItem('g7_lang') || 'ms';
         changeLanguage(savedLang);
 
+        // Excel File Handler
         const excelInput = document.getElementById('excelInput');
         const fileNameDisplay = document.getElementById('fileName');
         const uploadBtn = document.getElementById('uploadBtn');
         const progressContainer = document.getElementById('progressContainer');
         const progressBar = document.getElementById('progressBar');
         const progressText = document.getElementById('progressText');
+        const percentageText = document.getElementById('percentageText');
 
         excelInput.addEventListener('change', function(e) {
             if(e.target.files.length > 0) {
-                fileNameDisplay.innerText = e.target.files[0].name;
+                const fName = e.target.files[0].name;
+                fileNameDisplay.innerText = fName;
                 fileNameDisplay.classList.remove('text-slate-400');
                 fileNameDisplay.classList.add('text-blue-900');
+                
                 uploadBtn.classList.remove('hidden');
                 progressContainer.classList.add('hidden');
+                progressBar.style.width = '0%';
             }
         });
 
+        // Date Parser
         function parseExcelDate(val) {
             if (!val || val === "0" || val === "" || val === 0 || String(val).toUpperCase() === "N/A" || val === "-") return "";
             
             let date;
+            
             if (typeof val === 'number') {
                 date = new Date(Math.round((val - 25569) * 86400 * 1000));
             } 
@@ -249,121 +399,148 @@
             return ""; 
         }
 
+        // ✅ FIXED: Excel Upload — auto header + separate JTP & REMARKS → PIC
         function uploadExcel() {
             const file = excelInput.files[0];
             const reader = new FileReader();
 
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array', cellDates: true});
-                    const firstSheetName = workbook.SheetNames[0];
-                    const firstSheet = workbook.Sheets[firstSheetName];
-                    
-                    const rawRows = XLSX.utils.sheet_to_json(firstSheet, {header: 1, defval: ""});
-                    
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rawRows = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: ""});
+
+                    // ─── 1. AUTO-DETECT header row ───
                     let headerIndex = -1;
-                    for (let i = 0; i < rawRows.length; i++) {
-                        const row = rawRows[i].map(c => String(c).toUpperCase().trim());
-                        if (row.includes("PART NO") || row.includes("DESCRIPTION") || row.includes("SERIAL NO") || row.includes("DATE IN")) {
-                            headerIndex = i;
-                            break;
-                        }
+                    const keywords = ['part no', 'serial no', 'description', 'date in', 'status'];
+                    for (let i = 0; i < Math.min(15, rawRows.length); i++) {
+                        const rowLower = rawRows[i].map(c => String(c || '').toLowerCase());
+                        const hits = keywords.filter(kw => rowLower.includes(kw)).length;
+                        if (hits >= 3) { headerIndex = i; break; }
                     }
+                    if (headerIndex === -1) headerIndex = 0;
+                    const headerRow = rawRows[headerIndex];
+                    console.log('📋 Header at row', headerIndex, '→', headerRow);
 
-                    if (headerIndex === -1) {
-                        alert("Gagal cari tajuk kolum.");
-                        return;
-                    }
+                    // ─── 2. MAP columns by exact header name ───
+                    const colMap = {};
+                    headerRow.forEach((h, idx) => {
+                        const key = String(h || '').toLowerCase().trim();
+                        if (key === 'part no')          colMap.pn      = idx;
+                        else if (key === 'description') colMap.desc    = idx;
+                        else if (key === 'serial no')   colMap.sn      = idx;
+                        else if (key === 'date in')     colMap.dateIn  = idx;
+                        else if (key === 'date out')    colMap.dateOut = idx;
+                        else if (key === 'status')      colMap.status  = idx;
+                        else if (key === 'jtp')         colMap.jtp     = idx;     // JTP separate
+                        else if (key === 'remarks')     colMap.remarks = idx;     // REMARKS separate
+                        else if (key === 'defect')      colMap.defect  = idx;     // DEFECT only
+                    });
+                    colMap.pn      = colMap.pn      ?? 1;
+                    colMap.desc    = colMap.desc    ?? 2;
+                    colMap.sn      = colMap.sn      ?? 3;
+                    colMap.dateIn  = colMap.dateIn  ?? 4;
+                    colMap.dateOut = colMap.dateOut  ?? 5;
+                    colMap.status  = colMap.status  ?? 6;
+                    // jtp / remarks / defect → NO hardcoded fallback
+                    console.log('📊 colMap:', colMap);
 
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, {range: headerIndex});
-                    
-                    const formattedData = jsonData.map(row => {
-                        const getVal = (keys) => {
-                            const foundKey = Object.keys(row).find(k => keys.includes(k.trim().toUpperCase()));
-                            return foundKey ? row[foundKey] : "";
-                        };
+                    // ─── 3. PROCESS each data row ───
+                    const dataRows = rawRows.slice(headerIndex + 1);
+                    const formattedData = dataRows.map((row, idx) => {
+                        const pn = String(row[colMap.pn] || '').trim().toUpperCase();
+                        const sn = String(row[colMap.sn] || '').trim().toUpperCase();
 
-                        // 1. LOGIK STATUS & DEFECT (Membezakan maklumat)
-                        let rawRemark = String(getVal(["DEFECT", "REMARKS", "KEROSAKAN", "CATATAN", "WARRANTY"]) || "N/A").toUpperCase();
-                        let finalStatus = "SERVICEABLE";
-                        let finalDefect = rawRemark;
+                        // skip empty / sub-header rows (e.g. 2022 has "DATE OUT","DATE IN","VENDOR" row)
+                        if (!pn && !sn)                                          return null;
+                        if (pn === 'PART NO' || sn === 'SERIAL NO')             return null;
+                        if (pn === 'DATE OUT' || pn === 'DATE IN' || pn === 'VENDOR') return null;
+                        if (pn === '' || sn === '')                              return null;
 
-                        // Jika dalam catatan ada perkataan "WARRANTY"
-                        if (rawRemark.includes("WARRANTY")) {
-                            finalStatus = "WARRANTY REPAIR";
-                            // Jika hanya tulis "WARRANTY G7", kita letak kerosakan sebagai N/A melainkan ada info lain
-                            if (rawRemark === "WARRANTY G7" || rawRemark === "WARRANTY") {
-                                finalDefect = "N/A";
-                            }
-                        }
+                        // PIC = JTP + REMARKS combined (whichever has value)
+                        const jtpVal     = (colMap.jtp     !== undefined) ? String(row[colMap.jtp]     || '').trim() : '';
+                        const remarksVal = (colMap.remarks !== undefined) ? String(row[colMap.remarks] || '').trim() : '';
+                        const picParts   = [jtpVal, remarksVal].filter(v => v && v.toLowerCase() !== 'nan');
+                        const picFinal   = picParts.join(' ').trim() || 'N/A';
 
-                        // 2. LOGIK DATE OUT (Pastikan dikesan)
-                        let dateOutVal = getVal(["DATE OUT", "DATE_OUT", "OUTGOING", "TARIKH KELUAR", "D_OUT"]);
+                        // DEFECT
+                        const rawDef   = (colMap.defect !== undefined) ? String(row[colMap.defect] || '').trim() : '';
+                        const defFinal = (rawDef && rawDef.toLowerCase() !== 'nan') ? rawDef : 'N/A';
+
+                        if (idx < 3) console.log(`Row ${idx+1}: PIC="${picFinal}" DEFECT="${defFinal}"`);
 
                         return {
-                            drn: "-",
-                            peralatan: String(getVal(["DESCRIPTION", "COMPONENT", "EQUIPMENT", "PERALATAN", "ITEM"])).toUpperCase(),
-                            pn: String(getVal(["PART NO", "PART NO.", "PART NUMBER", "P/N"])).toUpperCase(),
-                            sn: String(getVal(["SERIAL NO", "SERIAL NO.", "SERIAL NUMBER", "S/N"])).toUpperCase(),
-                            pic: String(getVal(["PIC", "VENDOR", "JKTEK", "JTP"]) || "N/A").toUpperCase(),
-                            status: finalStatus,
-                            status_type: 'REPAIR',
-                            defect: finalDefect,
-                            date_in: parseExcelDate(getVal(["DATE IN", "DATE_IN", "INCOMING", "TARIKH MASUK"])),
-                            date_out: parseExcelDate(dateOutVal) 
+                            "DRN": "-",
+                            "PERALATAN": String(row[colMap.desc]  || 'N/A').trim().toUpperCase(),
+                            "P/N":       pn,
+                            "S/N":       sn,
+                            "DATE IN":   parseExcelDate(row[colMap.dateIn]),
+                            "DATE OUT":  parseExcelDate(row[colMap.dateOut]),
+                            "STATUS":    String(row[colMap.status] || 'UNDER REPAIR').trim().toUpperCase(),
+                            "PIC":       picFinal.toUpperCase(),
+                            "DEFECT":    defFinal.toUpperCase()
                         };
-                    }).filter(item => {
-                        const sn = String(item.sn).toUpperCase().trim();
-                        const pn = String(item.pn).toUpperCase().trim();
-                        return (sn !== "" && sn !== "N/A" && pn !== "" && pn !== "N/A");
-                    });
+                    }).filter(item => item !== null);
 
+                    console.log(`📦 Valid rows: ${formattedData.length}`);
                     if (formattedData.length > 0) {
                         processImport(formattedData);
                     } else {
-                        alert("Tiada data sah dijumpai.");
+                        alert("No valid data found in this file.");
                     }
                 } catch (err) {
-                    alert("Ralat memproses fail: " + err.message);
+                    console.error(err);
+                    alert("System Error: " + err.message);
                 }
             };
             reader.readAsArrayBuffer(file);
         }
 
+        // Process Import with Progress
         async function processImport(dataList) {
             uploadBtn.classList.add('hidden');
             progressContainer.classList.remove('hidden');
-            const total = dataList.length;
-            let successCount = 0;
-            const chunkSize = 10; 
+            
             const lang = localStorage.getItem('g7_lang') || 'ms';
 
-            for (let i = 0; i < total; i += chunkSize) {
-                const chunk = dataList.slice(i, i + chunkSize);
-                const requests = chunk.map(item => {
-                    const params = new URLSearchParams();
-                    for (const key in item) {
-                        params.append(key, item[key]);
-                    }
-
-                    return fetch('/incoming', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: params
-                    }).then(res => { if(res.ok) successCount++; })
+            // Send as JSON to /import_bulk endpoint
+            try {
+                const response = await fetch('/import_bulk', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ data: dataList })
                 });
+
+                // Simulate progress
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 10;
+                    if (progress <= 90) {
+                        progressBar.style.width = progress + "%";
+                        percentageText.innerText = progress + "%";
+                        progressText.innerText = `${dictionary[lang].textImporting}... (${progress}%)`;
+                    }
+                }, 200);
+
+                const result = await response.json();
                 
-                await Promise.all(requests);
-                const currentProgress = Math.min(i + chunkSize, total);
-                const percentage = Math.round((currentProgress / total) * 100);
-                progressBar.style.width = percentage + "%";
-                progressText.innerText = `${dictionary[lang].textImporting}: ${percentage}% (${currentProgress}/${total})`;
+                clearInterval(interval);
+                progressBar.style.width = "100%";
+                percentageText.innerText = "100%";
+
+                if (result.status === 'success') {
+                    alert(`Import Complete! ${result.count} records saved successfully.`);
+                    window.location.reload();
+                } else {
+                    alert('Import failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+                console.error(error);
             }
-            setTimeout(() => {
-                alert(`Selesai! ${successCount} rekod berjaya diimport.`);
-                window.location.reload();
-            }, 800);
         }
     </script>
 </body>
