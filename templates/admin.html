@@ -736,7 +736,8 @@
 
                     if (res.ok) {
                         const result = await res.json();
-                        alert(`✅ Berjaya import ${result.count} rekod!`);
+                        const skipMsg = result.skipped ? ` (${result.skipped} duplicate(s) skipped)` : '';
+                        alert(`✅ Berjaya import ${result.count} rekod!${skipMsg}`);
                         location.reload();
                     } else {
                         const err = await res.text();

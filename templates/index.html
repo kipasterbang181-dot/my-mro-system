@@ -560,7 +560,8 @@
                 percentageText.innerText = "100%";
 
                 if (result.status === 'success') {
-                    alert(`Import Complete! ${result.count} records saved successfully.`);
+                    const skipMsg = result.skipped ? ` (${result.skipped} duplicate(s) skipped)` : '';
+                    alert(`Import Complete! ${result.count} records saved.${skipMsg}`);
                     window.location.reload();
                 } else {
                     alert('Import failed: ' + (result.error || 'Unknown error'));
