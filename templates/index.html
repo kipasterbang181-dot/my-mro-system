@@ -504,9 +504,9 @@
             
             const lang = localStorage.getItem('g7_lang') || 'ms';
 
-            // Send as JSON to /import_bulk endpoint
+            // Send as JSON to /import_bulk_public endpoint (no login required)
             try {
-                const response = await fetch('/import_bulk', {
+                const response = await fetch('/import_bulk_public', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json'
