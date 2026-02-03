@@ -421,6 +421,11 @@
                 <button onclick="exportFullDatabase()" class="bg-white text-blue-900 py-5 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-cyan-50 transition-all shadow-xl shadow-blue-900/40 transform active:scale-95">
                     Export Full Excel 📥
                 </button>
+
+                <!-- Cleanup Duplicates Button -->
+                <button onclick="cleanupDuplicates()" class="mt-4 bg-red-100 text-red-800 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-red-200 transition-all shadow-md transform active:scale-95">
+                    🧹 Remove Duplicates
+                </button>
             </div>
         </div>
 
@@ -757,6 +762,24 @@
         }
 
         /**
+        /**
+         * FUNGSI: CLEANUP DUPLICATES
+         * Calls /cleanup_duplicates endpoint to remove duplicate records from DB
+         */
+        async function cleanupDuplicates() {
+            if (!confirm("This will remove ALL duplicate records from the database.\nOnly the first occurrence of each record will be kept.\n\nAre you sure?")) return;
+            try {
+                const res = await fetch("/cleanup_duplicates", { method: "POST", headers: { "Content-Type": "application/json" } });
+                const result = await res.json();
+                if (res.ok) {
+                    alert("✅ Cleanup done! " + result.deleted + " duplicate record(s) removed.");
+                    location.reload();
+                } else {
+                    alert("❌ Error: " + (result.error || "Unknown error"));
+                }
+            } catch(e) { alert("❌ Network error: " + e.message); }
+        }
+
          * FUNGSI 2: EXPORT DATABASE TO EXCEL
          * Memuat turun jadual yang dipaparkan ke fail .xlsx
          */

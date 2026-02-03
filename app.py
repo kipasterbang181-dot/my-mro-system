@@ -770,6 +770,62 @@ def export_excel_data():
         return f"Error Exporting Excel: {e}"
 
 # ==============================================================================
+# CLEANUP — Padam duplikat dari DB (admin only)
+# ==============================================================================
+
+@app.route('/cleanup_duplicates', methods=['POST'])
+def cleanup_duplicates():
+    """
+    Removes exact duplicate records from DB.
+    Keeps the FIRST (lowest ID) for each (pn, sn, date_in) group.
+    Admin only.
+    """
+    if not session.get('admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    try:
+        # Get all records grouped by (pn, sn, date_in)
+        from sqlalchemy import func
+        
+        # Find duplicate groups: (pn, sn, date_in) that appear more than once
+        duplicates_query = (
+            db.session.query(
+                RepairLog.pn,
+                RepairLog.sn,
+                RepairLog.date_in,
+                func.count(RepairLog.id).label('cnt'),
+                func.min(RepairLog.id).label('keep_id')  # keep the lowest ID
+            )
+            .group_by(RepairLog.pn, RepairLog.sn, RepairLog.date_in)
+            .having(func.count(RepairLog.id) > 1)
+            .all()
+        )
+
+        deleted_count = 0
+        for dup in duplicates_query:
+            # Delete all records in this group EXCEPT the one with lowest ID
+            count = (
+                RepairLog.query
+                .filter(
+                    RepairLog.pn == dup.pn,
+                    RepairLog.sn == dup.sn,
+                    RepairLog.date_in == dup.date_in,
+                    RepairLog.id != dup.keep_id
+                )
+                .delete()
+            )
+            deleted_count += count
+
+        db.session.commit()
+        logger.info(f"Cleanup: deleted {deleted_count} duplicate records")
+        return jsonify({"status": "success", "deleted": deleted_count}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Cleanup Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# ==============================================================================
 # LALUAN PUBLIC IMPORT (tanpa login) — digunakan oleh index.html
 # ==============================================================================
 
