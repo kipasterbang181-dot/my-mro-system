@@ -184,11 +184,14 @@ def _parse_import_date(d_str):
 
 
 def _build_existing_set():
-    """Load all existing (pn, sn, date_in) tuples from DB once."""
+    """
+    Load all existing (pn, sn, date_in) tuples from DB.
+    Returns uppercase keys for case-insensitive dedupe comparison.
+    """
     rows = db.session.query(RepairLog.pn, RepairLog.sn, RepairLog.date_in).all()
     return {(
-        str(r[0] or '').upper().strip(),
-        str(r[1] or '').upper().strip(),
+        str(r[0] or '').upper().strip(),  # uppercase for comparison
+        str(r[1] or '').upper().strip(),  # uppercase for comparison
         str(r[2]) if r[2] else ''
     ) for r in rows}
 
@@ -196,8 +199,8 @@ def _build_existing_set():
 def _process_import_payload(data_list):
     """
     Core import logic shared by /import_bulk and /import_bulk_public.
-    • Deduplicates against DB  AND  within the incoming batch.
-    • Runs normalize_status() on every STATUS value.
+    • Deduplicates against DB AND within the incoming batch.
+    • ✅ PRESERVES EXACT Excel values (no normalization, no uppercase)
     Returns (list[RepairLog], skipped_count).
     """
     existing_set  = _build_existing_set()
@@ -209,9 +212,12 @@ def _process_import_payload(data_list):
         d_in  = _parse_import_date(item.get('DATE IN'))  or datetime.now().date()
         d_out = _parse_import_date(item.get('DATE OUT'))
 
-        pn_val = str(item.get('P/N',  item.get('PART NO',   'N/A'))).upper().strip()
-        sn_val = str(item.get('S/N',  item.get('SERIAL NO', 'N/A'))).upper().strip()
-        key    = (pn_val, sn_val, str(d_in))
+        # ✅ NO .upper() - preserve exact case from Excel
+        pn_val = str(item.get('P/N',  item.get('PART NO',   'N/A'))).strip()
+        sn_val = str(item.get('S/N',  item.get('SERIAL NO', 'N/A'))).strip()
+        
+        # Dedupe key uses uppercase for comparison only
+        key = (pn_val.upper(), sn_val.upper(), str(d_in))
 
         if key in existing_set or key in seen_in_batch:
             skipped += 1
@@ -219,15 +225,15 @@ def _process_import_payload(data_list):
         seen_in_batch.add(key)
 
         logs_to_add.append(RepairLog(
-            drn        = str(item.get('DRN', 'N/A')).upper(),
-            peralatan  = str(item.get('PERALATAN', item.get('DESCRIPTION', 'N/A'))).upper(),
-            pn         = pn_val,
-            sn         = sn_val,
+            drn        = str(item.get('DRN', '-')).strip(),
+            peralatan  = str(item.get('PERALATAN', item.get('DESCRIPTION', 'N/A'))).strip(),
+            pn         = pn_val,  # ✅ Exact case from Excel
+            sn         = sn_val,  # ✅ Exact case from Excel
             date_in    = d_in,
             date_out   = d_out,
-            status_type= normalize_status(item.get('STATUS', 'UNDER REPAIR')),
-            pic        = str(item.get('PIC', 'N/A')).upper(),
-            defect     = str(item.get('DEFECT', 'N/A')).upper()
+            status_type= str(item.get('STATUS', 'UNDER REPAIR')).strip(),  # ✅ Exact from Excel
+            pic        = str(item.get('PIC', 'N/A')).strip(),              # ✅ Exact from Excel
+            defect     = str(item.get('DEFECT', 'N/A')).strip()            # ✅ Exact from Excel
         ))
 
     return logs_to_add, skipped
