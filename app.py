@@ -185,14 +185,17 @@ def _parse_import_date(d_str):
 
 def _build_existing_set():
     """
-    Load all existing (pn, sn, date_in) tuples from DB.
-    Returns uppercase keys for case-insensitive dedupe comparison.
+    Load all existing records from DB for duplicate detection.
+    For repair tracking: Only flag as duplicate if P/N + S/N + DATE IN + DATE OUT all match.
+    This allows re-repairs of the same part on different dates.
+    Returns uppercase keys for case-insensitive comparison.
     """
-    rows = db.session.query(RepairLog.pn, RepairLog.sn, RepairLog.date_in).all()
+    rows = db.session.query(RepairLog.pn, RepairLog.sn, RepairLog.date_in, RepairLog.date_out).all()
     return {(
-        str(r[0] or '').upper().strip(),  # uppercase for comparison
-        str(r[1] or '').upper().strip(),  # uppercase for comparison
-        str(r[2]) if r[2] else ''
+        str(r[0] or '').upper().strip(),  # P/N
+        str(r[1] or '').upper().strip(),  # S/N
+        str(r[2]) if r[2] else '',        # DATE IN
+        str(r[3]) if r[3] else ''         # DATE OUT (added for re-repair support)
     ) for r in rows}
 
 
@@ -201,6 +204,7 @@ def _process_import_payload(data_list):
     Core import logic shared by /import_bulk and /import_bulk_public.
     • Deduplicates against DB AND within the incoming batch.
     • ✅ PRESERVES EXACT Excel values (no normalization, no uppercase)
+    • ✅ Allows re-repairs (only blocks if P/N + S/N + DATE IN + DATE OUT all match)
     Returns (list[RepairLog], skipped_count).
     """
     existing_set  = _build_existing_set()
@@ -216,8 +220,8 @@ def _process_import_payload(data_list):
         pn_val = str(item.get('P/N',  item.get('PART NO',   'N/A'))).strip()
         sn_val = str(item.get('S/N',  item.get('SERIAL NO', 'N/A'))).strip()
         
-        # Dedupe key uses uppercase for comparison only
-        key = (pn_val.upper(), sn_val.upper(), str(d_in))
+        # Dedupe key: P/N + S/N + DATE IN + DATE OUT (allows re-repairs)
+        key = (pn_val.upper(), sn_val.upper(), str(d_in), str(d_out) if d_out else '')
 
         if key in existing_set or key in seen_in_batch:
             skipped += 1
@@ -665,8 +669,9 @@ def export_excel_data():
 @app.route('/cleanup_duplicates', methods=['POST'])
 def cleanup_duplicates():
     """
-    Remove exact duplicates (same pn + sn + date_in).
-    Keeps lowest-ID record in each group.  Admin only.
+    Remove exact duplicates (same P/N + S/N + DATE IN + DATE OUT).
+    Keeps lowest-ID record in each group. Admin only.
+    ✅ Allows re-repairs (only removes if all 4 fields match)
     """
     if not session.get('admin'):
         return jsonify({"error": "Unauthorized"}), 403
@@ -675,10 +680,10 @@ def cleanup_duplicates():
 
         dup_groups = (
             db.session.query(
-                RepairLog.pn, RepairLog.sn, RepairLog.date_in,
+                RepairLog.pn, RepairLog.sn, RepairLog.date_in, RepairLog.date_out,
                 func.min(RepairLog.id).label('keep_id')
             )
-            .group_by(RepairLog.pn, RepairLog.sn, RepairLog.date_in)
+            .group_by(RepairLog.pn, RepairLog.sn, RepairLog.date_in, RepairLog.date_out)
             .having(func.count(RepairLog.id) > 1)
             .all()
         )
@@ -691,6 +696,7 @@ def cleanup_duplicates():
                     RepairLog.pn      == g.pn,
                     RepairLog.sn      == g.sn,
                     RepairLog.date_in == g.date_in,
+                    RepairLog.date_out == g.date_out,
                     RepairLog.id      != g.keep_id
                 )
                 .delete()
