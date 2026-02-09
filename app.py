@@ -205,6 +205,7 @@ def _process_import_payload(data_list):
     • Deduplicates against DB AND within the incoming batch.
     • ✅ PRESERVES EXACT Excel values (no normalization, no uppercase)
     • ✅ Allows re-repairs (only blocks if P/N + S/N + DATE IN + DATE OUT all match)
+    • ✅ Items with S/N="N/A" are ALWAYS unique (multiple units without serial numbers)
     Returns (list[RepairLog], skipped_count).
     """
     existing_set  = _build_existing_set()
@@ -220,13 +221,18 @@ def _process_import_payload(data_list):
         pn_val = str(item.get('P/N',  item.get('PART NO',   'N/A'))).strip()
         sn_val = str(item.get('S/N',  item.get('SERIAL NO', 'N/A'))).strip()
         
-        # Dedupe key: P/N + S/N + DATE IN + DATE OUT (allows re-repairs)
-        key = (pn_val.upper(), sn_val.upper(), str(d_in), str(d_out) if d_out else '')
-
-        if key in existing_set or key in seen_in_batch:
-            skipped += 1
-            continue
-        seen_in_batch.add(key)
+        # ✅ SPECIAL RULE: If S/N is "N/A", skip duplicate check (allows multiple units)
+        if sn_val.upper() in ('N/A', '', 'NONE', 'NULL'):
+            # Don't check for duplicates - always import
+            pass
+        else:
+            # Normal duplicate check for items with real serial numbers
+            key = (pn_val.upper(), sn_val.upper(), str(d_in), str(d_out) if d_out else '')
+            
+            if key in existing_set or key in seen_in_batch:
+                skipped += 1
+                continue
+            seen_in_batch.add(key)
 
         logs_to_add.append(RepairLog(
             drn        = str(item.get('DRN', '-')).strip(),
@@ -278,6 +284,20 @@ def logout():
     session.clear()
     flash("Anda telah log keluar.", "info")
     return redirect(url_for('index'))
+
+
+@app.route('/health')
+def health():
+    """
+    Health check endpoint for monitoring/cronjobs.
+    Returns 200 OK if service is running.
+    No authentication required.
+    """
+    return jsonify({
+        "status": "ok",
+        "service": "G7 Aerospace MRO System",
+        "timestamp": datetime.now().isoformat()
+    }), 200
 
 
 # ==============================================================================
