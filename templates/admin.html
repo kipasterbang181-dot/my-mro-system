@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="description" content="Sistem Pengurusan Penyelenggaraan Aset G7 Aerospace">
+    <meta name="description" content="G7 Aerospace Asset Maintenance Management System">
     <meta name="author" content="G7 Aerospace">
     
     <title>G7 Dashboard | Management Console</title>
@@ -242,6 +242,9 @@
 
     <div class="fixed top-24 right-6 flex gap-1 bg-white shadow-2xl p-1.5 rounded-full border border-blue-100 z-50 no-print transition-all hover:scale-105">
         
+        <button onclick="changeLanguage('en')" id="btn-en" class="lang-btn px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all">
+            EN
+        </button>
     </div>
 
     <nav class="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-950 text-white sticky top-0 z-50 border-b border-blue-500/30 shadow-2xl no-print">
@@ -259,7 +262,7 @@
 
             <div class="flex items-center gap-8">
                 <a href="{{ url_for('index') }}" id="t-nav-main" class="text-xs font-bold uppercase tracking-widest text-blue-200 hover:text-white transition-colors no-underline relative group">
-                    Log Utama
+                    Main Log
                     <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-cyan-400 transition-all group-hover:w-full"></span>
                 </a>
                 
@@ -354,7 +357,7 @@
                     
                     <button onclick="processExcel()" id="importBtn" 
                             class="bg-slate-900 hover:bg-black text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-2xl flex items-center justify-center min-w-[240px] hover:shadow-slate-400/50 transform active:scale-95">
-                        <span id="btnText">Proses & Masuk Data</span>
+                        <span id="btnText">Process & Import Data</span>
                     </button>
                 </div>
             </div>
@@ -376,13 +379,13 @@
             
             <div class="p-10 border-b border-slate-50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-slate-50/30">
                 <div>
-                    <h2 id="t-console-title" class="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Konsol Pengurusan</h2>
+                    <h2 id="t-console-title" class="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Management Console</h2>
                     <p class="text-slate-500 text-xs font-bold mt-2 uppercase tracking-[0.2em] flex items-center gap-3">
                         <span class="relative flex h-3 w-3">
                             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                             <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                         </span>
-                        <span id="t-db-live">Pangkalan Data Live Aktif</span>
+                        <span id="t-db-live">Live Database Active</span>
                     </p>
                 </div>
                 
@@ -415,7 +418,7 @@
                     </div>
 
                     <button onclick="confirmBulkDelete()" class="bg-rose-50 text-rose-600 px-8 py-5 rounded-3xl font-black uppercase tracking-widest text-[11px] hover:bg-rose-100 transition-all border border-rose-100 whitespace-nowrap shadow-sm hover:shadow-md">
-                        <span id="t-btn-delete">Padam Terpilih 🗑️</span>
+                        <span id="t-btn-delete">Delete Selected 🗑️</span>
                     </button>
                 </div>
             </div>
@@ -428,9 +431,9 @@
                                 <th class="px-10 py-6 text-left w-10 no-print">
                                     <input type="checkbox" id="selectAll" class="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
                                 </th>
-                                <th id="th-asset" class="px-6 py-6 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Butiran Aset</th>
-                                <th id="th-defect" class="px-6 py-6 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Kerosakan & Nota</th>
-                                <th id="th-timeline" class="px-6 py-6 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Garis Masa & Status</th>
+                                <th id="th-asset" class="px-6 py-6 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Asset Details</th>
+                                <th id="th-defect" class="px-6 py-6 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Defects & Notes</th>
+                                <th id="th-timeline" class="px-6 py-6 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Timeline & Status</th>
                                 <th id="th-action" class="px-10 py-6 text-right text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] no-print">Tindakan</th>
                             </tr>
                         </thead>
@@ -467,7 +470,7 @@
                                 
                                 <td class="px-6 py-8 align-top">
                                     <div class="text-xs text-slate-700 font-bold leading-relaxed max-w-sm uppercase bg-amber-50/50 p-3 rounded-xl border-l-4 border-amber-400 filter-target shadow-sm">
-                                        "{{ log.defect or 'TIADA REKOD KEROSAKAN' }}"
+                                        "{{ log.defect or 'NO DEFECT RECORDED' }}"
                                     </div>
                                     <div class="mt-2">
                                         <p class="text-[10px] text-slate-500 font-medium">
@@ -680,10 +683,10 @@
 
                 } catch (err) {
                     console.error(err);
-                    alert("Ralat Pemprosesan: " + err.message);
+                    alert("Processing Error: " + err.message);
                 } finally {
                     importBtn.disabled = false;
-                    btnText.innerHTML = "Proses & Masuk Data";
+                    btnText.innerHTML = "Process & Import Data";
                 }
             };
 
@@ -807,6 +810,15 @@
             document.getElementById('btn-' + lang).classList.add('active');
             
             const trans = {
+                'ms': {
+                    't-nav-main': 'Main Log', 
+                    't-import-title': 'Import Pukal Excel (2022-2026)',
+                    't-console-title': 'Management Console', 
+                    't-records': 'Jumlah Rekod',
+                    'th-asset': 'Asset Details', 
+                    'th-defect': 'Defects & Notes', 
+                    'th-action': 'Actions'
+                },
                 'en': {
                     't-nav-main': 'Main Log', 
                     't-import-title': 'Bulk Excel Import (2022-2026)',
@@ -843,7 +855,7 @@
                 return alert("Please select at least one record to delete.");
             }
             
-            if (confirm(`WARNING: Are you sure you want to permanently delete ${count} record(s) ini secara kekal?`)) {
+            if (confirm(`WARNING: Are you sure you want to permanently delete ${count} record(s)?`)) {
                 document.getElementById('bulkDeleteForm').submit();
             }
         }
@@ -889,7 +901,7 @@
         }
 
         window.onload = () => {
-            const savedLang = 'en';
+            const savedLang = localStorage.getItem('g7_lang') || 'en';
             changeLanguage(savedLang);
         };
     </script>
