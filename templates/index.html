@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -83,16 +83,7 @@
 
 <body class="min-h-screen p-4 flex flex-col items-center justify-center">
 
-    <div class="fixed top-6 right-6 flex gap-2 bg-white/10 p-1 rounded-full backdrop-blur-md border border-white/20 z-50 shadow-xl">
-        <button onclick="changeLanguage('ms')" id="btn-ms" class="lang-btn px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest cursor-pointer text-slate-400">
-            Melayu
-        </button>
-        <button onclick="changeLanguage('en')" id="btn-en" class="lang-btn px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest cursor-pointer text-slate-400">
-            English
-        </button>
-    </div>
-
-    <div class="max-w-2xl w-full bg-white p-10 rounded-[3rem] shadow-2xl border-t-8 border-blue-900 relative my-10">
+        <div class="max-w-2xl w-full bg-white p-10 rounded-[3rem] shadow-2xl border-t-8 border-blue-900 relative my-10">
         
         <div class="text-center mb-10">
             <h1 class="text-4xl font-black text-blue-900 uppercase italic leading-none tracking-tighter hover:scale-105 transition-transform cursor-default">
@@ -207,7 +198,7 @@
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                         </div>
                         <span id="fileName" class="text-xs font-bold text-slate-400 uppercase truncate max-w-[200px] sm:max-w-xs">
-                            Pilih fail Excel...
+                            Choose Excel file...
                         </span>
                     </div>
                     <span id="t-btn-browse" class="bg-slate-200 text-slate-600 text-[10px] font-black px-4 py-2 rounded-xl uppercase group-hover:bg-blue-900 group-hover:text-white transition-colors shadow-sm">
@@ -225,7 +216,7 @@
                     <div id="progressBar" class="bg-gradient-to-r from-emerald-400 to-emerald-600 h-full w-0 transition-all duration-300 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
                 </div>
                 <p id="progressText" class="text-[10px] font-black text-emerald-600 uppercase mt-2 text-center tracking-widest">
-                    Sedia untuk import...
+                    Ready to import...
                 </p>
             </div>
 
@@ -252,31 +243,8 @@
             document.getElementById('current_date').value = `${year}-${month}-${day}`;
         });
 
-        // Language Dictionary
+        // Set English as default
         const dictionary = {
-            ms: {
-                subtitle: "Log Penyelenggaraan Sah",
-                labelEquip: "Nama Peralatan",
-                phEquip: "MASUKKAN JENIS PERALATAN",
-                labelPn: "Nombor Bahagian (P/N)",
-                phPn: "MASUKKAN P/N",
-                labelSn: "Nombor Siri (S/N)",
-                phSn: "MASUKKAN S/N",
-                labelDefect: "Kerosakan / Catatan",
-                phDefect: "JELASKAN KEROSAKAN",
-                labelPic: "PIC / Catatan",
-                phPic: "MASUKKAN PIC ATAU CATATAN",
-                labelStatus: "Status Kebenaran",
-                optStatus: "PILIH STATUS",
-                btnSave: "Sahkan & Simpan Log",
-                btnAdmin: "Portal Akses Admin",
-                labelBulk: "Import Pukal (Excel)",
-                phFile: "Pilih fail Excel...",
-                btnBrowse: "Cari",
-                btnImport: "Mulakan Import Data",
-                textReady: "Sedia untuk import...",
-                textImporting: "SEDANG IMPORT"
-            },
             en: {
                 subtitle: "Authorized Maintenance Log",
                 labelEquip: "Name Equipment",
@@ -303,9 +271,7 @@
         };
 
         function changeLanguage(lang) {
-            localStorage.setItem('g7_lang', lang);
-            const t = dictionary[lang];
-
+            const t = dictionary['en'];
             const elements = {
                 't-subtitle': t.subtitle,
                 't-label-equip': t.labelEquip,
@@ -323,24 +289,18 @@
                 't-btn-import': t.btnImport,
                 'progressText': t.textReady
             };
-
             for (const [id, text] of Object.entries(elements)) {
                 const el = document.getElementById(id);
                 if (el) el.innerText = text;
             }
-
             document.getElementById('p-equip').placeholder = t.phEquip;
             document.getElementById('p-pn').placeholder = t.phPn;
             document.getElementById('p-sn').placeholder = t.phSn;
             document.getElementById('p-defect').placeholder = t.phDefect;
             document.getElementById('p-pic').placeholder = t.phPic;
-
-            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('btn-' + lang).classList.add('active');
         }
 
-        const savedLang = localStorage.getItem('g7_lang') || 'ms';
-        changeLanguage(savedLang);
+        changeLanguage('en');
 
         // Excel File Handler
         const excelInput = document.getElementById('excelInput');

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -109,23 +109,6 @@
 
         // SISTEM TRANSLATION (Kekal seperti asal)
         const reportTranslations = {
-            ms: {
-                subtitle: "LAPORAN PENYELENGGARAAN UNIT",
-                field: "RUANGAN",
-                details: "BUTIRAN",
-                equip: "PERALATAN",
-                pn: "NOMBOR BAHAGIAN",
-                sn: "NOMBOR SIRI",
-                defect: "KEROSAKAN / CATATAN",
-                dateIn: "TARIKH MASUK",
-                dateOut: "TARIKH KELUAR",
-                status: "STATUS",
-                pic: "PIC / JTP",
-                generated: "Dijana pada: ",
-                signature: "Tandatangan Sah",
-                btnPrint: "CETAK / SIMPAN PDF 📄",
-                btnBack: "KEMBALI"
-            },
             en: {
                 subtitle: "UNIT MAINTENANCE REPORT",
                 field: "FIELD",
@@ -140,13 +123,13 @@
                 pic: "PIC / JTP",
                 generated: "Generated: ",
                 signature: "Authorized Signature",
-                btnPrint: "PRINT / SAVE PDF 📄",
+                btnPrint: "PRINT / SAVE PDF",
                 btnBack: "BACK"
             }
         };
 
         function applyLanguage() {
-            const lang = localStorage.getItem('g7_lang') || 'ms';
+            const lang = 'en';
             const t = reportTranslations[lang];
 
             document.getElementById('t-report-subtitle').innerText = t.subtitle;
