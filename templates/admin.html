@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="description" content="G7 Aerospace Asset Maintenance Management System">
+    <meta name="description" content="Sistem Pengurusan Penyelenggaraan Aset G7 Aerospace">
     <meta name="author" content="G7 Aerospace">
     
     <title>G7 Dashboard | Management Console</title>
@@ -241,12 +241,7 @@
 <body class="min-h-screen">
 
     <div class="fixed top-24 right-6 flex gap-1 bg-white shadow-2xl p-1.5 rounded-full border border-blue-100 z-50 no-print transition-all hover:scale-105">
-        <button onclick="changeLanguage('ms')" id="btn-ms" class="lang-btn px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all">
-            MS
-        </button>
-        <button onclick="changeLanguage('en')" id="btn-en" class="lang-btn px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all">
-            EN
-        </button>
+        
     </div>
 
     <nav class="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-950 text-white sticky top-0 z-50 border-b border-blue-500/30 shadow-2xl no-print">
@@ -369,7 +364,7 @@
                     <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm1.8 18H14l-2-3.4-2 3.4H8.2l2.9-4.5-2.8-4.4H10l1.9 3.4 2-3.4h1.8l-2.9 4.5 3 4.4z"/></svg>
                 </div>
                 <h4 class="text-xs font-black uppercase tracking-[0.2em] mb-4">Database Export</h4>
-                <p class="text-blue-100 text-[11px] font-bold mb-8 leading-relaxed">Muat turun semua rekod pangkalan data dalam format fail Excel (.xlsx) untuk sandaran.</p>
+                <p class="text-blue-100 text-[11px] font-bold mb-8 leading-relaxed">Download all database records in Excel format (.xlsx) for backup.</p>
                 
                 <button onclick="exportFullDatabase()" class="bg-white text-blue-900 py-5 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-cyan-50 transition-all shadow-xl shadow-blue-900/40 transform active:scale-95">
                     Export Full Excel 📥
@@ -399,7 +394,7 @@
                         </div>
                         <input type="text" id="searchInput" onkeyup="filterTable()" 
                                class="bg-white border border-slate-200 text-slate-700 text-xs rounded-3xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 block w-full pl-10 p-4 font-bold tracking-wide transition-all shadow-sm outline-none" 
-                               placeholder="Cari S/N atau P/N...">
+                               placeholder="Search S/N or P/N...">
                     </div>
 
                     <div class="relative">
@@ -531,7 +526,7 @@
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                         </a>
                                         
-                                        <button type="button" onclick="if(confirm('Adakah anda pasti mahu memadam rekod ini secara kekal?')) window.location.href='{{ url_for('delete_log', id=log.id) }}'" class="p-2 text-rose-600 bg-rose-50 rounded-xl hover:bg-rose-100 transition-colors tooltip" title="Delete">
+                                        <button type="button" onclick="if(confirm('Are you sure you want to permanently delete this record?')) window.location.href='{{ url_for('delete_log', id=log.id) }}'" class="p-2 text-rose-600 bg-rose-50 rounded-xl hover:bg-rose-100 transition-colors tooltip" title="Delete">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                         </button>
                                     </div>
@@ -580,7 +575,7 @@
             const btnText = document.getElementById('btnText');
 
             if (!fileInput.files[0]) {
-                alert("Sila pilih fail Excel untuk dimuat naik!");
+                alert("Please select an Excel file to upload!");
                 return;
             }
 
@@ -676,7 +671,7 @@
                     if (res.ok) {
                         const result = await res.json();
                         const skipMsg = result.skipped ? ` (${result.skipped} duplicate(s) skipped)` : '';
-                        alert(`✅ Berjaya import ${result.count} rekod!${skipMsg}`);
+                        alert(`✅ Successfully imported ${result.count} record(s)!${skipMsg}`);
                         location.reload();
                     } else {
                         const err = await res.text();
@@ -812,15 +807,6 @@
             document.getElementById('btn-' + lang).classList.add('active');
             
             const trans = {
-                'ms': {
-                    't-nav-main': 'Log Utama', 
-                    't-import-title': 'Import Pukal Excel (2022-2026)',
-                    't-console-title': 'Konsol Pengurusan', 
-                    't-records': 'Jumlah Rekod',
-                    'th-asset': 'Butiran Aset', 
-                    'th-defect': 'Kerosakan & Nota', 
-                    'th-action': 'Tindakan'
-                },
                 'en': {
                     't-nav-main': 'Main Log', 
                     't-import-title': 'Bulk Excel Import (2022-2026)',
@@ -854,10 +840,10 @@
             const count = document.querySelectorAll('.item-checkbox:checked').length;
             
             if (count === 0) {
-                return alert("Sila pilih sekurang-kurangnya satu rekod untuk dipadam.");
+                return alert("Please select at least one record to delete.");
             }
             
-            if (confirm(`AMARAN: Adakah anda pasti mahu memadam ${count} rekod ini secara kekal?`)) {
+            if (confirm(`WARNING: Are you sure you want to permanently delete ${count} record(s) ini secara kekal?`)) {
                 document.getElementById('bulkDeleteForm').submit();
             }
         }
@@ -903,7 +889,7 @@
         }
 
         window.onload = () => {
-            const savedLang = localStorage.getItem('g7_lang') || 'ms';
+            const savedLang = 'en';
             changeLanguage(savedLang);
         };
     </script>
